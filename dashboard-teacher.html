@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teacher Dashboard · IBCS App</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Teacher dashboard</h1>
+      <p>Placeholder widgets for class management and topic controls.</p>
+    </header>
+
+    <main>
+      <div class="layout">
+        <section class="card">
+          <h2>Create class</h2>
+          <form id="create-class">
+            <label>
+              <span>Class name</span>
+              <input name="name" placeholder="e.g. HL Year 1" required />
+            </label>
+            <label>
+              <span>Description</span>
+              <input name="description" placeholder="optional" />
+            </label>
+            <button type="submit">Create</button>
+            <p class="status" id="class-status"></p>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2>Add student</h2>
+          <form id="add-student">
+            <label>
+              <span>Class ID</span>
+              <input name="classId" required />
+            </label>
+            <label>
+              <span>Student username</span>
+              <input name="username" required />
+            </label>
+            <label>
+              <span>Password</span>
+              <input name="password" type="password" required />
+            </label>
+            <button type="submit">Enroll</button>
+            <p class="status" id="student-status"></p>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2>Unlock topic</h2>
+          <form id="unlock-topic">
+            <label>
+              <span>Class ID</span>
+              <input name="classId" required />
+            </label>
+            <label>
+              <span>Topic ID</span>
+              <input name="topicId" required placeholder="e.g. A1.1" />
+            </label>
+            <button type="submit">Unlock</button>
+            <p class="status" id="unlock-status"></p>
+          </form>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <small><a href="./index.html">Back to login</a></small>
+    </footer>
+
+    <script>
+      const WORKER_BASE = "https://ibcs-auth.stevengstewart25.workers.dev";
+
+      function withToken(headers = {}) {
+        const token = window.localStorage.getItem("ibcs.token");
+        if (token) {
+          headers.authorization = `Bearer ${token}`;
+        }
+        return headers;
+      }
+
+      document.getElementById("create-class")?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const status = document.getElementById("class-status");
+        status.textContent = "Saving…";
+        status.className = "status";
+        const form = event.currentTarget;
+        const payload = {
+          name: form.name.value.trim(),
+          description: form.description.value.trim(),
+        };
+        try {
+          const response = await fetch(`${WORKER_BASE}/t/add-class`, {
+            method: "POST",
+            headers: withToken({ "content-type": "application/json" }),
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(data.error || "Request failed");
+          }
+          status.textContent = `Class created (id: ${data.class?.id ?? data.class?.classId ?? "n/a"})`;
+          status.classList.add("success");
+        } catch (error) {
+          status.textContent = error.message;
+          status.classList.add("error");
+        }
+      });
+
+      document.getElementById("add-student")?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const status = document.getElementById("student-status");
+        status.textContent = "Saving…";
+        status.className = "status";
+        const form = event.currentTarget;
+        const payload = {
+          classId: form.classId.value.trim(),
+          student: {
+            username: form.username.value.trim(),
+            password: form.password.value,
+          },
+        };
+        try {
+          const response = await fetch(`${WORKER_BASE}/t/add-student`, {
+            method: "POST",
+            headers: withToken({ "content-type": "application/json" }),
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(data.error || "Request failed");
+          }
+          status.textContent = `Student enrolled (${data.enrollment?.studentId ?? "n/a"})`;
+          status.classList.add("success");
+        } catch (error) {
+          status.textContent = error.message;
+          status.classList.add("error");
+        }
+      });
+
+      document.getElementById("unlock-topic")?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const status = document.getElementById("unlock-status");
+        status.textContent = "Saving…";
+        status.className = "status";
+        const form = event.currentTarget;
+        const payload = {
+          classId: form.classId.value.trim(),
+          topicId: form.topicId.value.trim(),
+        };
+        try {
+          const response = await fetch(`${WORKER_BASE}/t/unlock-topic`, {
+            method: "POST",
+            headers: withToken({ "content-type": "application/json" }),
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(data.error || "Request failed");
+          }
+          status.textContent = "Topic unlocked.";
+          status.classList.add("success");
+        } catch (error) {
+          status.textContent = error.message;
+          status.classList.add("error");
+        }
+      });
+    </script>
+  </body>
+</html>

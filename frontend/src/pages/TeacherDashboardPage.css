@@ -1,0 +1,118 @@
+.dashboard-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.card {
+  background: white;
+  border-radius: 1rem;
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 1.25rem;
+}
+
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-header button.secondary {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  color: inherit;
+}
+
+.card-columns {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.card-columns article {
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 0.85rem;
+  padding: 1.25rem;
+  background: rgba(37, 99, 235, 0.05);
+  display: grid;
+  gap: 1rem;
+}
+
+form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+input {
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 0.65rem;
+  padding: 0.6rem 0.75rem;
+  background: #f8fafc;
+}
+
+.status {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.status--error {
+  color: #dc2626;
+}
+
+.status--success {
+  color: #15803d;
+}
+
+.status--info {
+  color: #2563eb;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.list li {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.8rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.badge {
+  justify-self: flex-start;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.15);
+  color: #1d4ed8;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.muted {
+  color: rgba(15, 23, 42, 0.65);
+  font-size: 0.9rem;
+}
+
+@media (min-width: 900px) {
+  .card-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .card-columns {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

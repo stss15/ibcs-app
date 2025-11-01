@@ -1,0 +1,84 @@
+.login-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.card {
+  background: white;
+  border-radius: 1rem;
+  padding: clamp(1.5rem, 3vw, 2rem);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 1.25rem;
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+input {
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 0.7rem;
+  padding: 0.65rem 0.8rem;
+  font-size: 1rem;
+  background: #f8fafc;
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.7rem 1.4rem;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.status {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.status--error {
+  color: #dc2626;
+}
+
+.status--success {
+  color: #15803d;
+}
+
+.link-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .login-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .login-grid > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+.link-card {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 0.9rem;
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}

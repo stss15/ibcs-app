@@ -1,0 +1,35 @@
+.topic-page {
+  max-width: 720px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 1rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 1.25rem;
+}
+
+.topic-panel {
+  border-radius: 0.9rem;
+  padding: 1.25rem;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.status {
+  font-size: 0.95rem;
+}
+
+.status--success {
+  color: #15803d;
+}
+
+.status--error {
+  color: #dc2626;
+}
+
+.muted {
+  color: rgba(15, 23, 42, 0.65);
+}

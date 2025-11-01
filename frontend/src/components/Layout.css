@@ -1,0 +1,41 @@
+.layout-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-header {
+  background: linear-gradient(135deg, #1e3a8a, #312e81);
+  color: #f8fafc;
+  padding: 2rem clamp(1rem, 3vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.layout-header nav {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.layout-header a {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.layout-main {
+  flex: 1;
+  padding: clamp(1rem, 3vw, 3rem);
+  display: grid;
+  gap: 2rem;
+}
+
+.layout-footer {
+  background: #0f172a;
+  color: #cbd5f5;
+  text-align: center;
+  padding: 1rem;
+}
