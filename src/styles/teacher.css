@@ -1,0 +1,100 @@
+.card.hidden {
+  display: none;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.card.inner {
+  box-shadow: none;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #f8fafc;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
+}
+
+.field > span {
+  font-weight: 600;
+}
+
+.field > input,
+.field > textarea,
+.field > select {
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+}
+
+.button.secondary {
+  background: transparent;
+  color: #1f7aed;
+  border: 1px solid currentColor;
+}
+
+.form-hint {
+  text-align: left;
+  font-size: 0.85rem;
+  color: rgba(15, 23, 42, 0.7);
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.list li {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: white;
+}
+
+.subtle {
+  color: rgba(15, 23, 42, 0.7);
+}
+
+#roster,
+#unlocks {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(31, 122, 237, 0.12);
+  color: #1f7aed;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.error {
+  color: #d93025;
+  font-weight: 600;
+}
+
+.success {
+  color: #0f9d58;
+  font-weight: 600;
+}
+
+.form-status {
+  margin-top: 0.5rem;
+}

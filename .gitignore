@@ -1,0 +1,17 @@
+# Node artifacts
+node_modules/
+*.log
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Build output
+.dist/
+dist/
+build/
+
+# Wrangler
+.workers/
+
+# Misc
+.DS_Store

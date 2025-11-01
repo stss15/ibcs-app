@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teacher Dashboard · IBCS App</title>
+    <link rel="stylesheet" href="../../styles/base.css" />
+    <link rel="stylesheet" href="../../styles/teacher.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Teacher Dashboard</h1>
+      <p class="tagline">
+        Unlock topics, onboard students, and monitor formative progress.
+      </p>
+    </header>
+
+    <main>
+      <section id="auth-card" class="card">
+        <h2>Sign in</h2>
+        <form id="teacher-login">
+          <label class="field">
+            <span>Login ID</span>
+            <input
+              name="email"
+              required
+              autocomplete="username"
+              placeholder="email or username"
+            />
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input
+              name="password"
+              type="password"
+              required
+              autocomplete="current-password"
+            />
+          </label>
+          <button class="button" type="submit">Sign in</button>
+          <p class="form-hint">
+            Tokens expire automatically. Signing in issues a new session token.
+          </p>
+        </form>
+      </section>
+
+      <section id="dashboard" class="card hidden">
+        <header class="card-header">
+          <div>
+            <h2 id="teacher-greeting">Welcome</h2>
+            <p class="subtle">
+              Manage your classes and unlock topics for the current cohort.
+            </p>
+          </div>
+          <button id="sign-out" class="button secondary" type="button">
+            Sign out
+          </button>
+        </header>
+
+        <div class="card-grid">
+          <article class="card inner">
+            <h3>Create class</h3>
+            <form id="add-class">
+              <label class="field">
+                <span>Class name</span>
+                <input name="name" placeholder="e.g. HL Year 1" required />
+              </label>
+              <label class="field">
+                <span>Description (optional)</span>
+                <input name="description" placeholder="Semester overview" />
+              </label>
+              <button class="button" type="submit">Add class</button>
+            </form>
+          </article>
+
+          <article class="card inner">
+            <h3>Add student</h3>
+            <form id="add-student">
+              <label class="field">
+                <span>Class ID</span>
+                <input
+                  name="classId"
+                  required
+                  placeholder="Copy from your classes list"
+                />
+              </label>
+              <label class="field">
+                <span>Student username</span>
+                <input name="username" placeholder="optional" />
+              </label>
+              <label class="field">
+                <span>Student name</span>
+                <input name="name" placeholder="First name" />
+              </label>
+              <button class="button" type="submit">Enroll student</button>
+            </form>
+          </article>
+        </div>
+
+        <article class="card inner">
+          <h3>Unlock topic</h3>
+          <form id="unlock-topic">
+            <label class="field">
+              <span>Class ID</span>
+              <input name="classId" required />
+            </label>
+            <label class="field">
+              <span>Topic ID</span>
+              <input name="topicId" required placeholder="e.g. A1.1" />
+            </label>
+            <button class="button" type="submit">Unlock</button>
+          </form>
+        </article>
+
+        <section>
+          <h3>Your classes</h3>
+          <ul id="class-list" class="list"></ul>
+        </section>
+
+        <section>
+          <h3>Roster</h3>
+          <div id="roster"></div>
+        </section>
+
+        <section>
+          <h3>Unlocked topics</h3>
+          <div id="unlocks"></div>
+        </section>
+      </section>
+    </main>
+
+    <footer>
+      <small>Need help? Check the README in the repo for setup steps.</small>
+    </footer>
+
+    <script type="module" src="../../scripts/teacher-dashboard.js"></script>
+  </body>
+</html>
