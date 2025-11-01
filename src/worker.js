@@ -43,6 +43,10 @@ export default {
         return await handleUnlockTopic(request, env);
       }
 
+      if (route === "/setup/seed" && request.method === "POST") {
+        return await handleSeed(request, env);
+      }
+
       return jsonResponse({ error: "Not found" }, 404);
     } catch (error) {
       if (error instanceof Response) {
@@ -380,6 +384,93 @@ async function handleUnlockTopic(request, env) {
     },
     201,
   );
+}
+
+async function handleSeed(request, env) {
+  if (!env?.SEED_KEY) {
+    return jsonResponse({ error: "Seed key not configured" }, 403);
+  }
+
+  const seedKey = request.headers.get("x-seed-key");
+  if (!seedKey || seedKey !== env.SEED_KEY) {
+    return jsonResponse({ error: "Forbidden" }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  if (!body?.teacher || !body.teacher.username || !body.teacher.password) {
+    return jsonResponse({ error: "Teacher username and password required" }, 400);
+  }
+
+  const db = new InstantDBClient(env);
+  const now = new Date().toISOString();
+
+  const teacherPayload = {
+    username: body.teacher.username,
+    passwordHash: await hashPassword(body.teacher.password),
+    displayName: body.teacher.displayName || body.teacher.username,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const teacherRecord = await db.createDocument("teachers", teacherPayload);
+  const teacherId =
+    normalizeId(teacherRecord?.id) ||
+    normalizeId(teacherRecord?._id) ||
+    normalizeId(teacherRecord?.teacherId);
+
+  const classes = Array.isArray(body.classes) ? body.classes : [];
+  let classCount = 0;
+  let studentCount = 0;
+
+  for (const classInput of classes) {
+    if (!classInput?.name) {
+      continue;
+    }
+    const classPayload = {
+      name: classInput.name,
+      teacherId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const classRecord = await db.createDocument("classes", classPayload);
+    const classId =
+      normalizeId(classRecord?.id) ||
+      normalizeId(classRecord?._id) ||
+      normalizeId(classRecord?.classId);
+    classCount += 1;
+
+    const students = Array.isArray(classInput.students) ? classInput.students : [];
+    for (const studentInput of students) {
+      if (!studentInput?.name || !studentInput?.password) {
+        continue;
+      }
+      const studentPayload = {
+        name: studentInput.name,
+        passwordHash: await hashPassword(studentInput.password),
+        classId,
+        teacherId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await db.createDocument("students", studentPayload);
+      studentCount += 1;
+    }
+  }
+
+  return jsonResponse({
+    ok: true,
+    counts: {
+      teachers: 1,
+      classes: classCount,
+      students: studentCount,
+    },
+  });
 }
 
 class InstantDBClient {
