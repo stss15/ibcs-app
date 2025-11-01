@@ -5,3 +5,4 @@ compatibility_date = "2024-05-01"
 # Bindings are configured via Wrangler commands during deployment.
 # wrangler secret put TOKEN_SECRET
 # wrangler secret put INSTANT_APP_ID
+# wrangler secret put INSTANT_ADMIN_TOKEN
