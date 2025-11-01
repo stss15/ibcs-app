@@ -17,67 +17,18 @@
     </header>
 
     <main>
-      <section id="student-auth" class="card">
-        <h2>Sign in</h2>
-        <form id="student-login">
-          <label class="field">
-            <span>Class code</span>
-            <input name="classCode" required />
-          </label>
-          <label class="field">
-            <span>Username</span>
-            <input name="username" required autocomplete="username" />
-          </label>
-          <label class="field">
-            <span>Password</span>
-            <input
-              name="password"
-              type="password"
-              required
-              autocomplete="current-password"
-            />
-          </label>
-          <button class="button" type="submit">Enter</button>
-        </form>
-      </section>
-
-      <section id="student-dashboard" class="card hidden">
-        <header class="card-header">
-          <div>
-            <h2 id="student-greeting">Welcome back</h2>
-            <p class="subtle">
-              Complete the reading, pass the formative, and then submit the
-              summative task.
-            </p>
-          </div>
-          <button id="student-sign-out" class="button secondary" type="button">
-            Sign out
-          </button>
-        </header>
-
-        <article class="card inner">
-          <h3>Current topic</h3>
-          <div id="current-topic" class="topic-card">
-            Select a topic from your unlocked list to begin.
-          </div>
-        </article>
-
-        <section>
-          <h3>Unlocked topics</h3>
-          <div id="student-unlocks" class="topic-grid"></div>
-        </section>
-
-        <section>
-          <h3>Progress</h3>
-          <div id="student-progress" class="progress-grid"></div>
-        </section>
+      <section class="card">
+        <h2>Start in the React portal</h2>
+        <p>
+          The student experience is delivered by the React single-page app.
+          Launch the SPA to view unlocked topics, readings, and formative checks.
+        </p>
+        <a class="button" href="/frontend/">Open React app</a>
       </section>
     </main>
 
     <footer>
       <small>All progress is stored with your teacher — no emails needed.</small>
     </footer>
-
-    <script type="module" src="../../scripts/student-home.js"></script>
   </body>
 </html>

@@ -1,19 +1,37 @@
 import { useCallback, useEffect, useState } from "react";
 
-const STORAGE_KEY = "ibcs.token";
+const STORAGE_KEY = "ibcs.session";
+
+function readSession() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.warn("Failed to read session", error);
+    return null;
+  }
+}
 
 export function useSession() {
-  const [token, setToken] = useState(() => window.localStorage.getItem(STORAGE_KEY));
+  const [session, setSessionState] = useState(() => readSession());
 
   useEffect(() => {
-    if (token) {
-      window.localStorage.setItem(STORAGE_KEY, token);
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
+    try {
+      if (session) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+      } else {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (error) {
+      console.warn("Failed to persist session", error);
     }
-  }, [token]);
+  }, [session]);
 
-  const clear = useCallback(() => setToken(null), []);
+  const setSession = useCallback((value) => {
+    setSessionState(value);
+  }, []);
 
-  return { token, setToken, clear };
+  const clear = useCallback(() => setSessionState(null), []);
+
+  return { session, setSession, clear };
 }

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import "./Layout.css";
 
-function Layout({ children }) {
+function Layout({ children, notice }) {
   return (
     <div className="layout-root">
       <header className="layout-header">
@@ -11,15 +11,16 @@ function Layout({ children }) {
         </div>
         <nav>
           <Link to="/">Login</Link>
-          <Link to="/teacher">Teacher</Link>
-          <Link to="/student">Student</Link>
+          <Link to="/dashboard">Teacher dashboard</Link>
+          <Link to="/student">Student view</Link>
         </nav>
       </header>
+      {notice && <div className="layout-banner">{notice}</div>}
       <main className="layout-main">{children}</main>
       <footer className="layout-footer">
         <small>
-          Worker: {__WORKER_BASE__ || "configure WORKER_BASE"} · InstantDB App:{" "}
-          {__INSTANT_APP_ID__ || "configure INSTANT_APP_ID"}
+          Static SPA on GitHub Pages · Direct InstantDB integration (POC). Rotate the admin token
+          after the demo.
         </small>
       </footer>
     </div>

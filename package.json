@@ -1,8 +1,0 @@
-{
-  "name": "ibcs-app",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@instantdb/admin": "^0.21.30"
-  }
-}

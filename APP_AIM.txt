@@ -18,7 +18,7 @@ Core objectives
 
 Non goals
 - No email based accounts, no OAuth, no AI API usage, no paid services.
-- No heavy back end. Only a Worker for auth and safe writes.
+- No heavy back end. For the POC we talk straight to InstantDB from the SPA.
 
 Privacy principles
 - Only store teacher display names and student first names or usernames.
@@ -26,7 +26,7 @@ Privacy principles
 - Students can only read public content and write their own progress. Teachers can modify only their classes.
 
 Definition of done for MVP
-- Login works for teacher and student using the Worker.
+- Login works for teacher and student using the SPA + InstantDB.
 - Teacher can create a class, add students, and unlock a topic.
 - Student can complete a formative and unlock the next section.
 - Summative submission stores a grade placeholder and appears in the marking queue.
@@ -41,4 +41,4 @@ M4 Analytics per class and topic, content authoring GUI, theme and accessibility
 Success criteria
 - A class can complete an A1 subtopic end to end without staff intervention after unlock.
 - Teacher can see live progress and export marks.
-- Deployment runs on free tiers only: GitHub Pages, InstantDB, Cloudflare Worker.
+- Deployment runs on free tiers only: GitHub Pages and InstantDB (static stack).

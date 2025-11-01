@@ -3,142 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IBCS App · Login</title>
-    <link rel="stylesheet" href="./styles/main.css" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' https://api.instantdb.com; img-src 'self' data:; style-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self'"
+    />
+    <title>IBCS Learning Journey</title>
+    <link rel="stylesheet" href="src/styles/base.css" />
+    <link rel="stylesheet" href="src/styles/landing.css" />
   </head>
   <body>
-    <header>
-      <h1>IBCS Learning Journey</h1>
-      <p>Authenticate to begin teaching or learning the 2027 IB Computer Science syllabus.</p>
-    </header>
-
     <main>
-      <div class="layout">
-        <section class="card">
-          <h2>Teacher sign in</h2>
-          <form id="teacher-form">
-            <label>
-              <span>Email or username</span>
-              <input name="email" required autocomplete="username" />
-            </label>
-            <label>
-              <span>Password</span>
-              <input name="password" type="password" required autocomplete="current-password" />
-            </label>
-            <button type="submit">Sign in</button>
-            <p class="status" id="teacher-status"></p>
-          </form>
-        </section>
-
-        <section class="card">
-          <h2>Student sign in</h2>
-          <form id="student-form">
-            <label>
-              <span>Class code</span>
-              <input name="classCode" required />
-            </label>
-            <label>
-              <span>Username</span>
-              <input name="username" required autocomplete="username" />
-            </label>
-            <label>
-              <span>Password</span>
-              <input name="password" type="password" required autocomplete="current-password" />
-            </label>
-            <button type="submit">Enter</button>
-            <p class="status" id="student-status"></p>
-          </form>
-        </section>
-
-        <section class="card">
-          <h2>Dashboards</h2>
-          <div class="grid two-up">
-            <a class="card" href="./dashboard-teacher.html">
-              <strong>Teacher dashboard</strong>
-              <p>Manage classes, unlock topics, and review progress.</p>
-            </a>
-            <a class="card" href="./dashboard-student.html">
-              <strong>Student dashboard</strong>
-              <p>View unlocked topics and track formative progress.</p>
-            </a>
-          </div>
-        </section>
-      </div>
+      <article class="cta">
+        <h1>IBCS Learning Journey</h1>
+        <p>
+          Launch the teacher dashboard to manage classes and monitor student progress. This proof of
+          concept talks directly to InstantDB from the browser using a temporary admin token.
+        </p>
+        <a href="/frontend/">Open the Web App</a>
+      </article>
     </main>
-
-    <footer>
-      <small>Worker: https://ibcs-auth.stevengstewart25.workers.dev · InstantDB App: fa61cd0c-d77e-44e5-919d-90a90ead7039</small>
-    </footer>
-
-    <script>
-      const WORKER_BASE = "https://ibcs-auth.stevengstewart25.workers.dev";
-
-      document.getElementById("teacher-form")?.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const status = document.getElementById("teacher-status");
-        status.textContent = "Signing in…";
-        status.className = "status";
-
-        const form = event.currentTarget;
-        const body = {
-          email: form.email.value.trim(),
-          password: form.password.value,
-        };
-
-        try {
-          const response = await fetch(`${WORKER_BASE}/t/login`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          const data = await response.json().catch(() => ({}));
-          if (!response.ok) {
-            throw new Error(data.error || "Login failed");
-          }
-          if (data.token) {
-            window.localStorage.setItem("ibcs.token", data.token);
-          }
-          status.textContent = `Signed in. Token: ${data.token?.slice(0, 24) ?? "n/a"}...`;
-          status.classList.add("success");
-        } catch (error) {
-          status.textContent = error.message;
-          status.classList.add("error");
-        }
-      });
-
-      document.getElementById("student-form")?.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const status = document.getElementById("student-status");
-        status.textContent = "Signing in…";
-        status.className = "status";
-
-        const form = event.currentTarget;
-        const body = {
-          classCode: form.classCode.value.trim(),
-          username: form.username.value.trim(),
-          password: form.password.value,
-        };
-
-        try {
-          const response = await fetch(`${WORKER_BASE}/s/login`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          const data = await response.json().catch(() => ({}));
-          if (!response.ok) {
-            throw new Error(data.error || "Login failed");
-          }
-          if (data.token) {
-            window.localStorage.setItem("ibcs.token", data.token);
-          }
-          status.textContent = `Signed in. Token: ${data.token?.slice(0, 24) ?? "n/a"}...`;
-          status.classList.add("success");
-        } catch (error) {
-          status.textContent = error.message;
-          status.classList.add("error");
-        }
-      });
-    </script>
   </body>
 </html>

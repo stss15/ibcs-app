@@ -59,9 +59,34 @@ button:disabled {
   color: #15803d;
 }
 
-.link-grid {
-  display: grid;
-  gap: 1rem;
+
+.role-toggle {
+  display: inline-flex;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.role-toggle > button {
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0.5rem 1.4rem;
+  border: none;
+  box-shadow: none;
+}
+
+.role-toggle > button.active {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+}
+
+.role-toggle > button:first-child {
+  border-right: 1px solid rgba(15, 23, 42, 0.2);
+}
+
+.role-toggle > button:not(.active):hover {
+  background: rgba(37, 99, 235, 0.08);
 }
 
 @media (min-width: 768px) {
@@ -72,13 +97,4 @@ button:disabled {
   .login-grid > :last-child {
     grid-column: 1 / -1;
   }
-}
-
-.link-card {
-  display: grid;
-  gap: 0.5rem;
-  padding: 1rem;
-  border-radius: 0.9rem;
-  background: rgba(37, 99, 235, 0.12);
-  border: 1px solid rgba(37, 99, 235, 0.25);
 }

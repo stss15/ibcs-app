@@ -1,109 +1,79 @@
-import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { request } from "../lib/api.js";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { findOneByField } from "../lib/instant.js";
+import { hashPassword } from "../lib/hash.js";
 import { useSession } from "../hooks/useSession.js";
 import "./LoginPage.css";
 
 const initialState = { status: "idle", message: "" };
 
 function LoginPage() {
-  const [teacherState, setTeacherState] = useState(initialState);
-  const [studentState, setStudentState] = useState(initialState);
-  const { setToken } = useSession();
+  const [role, setRole] = useState("teacher");
+  const [status, setStatus] = useState(initialState);
+  const { setSession } = useSession();
   const navigate = useNavigate();
 
-  const tokenText = useMemo(() => (value) => (value ? `${value.slice(0, 24)}…` : "n/a"), []);
+  const roleLabel = role === "teacher" ? "Teacher" : "Student";
 
-  async function handleTeacherSubmit(event) {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
-    const payload = {
-      email: form.email.value.trim(),
-      password: form.password.value,
-    };
+    const username = form.username.value.trim();
+    const password = form.password.value;
 
-    setTeacherState({ status: "loading", message: "Signing in…" });
+    if (!username || !password) {
+      setStatus({ status: "error", message: "Enter username and password." });
+      return;
+    }
+
+    setStatus({ status: "loading", message: `Signing in as ${roleLabel}…` });
 
     try {
-      const data = await request("/t/login", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      if (data.token) {
-        setToken(data.token);
+      const collection = role === "teacher" ? "teachers" : "students";
+      const user = await findOneByField(collection, "username", username);
+      if (!user) {
+        throw new Error("Invalid credentials");
       }
-      setTeacherState({
-        status: "success",
-        message: `Signed in. Token ${tokenText(data.token)}`,
-      });
-      navigate("/teacher");
-    } catch (error) {
-      setTeacherState({
-        status: "error",
-        message: error.message,
-      });
-    }
-  }
-
-  async function handleStudentSubmit(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const payload = {
-      classCode: form.classCode.value.trim(),
-      username: form.username.value.trim(),
-      password: form.password.value,
-    };
-
-    setStudentState({ status: "loading", message: "Signing in…" });
-
-    try {
-      const data = await request("/s/login", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      if (data.token) {
-        setToken(data.token);
+      const hashedInput = await hashPassword(password);
+      if (user.password !== hashedInput) {
+        throw new Error("Invalid credentials");
       }
-      setStudentState({
-        status: "success",
-        message: `Signed in. Token ${tokenText(data.token)}`,
-      });
-      navigate("/student");
+      setSession({ role, username, classId: user.classId || null });
+      setStatus({ status: "success", message: "Signed in." });
+      navigate(role === "teacher" ? "/dashboard" : "/student", { replace: true });
     } catch (error) {
-      setStudentState({
-        status: "error",
-        message: error.message,
-      });
+      setStatus({ status: "error", message: error.message || "Login failed" });
     }
-  }
+  };
 
   return (
     <div className="login-grid">
       <section className="card">
-        <h2>Teacher sign in</h2>
-        <form onSubmit={handleTeacherSubmit}>
-          <label>
-            <span>Email or username</span>
-            <input name="email" required autoComplete="username" />
-          </label>
-          <label>
-            <span>Password</span>
-            <input name="password" type="password" required autoComplete="current-password" />
-          </label>
-          <button type="submit" disabled={teacherState.status === "loading"}>
-            {teacherState.status === "loading" ? "Working…" : "Sign in"}
+        <h2>Welcome back</h2>
+        <p>Select your role, then enter your credentials.</p>
+        <div className="role-toggle">
+          <button
+            type="button"
+            className={role === "teacher" ? "active" : ""}
+            onClick={() => {
+              setRole("teacher");
+              setStatus(initialState);
+            }}
+          >
+            Teacher
           </button>
-          <Status {...teacherState} />
-        </form>
-      </section>
-
-      <section className="card">
-        <h2>Student sign in</h2>
-        <form onSubmit={handleStudentSubmit}>
-          <label>
-            <span>Class code</span>
-            <input name="classCode" required />
-          </label>
+          <button
+            type="button"
+            className={role === "student" ? "active" : ""}
+            onClick={() => {
+              setRole("student");
+              setStatus(initialState);
+            }}
+          >
+            Student
+          </button>
+        </div>
+        <form onSubmit={handleSubmit}>
           <label>
             <span>Username</span>
             <input name="username" required autoComplete="username" />
@@ -112,33 +82,21 @@ function LoginPage() {
             <span>Password</span>
             <input name="password" type="password" required autoComplete="current-password" />
           </label>
-          <button type="submit" disabled={studentState.status === "loading"}>
-            {studentState.status === "loading" ? "Working…" : "Enter"}
+          <button type="submit" disabled={status.status === "loading"}>
+            {status.status === "loading" ? "Working…" : `Log in as ${roleLabel}`}
           </button>
-          <Status {...studentState} />
+          {status.message && <p className={`status status--${status.status}`}>{status.message}</p>}
         </form>
       </section>
-
       <section className="card">
-        <h2>Dashboards</h2>
-        <div className="link-grid">
-          <Link className="link-card" to="/teacher">
-            <strong>Teacher dashboard</strong>
-            <p>Manage classes, unlock topics, and monitor submissions.</p>
-          </Link>
-          <Link className="link-card" to="/student">
-            <strong>Student dashboard</strong>
-            <p>Follow the gated journey and track formative progress.</p>
-          </Link>
-        </div>
+        <h2>Dev note</h2>
+        <p>
+          This proof-of-concept talks directly to InstantDB using a temporary admin token. Rotate the
+          token after the demo and move sensitive operations server-side.
+        </p>
       </section>
     </div>
   );
-}
-
-function Status({ status, message }) {
-  if (!message) return null;
-  return <p className={`status status--${status}`}>{message}</p>;
 }
 
 export default LoginPage;

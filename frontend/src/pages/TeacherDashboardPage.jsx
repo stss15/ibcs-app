@@ -1,66 +1,128 @@
-import { useEffect, useState } from "react";
-import { request, withAuthHeaders } from "../lib/api.js";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { create, list } from "../lib/instant.js";
+import { hashPassword } from "../lib/hash.js";
 import { useSession } from "../hooks/useSession.js";
 import "./TeacherDashboardPage.css";
 
 function TeacherDashboardPage() {
-  const { token, clear } = useSession();
-  const [dashboard, setDashboard] = useState(null);
+  const { session, clear } = useSession();
+  const navigate = useNavigate();
   const [status, setStatus] = useState(null);
+  const [classes, setClasses] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const teacherUsername = session?.role === "teacher" ? session.username : null;
 
   useEffect(() => {
-    if (!token) {
+    if (!teacherUsername) {
+      navigate("/", { replace: true });
+    }
+  }, [teacherUsername, navigate]);
+
+  const groupedStudents = useMemo(() => {
+    const map = new Map();
+    for (const student of students) {
+      const key = String(student.classId ?? "");
+      const list = map.get(key) || [];
+      list.push(student);
+      map.set(key, list);
+    }
+    return map;
+  }, [students]);
+
+  const loadDashboard = useCallback(async () => {
+    if (!teacherUsername) return;
+    setLoading(true);
+    setStatus({ tone: "info", message: "Loading dashboard…" });
+    try {
+      const [classDocs, studentDocs] = await Promise.all([list("classes"), list("students")]);
+      const teacherClasses = classDocs.filter((clazz) => clazz.teacherUsername === teacherUsername);
+      const classIds = new Set(
+        teacherClasses.map((clazz) => String(clazz.id ?? clazz.classId ?? ""))
+      );
+      const teacherStudents = studentDocs.filter((student) =>
+        classIds.has(String(student.classId ?? ""))
+      );
+      setClasses(teacherClasses);
+      setStudents(teacherStudents);
+      setStatus(null);
+    } catch (error) {
+      setStatus({ tone: "error", message: error.message || "Failed to load dashboard." });
+    } finally {
+      setLoading(false);
+    }
+  }, [teacherUsername]);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  const handleSignOut = () => {
+    clear();
+    navigate("/", { replace: true });
+  };
+
+  async function handleCreateClass(event) {
+    event.preventDefault();
+    if (!teacherUsername) return;
+    const form = event.currentTarget;
+    const className = form.className.value.trim();
+    const description = form.description.value.trim();
+    if (!className) {
+      setStatus({ tone: "error", message: "Class name is required." });
       return;
     }
-    let active = true;
-    request("/t/dashboard", {
-      headers: withAuthHeaders(token),
-    })
-      .then((data) => {
-        if (active) {
-          setDashboard(data);
-        }
-      })
-      .catch((error) => {
-        if (active) {
-          setStatus({ tone: "error", message: error.message });
-        }
+    setStatus({ tone: "info", message: "Creating class…" });
+    try {
+      await create("classes", {
+        className,
+        description: description || undefined,
+        teacherUsername,
+        createdAt: new Date().toISOString(),
       });
-    return () => {
-      active = false;
-    };
-  }, [token]);
-
-  if (!token) {
-    return (
-      <section className="card">
-        <h2>Authentication required</h2>
-        <p>Sign in from the login page to manage your classes.</p>
-      </section>
-    );
+      form.reset();
+      setStatus({ tone: "success", message: "Class created." });
+      await loadDashboard();
+    } catch (error) {
+      setStatus({ tone: "error", message: error.message || "Failed to create class." });
+    }
   }
 
-  async function handleSubmit(event, endpoint, transform) {
+  async function handleAddStudent(event) {
     event.preventDefault();
+    if (!teacherUsername) return;
     const form = event.currentTarget;
-    const payload = transform(new FormData(form));
-
-    try {
-      setStatus({ tone: "info", message: "Saving…" });
-      await request(endpoint, {
-        method: "POST",
-        headers: withAuthHeaders(token),
-        body: JSON.stringify(payload),
-      });
-      setStatus({ tone: "success", message: "Saved!" });
-      form.reset();
-      const refreshed = await request("/t/dashboard", {
-        headers: withAuthHeaders(token),
-      });
-      setDashboard(refreshed);
-    } catch (error) {
-      setStatus({ tone: "error", message: error.message });
+    const classId = form.classId.value;
+    const studentName = form.studentName.value.trim();
+    const username = form.username.value.trim();
+    const password = form.password.value;
+    if (!classId || !studentName || !password) {
+      setStatus({ tone: "error", message: "Class, student name, and password are required." });
+      return;
     }
+    setStatus({ tone: "info", message: "Adding student…" });
+    try {
+      const passwordHash = await hashPassword(password);
+      await create("students", {
+        name: studentName,
+        username: username || undefined,
+        password: passwordHash,
+        classId,
+        teacherUsername,
+        createdAt: new Date().toISOString(),
+      });
+      form.reset();
+      setStatus({ tone: "success", message: "Student added." });
+      await loadDashboard();
+    } catch (error) {
+      setStatus({ tone: "error", message: error.message || "Failed to add student." });
+    }
+  }
+
+  if (!teacherUsername) {
+    return null;
   }
 
   return (
@@ -69,31 +131,25 @@ function TeacherDashboardPage() {
         <header className="card-header">
           <div>
             <h2>Teacher dashboard</h2>
-            <p>Manage classes, enroll students, and unlock topics.</p>
+            <p>Manage classes, enroll students, and review progress.</p>
           </div>
-          <button className="secondary" onClick={clear}>
+          <button className="secondary" onClick={handleSignOut} type="button">
             Sign out
           </button>
         </header>
         {status && <p className={`status status--${status.tone}`}>{status.message}</p>}
+        {loading && <p className="muted">Loading…</p>}
         <div className="card-columns">
           <article>
             <h3>Create class</h3>
-            <form
-              onSubmit={(event) =>
-                handleSubmit(event, "/t/add-class", (form) => ({
-                  name: form.get("name"),
-                  description: form.get("description"),
-                }))
-              }
-            >
+            <form onSubmit={handleCreateClass}>
               <label>
                 <span>Class name</span>
-                <input name="name" required placeholder="e.g. HL Year 1" />
+                <input name="className" required placeholder="e.g. HL Year 1" />
               </label>
               <label>
                 <span>Description</span>
-                <input name="description" placeholder="Optional short label" />
+                <input name="description" placeholder="Optional" />
               </label>
               <button type="submit">Create</button>
             </form>
@@ -101,57 +157,31 @@ function TeacherDashboardPage() {
 
           <article>
             <h3>Add student</h3>
-            <form
-              onSubmit={(event) =>
-                handleSubmit(event, "/t/add-student", (form) => ({
-                  classId: form.get("classId"),
-                  student: {
-                    username: form.get("username"),
-                    name: form.get("name"),
-                    password: form.get("password"),
-                  },
-                }))
-              }
-            >
+            <form onSubmit={handleAddStudent}>
               <label>
-                <span>Class ID</span>
-                <input name="classId" required />
+                <span>Class</span>
+                <select name="classId" required>
+                  <option value="">Select class</option>
+                  {classes.map((clazz) => (
+                    <option key={clazz.id} value={clazz.id}>
+                      {clazz.className} ({clazz.id})
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
-                <span>Student username</span>
-                <input name="username" required />
+                <span>Student name</span>
+                <input name="studentName" required placeholder="First name" />
               </label>
               <label>
-                <span>Display name</span>
-                <input name="name" placeholder="Optional" />
+                <span>Username (optional)</span>
+                <input name="username" placeholder="username" />
               </label>
               <label>
                 <span>Password</span>
-                <input name="password" type="password" placeholder="Temporary password" />
+                <input name="password" type="password" required placeholder="Temporary password" />
               </label>
-              <button type="submit">Enroll</button>
-            </form>
-          </article>
-
-          <article>
-            <h3>Unlock topic</h3>
-            <form
-              onSubmit={(event) =>
-                handleSubmit(event, "/t/unlock-topic", (form) => ({
-                  classId: form.get("classId"),
-                  topicId: form.get("topicId"),
-                }))
-              }
-            >
-              <label>
-                <span>Class ID</span>
-                <input name="classId" required />
-              </label>
-              <label>
-                <span>Topic ID</span>
-                <input name="topicId" required placeholder="e.g. A1.1" />
-              </label>
-              <button type="submit">Unlock</button>
+              <button type="submit">Add student</button>
             </form>
           </article>
         </div>
@@ -160,50 +190,31 @@ function TeacherDashboardPage() {
       <section className="card">
         <h3>Your classes</h3>
         <ul className="list">
-          {dashboard?.classes?.length ? (
-            dashboard.classes.map((item) => (
-              <li key={item.id ?? item.classId}>
-                <strong>{item.name ?? "Class"}</strong>
-                <span className="muted">ID: {item.id ?? item.classId ?? "unknown"}</span>
-              </li>
-            ))
-          ) : (
-            <li className="muted">No classes yet.</li>
-          )}
+          {classes.length === 0 && <li className="muted">No classes yet.</li>}
+          {classes.map((clazz) => (
+            <li key={clazz.id}>
+              <strong>{clazz.className}</strong>
+              <span className="muted">ID: {clazz.id}</span>
+              {clazz.description && <span className="muted">Description: {clazz.description}</span>}
+              <span className="muted">
+                Students: {groupedStudents.get(String(clazz.id ?? clazz.classId ?? ""))?.length || 0}
+              </span>
+            </li>
+          ))}
         </ul>
       </section>
 
       <section className="card">
-        <h3>Roster</h3>
+        <h3>Students</h3>
         <ul className="list">
-          {dashboard?.roster?.length ? (
-            dashboard.roster.map((item, index) => (
-              <li key={`${item.studentId ?? index}`}>
-                <strong>{item.student?.name ?? item.student?.username ?? item.studentId}</strong>
-                <span className="muted">Class: {item.classId ?? "n/a"}</span>
-                <span className="badge">{item.status ?? "active"}</span>
-              </li>
-            ))
-          ) : (
-            <li className="muted">No enrollments yet.</li>
-          )}
-        </ul>
-      </section>
-
-      <section className="card">
-        <h3>Unlocked topics</h3>
-        <ul className="list">
-          {dashboard?.unlocks?.length ? (
-            dashboard.unlocks.map((item, index) => (
-              <li key={`${item.topicId ?? index}`}>
-                <strong>{item.topic?.title ?? item.topicId}</strong>
-                <span className="muted">Unlocked: {item.unlockedAt ?? "recently"}</span>
-                <span className="muted">Class: {item.classId ?? "n/a"}</span>
-              </li>
-            ))
-          ) : (
-            <li className="muted">No topics unlocked yet.</li>
-          )}
+          {students.length === 0 && <li className="muted">No students yet.</li>}
+          {students.map((student) => (
+            <li key={student.id}>
+              <strong>{student.name}</strong>
+              {student.username && <span className="muted">Username: {student.username}</span>}
+              <span className="muted">Class ID: {student.classId}</span>
+            </li>
+          ))}
         </ul>
       </section>
     </div>

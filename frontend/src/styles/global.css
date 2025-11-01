@@ -24,3 +24,11 @@ a {
 button {
   font: inherit;
 }
+
+button.secondary {
+  background: transparent;
+  color: #1d4ed8;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.6rem 1.2rem;
+}

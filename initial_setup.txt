@@ -1,82 +1,63 @@
-IBCS APP — INITIAL SETUP
+IBCS APP — INITIAL SETUP (FLAT STACK POC)
 
 Goal
-Set up the repo, database, and auth so the skeleton app can ship on GitHub Pages with zero paid services.
+Serve a React single-page app from GitHub Pages that talks directly to InstantDB (no middle tier) for teacher login, class creation, and student enrollment.
 
 Prerequisites
-- GitHub account with Pages enabled
-- GitHub CLI installed: brew install gh
-- Node optional for local tooling
-- Cloudflare account for Workers free tier
-- InstantDB account for hosted free tier
+- GitHub Pages enabled for the repo (`stss15/ibcs-app`)
+- Node.js 18+ with npm
+- InstantDB app ID and admin token (dev-only)
 
-1. Create the repo
-gh repo create ibcs-app --public --clone
-cd ibcs-app
+1. Project layout
+```
+frontend/               # React + Vite SPA
+public/app-config.json  # APP_ID + admin token (dev only)
+src/                    # Legacy static pages & styles (landing)
+```
 
-2. Scaffold the folders
-mkdir -p public scripts tests worker/src
-mkdir -p src/{lib,components,pages/{teacher,student}}
-mkdir -p src/content/{A1/{A1.1,A1.2,A1.3,A1.4},A2/{A2.1,A2.2,A2.3,A2.4},A3/{A3.1,A3.2,A3.3,A3.4},A4/{A4.1,A4.2,A4.3,A4.4},B1/{B1.1},B2/{B2.1,B2.2,B2.3,B2.4,B2.5},B3/{B3.1,B3.2},B4/{B4.1}}
+2. Install dependencies
+```bash
+npm install
+```
 
-3. Commit the scaffold
-git add .
-git commit -m "chore: scaffold structure"
-git push -u origin main
+3. Configure runtime (dev only)
+`public/app-config.json`
+```json
+{
+  "APP_ID": "fa61cd0c-d77e-44e5-919d-90a90ead7039",
+  "INSTANT_ADMIN_TOKEN": "c88b98ee-4a55-4d83-ae15-57fdc04ed886"
+}
+```
 
-4. GitHub Pages
-In repo Settings -> Pages -> Build and deployment -> Source: Deploy from branch
-Branch main root
-Use relative links in HTML to avoid path breaks
+4. Run locally
+```bash
+npm run dev --prefix frontend
+```
+Vite serves at `http://localhost:5173/ibcs-app/` (base already set).
 
-5. InstantDB
-- Create an app and note the appId
-- Collections to create
-  teachers, classes, students, topics, subtopics, sections, items, progress, grades
-- Rules
-  students can write only their own progress
-  teachers can manage classes, unlocks, and marking
-- Put appId into src/lib/config.ts later
+5. Build
+```bash
+npm run build --prefix frontend
+```
+Publish `frontend/dist` to the branch used by GitHub Pages.
 
-6. Cloudflare Worker for auth and privileged writes
-cd worker
-echo 'name = "ibcs-auth"
-main = "src/index.ts"
-compatibility_date = "2024-11-01"' > wrangler.toml
+6. InstantDB collections (schemaless)
+- teachers: `{ username, password, createdAt }
+- classes: `{ className, description?, teacherUsername, createdAt, id }
+- students: `{ name, username?, password, classId, teacherUsername, createdAt }
 
-wrangler login
-wrangler kv namespace create TOKEN_STORE
-wrangler secret put TOKEN_SECRET
+7. Demo bootstrap
+The SPA seeds the demo teacher on first load if `teachers` lacks `username === "MrStewart"`.
 
-Create worker/src/index.ts with minimal endpoints
-- POST /t/login displayName password -> token
-- POST /s/login classCode username password -> token
-- POST /t/unlock classId topicCode -> ok
-- POST /t/mark studentId subtopicId score feedback -> ok
+8. Verification
+1. Open https://stss15.github.io/ibcs-app/
+2. Log in as Teacher (`MrStewart / Dragon-S25052`)
+3. Create a class
+4. Add a student (`Alice / student123`)
+5. Refresh — class & student persist
+6. Log in as `Alice` (student) to see assigned class
 
-Deploy
-wrangler deploy
-
-7. Frontend wiring
-Create src/lib/config.ts with your values
-export const CONFIG = {
-  appId: "INSTANTDB_APP_ID",
-  apiBase: "https://YOUR_WORKER.workers.dev"
-};
-
-Create three starter pages
-- src/pages/index.html
-- src/pages/teacher/dashboard.html
-- src/pages/student/home.html
-
-8. Sanity test
-- Load the Pages URL
-- Teacher login returns a token from Worker
-- Topics list renders from InstantDB
-- Unlock a topic for a dummy class
-- Student can pass a dummy formative and the next section unlocks
-
-9. Next
-- Add empty JSON stubs to every subtopic folder
-- Add Item components MCQ TF Gap Match Code
-- Add CSV export from teacher dashboard
+9. Cleanup after demo
+- Rotate the InstantDB admin token
+- Move to a server-side token minting flow
+- Replace SHA-256 hashes with server-side bcrypt/argon2 in production
