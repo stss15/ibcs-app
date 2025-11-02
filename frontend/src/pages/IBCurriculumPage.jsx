@@ -284,13 +284,23 @@ function IBCurriculumPage() {
 
                         const unlocked = status === "unlocked";
                         const hlOnly = status === "hl-only";
+                        const lessonHref = `/lesson/${encodeURIComponent(lesson.id)}`;
+                        const canLaunchLesson = canViewAll || unlocked;
 
                         return (
                           <li key={lesson.id} className={`ib-lesson ib-lesson--${status}`}>
                             <span className="ib-lesson__code">{lesson.id}</span>
                             <span className="ib-lesson__title">{lesson.title}</span>
                             <span className="ib-lesson__status">
-                              {unlocked && <span className="ib-status-pill is-unlocked">Unlocked</span>}
+                              {canLaunchLesson && (
+                                <Link
+                                  to={lessonHref}
+                                  className="ib-status-pill is-unlocked ib-status-pill--link"
+                                  aria-label={`Open ${lesson.title}`}
+                                >
+                                  {canViewAll ? "Open lesson" : "Start lesson"}
+                                </Link>
+                              )}
                               {canViewAll && <span className="ib-status-pill is-teacher">{staffBadgeLabel}</span>}
                               {!canViewAll && hlOnly && <span className="ib-status-pill is-hl">HL only</span>}
                               {!canViewAll && !unlocked && !hlOnly && <span className="ib-status-pill">Locked</span>}
@@ -303,6 +313,17 @@ function IBCurriculumPage() {
                 );
               })}
             </div>
+            <footer className="ib-unit-assessment">
+              <div>
+                <h3>End of unit assessment</h3>
+                <p className="muted">
+                  Finish every chapter in {selectedUnit.id} to unlock the full unit assessment and check mastery.
+                </p>
+              </div>
+              <button type="button" className="pill pill--action" disabled>
+                Unit assessment locked
+              </button>
+            </footer>
           </>
         ) : (
           <div className="ib-placeholder">

@@ -110,6 +110,33 @@ function writeStoredPasswords(map) {
   }
 }
 
+function usernameKey(username) {
+  return `username:${username.toLowerCase()}`;
+}
+
+function rememberPasswords(prev, entries) {
+  const next = { ...prev };
+  for (const entry of entries) {
+    if (!entry?.password) continue;
+    if (entry.id) {
+      next[entry.id] = entry.password;
+    }
+    if (entry.username) {
+      next[usernameKey(entry.username)] = entry.password;
+    }
+  }
+  return next;
+}
+
+function resolveStoredPassword(map, student) {
+  const byId = student?.id ? map[student.id] : undefined;
+  if (byId) return byId;
+  if (student?.username) {
+    return map[usernameKey(student.username)];
+  }
+  return undefined;
+}
+
 function getStageConfig(stageId) {
   return STAGE_CONFIG.find((item) => item.id === stageId) ?? STAGE_CONFIG[0];
 }
@@ -297,7 +324,8 @@ function TeacherDashboardPage() {
 
   const updatePasswordLookup = useCallback((updater) => {
     setPasswordLookupState((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater || {};
+      const result = typeof updater === "function" ? updater(prev) : updater;
+      const next = result ? result : {};
       writeStoredPasswords(next);
       return next;
     });
@@ -318,15 +346,15 @@ function TeacherDashboardPage() {
       const data = await getTeacherDashboard(token);
       setDashboard(data);
       if (Array.isArray(data?.students)) {
-        const updates = {};
+        const entries = [];
         for (const student of data.students) {
           const plain = extractPlainPassword(student);
           if (plain) {
-            updates[student.id] = plain;
+            entries.push({ id: student.id, username: student.username, password: plain });
           }
         }
-        if (Object.keys(updates).length > 0) {
-          updatePasswordLookup((prev) => ({ ...prev, ...updates }));
+        if (entries.length > 0) {
+          updatePasswordLookup((prev) => rememberPasswords(prev, entries));
         }
       }
     } catch (error) {
@@ -490,18 +518,23 @@ function TeacherDashboardPage() {
       return;
     }
 
+    if (!username) {
+      setStatus({ tone: "error", message: "Username is required." });
+      return;
+    }
+
     try {
       setStatus({ tone: "info", message: "Adding student…" });
       const created = await createStudent(token, {
         classId,
         firstName,
         lastName,
-        username: username || undefined,
+        username,
         password,
         yearGroup: meta.yearGroupLabel,
         programme: meta.programme,
       });
-      updatePasswordLookup((prev) => ({ ...prev, [created.id]: password }));
+      updatePasswordLookup((prev) => rememberPasswords(prev, [{ id: created.id, username: created.username, password }]));
       setVisiblePasswords((prev) => ({ ...prev, [created.id]: true }));
       setStudentModal(null);
       await loadDashboard();
@@ -553,11 +586,16 @@ function TeacherDashboardPage() {
         students: sanitizedStudents,
       });
 
-      const passwordMap = {};
-      created.forEach((student, index) => {
-        passwordMap[student.id] = prepared[index]?.passwordPlain ?? "";
-      });
-      updatePasswordLookup((prev) => ({ ...prev, ...passwordMap }));
+      const passwordEntries = created
+        .map((student, index) => ({
+          id: student.id,
+          username: student.username,
+          password: prepared[index]?.passwordPlain ?? "",
+        }))
+        .filter((entry) => entry.password);
+      if (passwordEntries.length > 0) {
+        updatePasswordLookup((prev) => rememberPasswords(prev, passwordEntries));
+      }
       setVisiblePasswords((prev) => ({ ...prev, ...Object.fromEntries(created.map((student) => [student.id, true])) }));
 
       setBulkStatus({ tone: "success", message: `${created.length} students imported.` });
@@ -683,7 +721,7 @@ function TeacherDashboardPage() {
                     </thead>
                     <tbody>
                       {students.map((student) => {
-                        const storedPassword = passwordLookup[student.id] ?? student.password ?? "";
+                        const storedPassword = resolveStoredPassword(passwordLookup, student) ?? student.password ?? "";
                         const isHash = typeof storedPassword === "string" && storedPassword.startsWith("$2b$");
                         const plainPassword = isHash ? "" : storedPassword;
                         const isVisible = visiblePasswords[student.id];
@@ -866,11 +904,12 @@ function TeacherDashboardPage() {
                   />
                 </label>
                 <label>
-                  <span>Username (optional)</span>
+                  <span>Username</span>
                   <input
                     value={studentForm.username}
                     onChange={(event) => handleStudentFormChange("username", event.target.value)}
-                    placeholder="auto-generated if left blank"
+                    placeholder="Enter unique username"
+                    required
                   />
                 </label>
                 <label>

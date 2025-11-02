@@ -30,6 +30,8 @@ function Layout({ children }) {
     return null;
   }, [role]);
 
+  const studentTrack = role === "student" ? (session?.user?.curriculumTrack || "").toLowerCase() : "";
+
   const navigationLinks = useMemo(() => {
     const links = [
       {
@@ -37,13 +39,17 @@ function Layout({ children }) {
         label: "Curriculum overview",
         match: (pathname) => pathname === "/curriculum",
       },
-      {
+    ];
+
+    const allowIbLink = role === "teacher" || role === "admin" || studentTrack.startsWith("ib");
+    if (allowIbLink) {
+      links.push({
         to: "/curriculum/ib",
         label: "IB curriculum map",
         match: (pathname) =>
           pathname.startsWith("/curriculum/ib") || pathname.startsWith("/topic") || pathname.startsWith("/lesson"),
-      },
-    ];
+      });
+    }
 
     if (role === "teacher") {
       links.push({
@@ -66,7 +72,7 @@ function Layout({ children }) {
     }
 
     return links;
-  }, [role]);
+  }, [role, studentTrack]);
 
   const handleSignOut = useCallback(() => {
     clear();

@@ -28,6 +28,20 @@ function progressLabel(status) {
   }
 }
 
+function describeTrack(track) {
+  const value = (track || "").toLowerCase();
+  if (value.startsWith("ib")) {
+    return "IB Computer Science";
+  }
+  if (value === "igcse") {
+    return "IGCSE Computer Science";
+  }
+  if (value.startsWith("ks3")) {
+    return "Key Stage 3 Computer Science";
+  }
+  return "Curriculum";
+}
+
 function StudentDashboardPage() {
   const { session, ready } = useSession();
   const navigate = useNavigate();
@@ -79,7 +93,11 @@ function StudentDashboardPage() {
     return map;
   }, [progress]);
 
-  const track = student?.curriculumTrack ?? studentSession?.curriculumTrack ?? "ib-sl";
+  const track = (student?.curriculumTrack ?? studentSession?.curriculumTrack ?? "ib-sl").toLowerCase();
+  const isIBTrack = track.startsWith("ib");
+  const trackDisplayName = describeTrack(track);
+  const curriculumLink = isIBTrack ? "/curriculum/ib" : "/curriculum";
+  const curriculumCtaLabel = isIBTrack ? "View curriculum map" : "Open curriculum overview";
 
   const unitSummaries = useMemo(() => {
     if (!manifest) return [];
@@ -135,10 +153,7 @@ function StudentDashboardPage() {
         <div className="page-hero__content">
           <span className="page-hero__eyebrow">Student dashboard</span>
           <h1 className="page-hero__title">Hi {studentSession.displayName ?? studentSession.username}</h1>
-          <p className="muted">
-            Your progress through the IB Computer Science pathway lives here. Lessons unlock as your teacher enables
-            them—use this page to see what to tackle next.
-          </p>
+          <p className="muted">Your progress through the {trackDisplayName} pathway lives here. Lessons unlock as your teacher enables them—use this page to see what to tackle next.</p>
         </div>
         <div className="student-overview">
           <div>
@@ -161,8 +176,8 @@ function StudentDashboardPage() {
       <section className="student-class-card">
         <header>
           <h2>Your class</h2>
-          <Link to="/curriculum/ib" className="pill">
-            View curriculum map
+          <Link to={curriculumLink} className="pill">
+            {curriculumCtaLabel}
           </Link>
         </header>
         {classInfo ? (
@@ -185,7 +200,7 @@ function StudentDashboardPage() {
       <section className="student-units">
         <header>
           <div>
-            <h2>IB Computer Science units</h2>
+            <h2>{trackDisplayName} units</h2>
             <p className="muted">Work through each unit in turn. Completed lessons fill the bar for that topic.</p>
           </div>
           <span className="student-unit-progress">{totalCompleted} of {totalLessons} lessons complete</span>
@@ -206,7 +221,13 @@ function StudentDashboardPage() {
                 <span>{unit.unlocked} unlocked</span>
                 <span>{unit.total} total</span>
               </div>
-              <Link to={`/curriculum/ib`} state={{ focusUnit: unit.id, focusChapter: unit.firstChapter }}>
+              <Link
+                to={
+                  isIBTrack
+                    ? { pathname: "/curriculum/ib", state: { focusUnit: unit.id } }
+                    : curriculumLink
+                }
+              >
                 Continue unit
               </Link>
             </article>
@@ -243,4 +264,3 @@ function StudentDashboardPage() {
 }
 
 export default StudentDashboardPage;
-
