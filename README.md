@@ -1,12 +1,26 @@
-# ibcs-app (POC)
+# ibcs-app
 
-Proof-of-concept for the IB Computer Science learning platform using a **flat stack**:
+IB Computer Science learning platform with authentication and database backend.
 
-- **Frontend**: React + Vite single-page app hosted on **GitHub Pages** (`https://stss15.github.io/ibcs-app/`).
-- **Backend**: none (for this POC). The browser talks directly to **InstantDB** using a temporary admin token.
-- **Database**: InstantDB collections (`teachers`, `classes`, `students`).
+## Stack
 
-> ⚠️ **Security warning**: The admin token is exposed client-side (`public/app-config.json`) strictly for this prototype. Rotate the token immediately after demos and move to a server-issued token flow when productionising.
+- **Frontend**: React + Vite single-page app hosted on **GitHub Pages** (`https://stss15.github.io/ibcs-app/`)
+- **Backend**: Cloudflare Worker for authentication and secure operations
+- **Database**: InstantDB collections (`teachers`, `classes`, `students`)
+
+## 🚀 Quick Setup
+
+**Need to set up the database and worker? Start here:**
+
+1. **[START_HERE.md](START_HERE.md)** - Begin here! Automated setup in 5 minutes
+2. **[QUICK_START.md](QUICK_START.md)** - Complete step-by-step guide
+3. **[SETUP_CHECKLIST.md](SETUP_CHECKLIST.md)** - Track your progress
+
+**For developers:**
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - How everything connects
+- **[worker/README.md](worker/README.md)** - Worker-specific docs
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed technical guide
 
 ---
 
@@ -28,118 +42,239 @@ src/styles/landing.css # Styling for the GitHub Pages landing splash
 
 ---
 
-## InstantDB setup
+## Database Schema
 
-Collections used in this POC (schemaless, but recommended fields):
+InstantDB collections (schemaless, but recommended fields):
 
-1. **teachers**
-   - `username` (string, unique)
-   - `password` (string, SHA-256 hash)
-   - `createdAt` (ISO timestamp)
-2. **classes**
-   - `className` (string)
-   - `description` (string, optional)
-   - `teacherUsername` (string, links to teachers.username)
-   - `createdAt` (ISO timestamp)
-3. **students**
-   - `name` (string)
-   - `username` (string, optional but useful for student login later)
-   - `password` (string, SHA-256 hash)
-   - `classId` (string, InstantDB document id)
-   - `teacherUsername` (string)
-   - `createdAt` (ISO timestamp)
+### teachers
+- `username` (string, unique)
+- `password` (string, bcrypt hash)
+- `displayName` (string, optional)
+- `createdAt` (ISO timestamp)
 
-The app seeds the demo teacher automatically:
+### classes
+- `className` (string)
+- `description` (string, optional)
+- `teacherUsername` (string, links to teachers.username)
+- `createdAt` (ISO timestamp)
 
-```
-username: MrStewart
-password: Dragon-S25052 (stored as SHA-256 hash)
-```
+### students
+- `name` (string)
+- `username` (string, optional but useful for student login)
+- `password` (string, bcrypt hash)
+- `classId` (string, InstantDB document id)
+- `teacherUsername` (string)
+- `createdAt` (ISO timestamp)
+
+You'll create the initial teacher account during setup (see [START_HERE.md](START_HERE.md))
 
 ---
 
-## Running locally
+## Local Development
+
+### First Time Setup
+
+1. **Set up InstantDB and Cloudflare Worker** (required first time only):
+   ```bash
+   cd worker
+   ./setup.sh
+   ```
+   See [START_HERE.md](START_HERE.md) for detailed instructions.
+
+2. **Update frontend config** with your InstantDB credentials:
+   Edit `frontend/public/app-config.json`
+
+### Running the App
 
 ```bash
+cd frontend
 npm install
-npm run dev --prefix frontend
+npm run dev
 ```
 
-Vite automatically serves the SPA at `http://localhost:5173/ibcs-app/` (because the base is set to `/ibcs-app/`).
+The app will be available at `http://localhost:5173`
 
-To build:
+### Building for Production
 
 ```bash
-npm run build --prefix frontend
+cd frontend
+npm run build
 ```
 
-Deploy the contents of `frontend/dist/` to the branch that GitHub Pages uses (typically `main` or `gh-pages`).
+Deploy the contents of `frontend/dist/` to GitHub Pages.
 
 ---
 
-## Runtime config
+## Configuration
 
-`public/app-config.json` contains:
+### Frontend Config
+
+`frontend/public/app-config.json` contains your InstantDB credentials:
 
 ```json
 {
-  "APP_ID": "fa61cd0c-d77e-44e5-919d-90a90ead7039",
-  "INSTANT_ADMIN_TOKEN": "c88b98ee-4a55-4d83-ae15-57fdc04ed886"
+  "APP_ID": "your-instantdb-app-id",
+  "INSTANT_ADMIN_TOKEN": "your-instantdb-admin-token"
 }
 ```
 
-At startup the SPA fetches this JSON, caches it, and uses it to call InstantDB.
+Get these credentials from: https://www.instantdb.com/dash
+
+### Worker Config
+
+The Cloudflare Worker requires these secrets (set via `npx wrangler secret put`):
+- `INSTANT_APP_ID` - Your InstantDB app ID
+- `INSTANT_ADMIN_TOKEN` - Your InstantDB admin token
+- `TOKEN_SECRET` - Secret for JWT signing
+- `SEED_KEY` - Secret for seeding initial data
+
+See [worker/README.md](worker/README.md) for details.
 
 ---
 
-## Application flow
+## Application Flow
 
-1. **Bootstrap** (`frontend/src/lib/bootstrap.js`)
-   - On first load we check whether `teachers` contains `MrStewart`.
-   - If missing, the app inserts the teacher with a SHA-256 hash of `Dragon-S25052`.
+### Authentication Flow
 
-2. **Login** (`LoginPage`)
-   - User selects Teacher or Student.
-   - We SHA-256 the entered password client-side and compare with InstantDB.
-   - Session is stored in `localStorage` (`ibcs.session`).
+1. **Login** (`LoginPage`)
+   - User selects Teacher or Student role
+   - Credentials sent to Cloudflare Worker
+   - Worker verifies password (bcrypt) against InstantDB
+   - Worker generates JWT token
+   - Session stored in `localStorage`
 
-3. **Teacher dashboard** (`/dashboard`)
-   - Lists classes where `teacherUsername` matches the session.
-   - Create class → `create("classes", {...})`.
-   - Add student → `create("students", {..., password: <sha256>})`.
-   - Roster shows students filtered by class ID.
+2. **Protected Operations**
+   - Creating classes and students goes through the Worker
+   - Worker validates JWT and permissions
+   - Worker hashes passwords with bcrypt
+   - Worker writes to InstantDB
 
-4. **Student view** (`/student`)
-   - Displays the assigned class for the logged-in student.
+### Data Flow
 
-All writes/read go straight to InstantDB’s REST API via `frontend/src/lib/instant.js`.
+1. **Teacher Dashboard** (`/dashboard`)
+   - Lists classes where `teacherUsername` matches session
+   - Create class via Worker: `POST /teacher/classes`
+   - Add student via Worker: `POST /teacher/students`
+   - Display roster filtered by class ID
 
----
+2. **Student View** (`/student`)
+   - Shows assigned class for logged-in student
+   - Access to learning materials and progress
 
-## Production caveats
+### Security
 
-- **Token exposure**: anyone can inspect the network tab and use the admin token. Rotate immediately after demos.
-- **No server-side validation**: class ownership, password hashing, and auth are enforced client-side only in this POC.
-- **Rate limits**: the InstantDB helper includes a very small retry/backoff but you should harden it if you spike requests.
-- **Password storage**: SHA-256 is used purely for simplicity. Switch to bcrypt/argon2 on the server later.
+- Passwords hashed with bcrypt (8 rounds)
+- JWT tokens for session management (8-hour expiry)
+- Teacher operations require valid authentication
+- CORS protection on Worker endpoints
 
----
-
-## Verification checklist
-
-1. Load `https://stss15.github.io/ibcs-app/`.
-2. If prompted, the app silently seeds `MrStewart` (toast appears once).
-3. Log in as Teacher: `MrStewart / Dragon-S25052`.
-4. Create a class (e.g., “HL Year 1”).
-5. Add a student (e.g., `username: Alice`, `password: student123`).
-6. Refresh the page → class and student persist (read from InstantDB).
-7. Sign out, log in as Student (`Alice / student123`) → see the class summary.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed diagrams and flow charts.
 
 ---
 
-## After the demo
+## Security Considerations
 
-- Rotate the InstantDB admin token (`INSTANT_ADMIN_TOKEN`).
-- Migrate sensitive operations server-side (Cloudflare Worker, Flask, etc.).
-- Replace SHA-256 with a stronger password scheme on the server.
-- Remove `public/app-config.json` or replace it with runtime-configured values.
+### Current Setup
+- ✅ Passwords hashed with bcrypt on the server
+- ✅ JWT-based authentication
+- ✅ Protected endpoints for sensitive operations
+- ✅ CORS protection
+- ⚠️ Admin token exposed in frontend config (required for direct InstantDB access)
+
+### For Production
+- Consider moving all data operations through Worker
+- Implement rate limiting
+- Add request logging and monitoring
+- Set up proper environment separation (dev/staging/prod)
+- Rotate tokens regularly
+- Add email verification for new accounts
+
+---
+
+## Testing the App
+
+### Local Testing
+
+1. Complete setup (see [START_HERE.md](START_HERE.md))
+2. Run frontend: `cd frontend && npm run dev`
+3. Open http://localhost:5173
+4. Log in as Teacher with credentials you created
+5. Create a class (e.g., "Year 12 Computer Science")
+6. Add a student with username and password
+7. Log out and log in as the student
+8. Verify student can see their class
+
+### Production Testing
+
+1. Build: `cd frontend && npm run build`
+2. Deploy to GitHub Pages
+3. Visit `https://stss15.github.io/ibcs-app/`
+4. Test login and functionality
+5. Check browser console for any errors
+6. Verify CORS settings allow your domain
+
+## Troubleshooting
+
+### Common Issues
+
+**Login fails:**
+- Check browser console for errors
+- Verify `app-config.json` has correct credentials
+- Ensure teacher account was seeded
+- Check Worker logs: `cd worker && npm run tail`
+
+**CORS errors:**
+- Add your domain to `CORS_ALLOWED_ORIGINS` in `worker/wrangler.toml`
+- Redeploy worker: `cd worker && npm run deploy`
+
+**Database errors:**
+- Verify InstantDB credentials are correct
+- Check InstantDB dashboard for API limits
+- Ensure InstantDB app is active
+
+See [SETUP_GUIDE.md](SETUP_GUIDE.md) for more troubleshooting tips.
+
+---
+
+## Useful Commands
+
+### Worker Commands
+```bash
+cd worker
+npm run deploy      # Deploy worker to Cloudflare
+npm run tail        # View live logs
+npm run seed        # Seed initial teacher
+npm run whoami      # Check Cloudflare login
+```
+
+### Frontend Commands
+```bash
+cd frontend
+npm run dev         # Start development server
+npm run build       # Build for production
+npm run preview     # Preview production build
+```
+
+## Documentation
+
+- **[START_HERE.md](START_HERE.md)** - Setup instructions (start here!)
+- **[QUICK_START.md](QUICK_START.md)** - Step-by-step setup guide
+- **[SETUP_CHECKLIST.md](SETUP_CHECKLIST.md)** - Track your progress
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and data flow
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed technical guide
+- **[worker/README.md](worker/README.md)** - Worker documentation
+- **[worker/DEPLOY.md](worker/DEPLOY.md)** - Deployment instructions
+
+## Support
+
+### Useful Links
+- **InstantDB Dashboard**: https://www.instantdb.com/dash
+- **Cloudflare Dashboard**: https://dash.cloudflare.com
+- **InstantDB Docs**: https://www.instantdb.com/docs
+- **Cloudflare Workers Docs**: https://developers.cloudflare.com/workers/
+
+### Getting Help
+1. Check the troubleshooting sections in the docs above
+2. View Worker logs: `cd worker && npm run tail`
+3. Check browser console for frontend errors
+4. Verify configuration in `app-config.json` and `wrangler.toml`

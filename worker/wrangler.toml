@@ -1,0 +1,13 @@
+name = "ibcs-auth"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+CORS_ALLOWED_ORIGINS = "https://stss15.github.io,http://localhost:5173"
+
+# Secrets (set via: npx wrangler secret put SECRET_NAME)
+# Required secrets:
+# - INSTANT_APP_ID: Your InstantDB App ID
+# - INSTANT_ADMIN_TOKEN: Your InstantDB Admin Token
+# - TOKEN_SECRET: Secret for JWT signing (generate with: openssl rand -base64 32)
+# - SEED_KEY: (Optional) Secret key for seeding initial data
