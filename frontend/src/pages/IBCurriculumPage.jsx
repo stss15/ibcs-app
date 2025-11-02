@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useSession } from "../hooks/useSession.js";
 import {
   useCurriculumManifest,
@@ -59,9 +59,11 @@ function computeLessonStatus({
 
 function IBCurriculumPage() {
   const { session } = useSession();
+  const location = useLocation();
   const { manifest, status, error } = useCurriculumManifest();
   const role = session?.user?.role ?? null;
   const isTeacher = role === "teacher";
+  const canToggleTrack = role === "teacher" || role === "admin";
   const [selectedUnitId, setSelectedUnitId] = useState(null);
   const [selectedTrack, setSelectedTrack] = useState(() =>
     resolveInitialTrack(isTeacher ? "ib-hl" : session?.user?.curriculumTrack, [
@@ -77,6 +79,14 @@ function IBCurriculumPage() {
       setSelectedUnitId(defaultUnit.id);
     }
   }, [manifest, selectedUnitId]);
+
+  useEffect(() => {
+    if (!manifest) return;
+    const focusUnit = location.state?.focusUnit;
+    if (focusUnit) {
+      setSelectedUnitId(focusUnit);
+    }
+  }, [location.state, manifest]);
 
   useEffect(() => {
     if (!manifest) return;
@@ -142,7 +152,7 @@ function IBCurriculumPage() {
           </Link>
         </div>
 
-        {trackOptions.length > 1 && (
+        {canToggleTrack && trackOptions.length > 1 && (
           <div className="ib-sidebar__tracks">
             <span className="ib-sidebar__tracks-label">Viewing as</span>
             <div className="ib-track-toggle" role="radiogroup" aria-label="Choose IB track">

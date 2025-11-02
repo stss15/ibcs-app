@@ -1,162 +1,256 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   archiveStudent,
   bulkCreateStudents,
   createClass,
   createStudent,
-  exportClassProgress,
   getTeacherDashboard,
-  unlockClassStage,
-  unlockStudentStage,
 } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import "./TeacherDashboardPage.css";
 
-const STAGE_PRESETS = [
-  "middle-years-lesson-1",
-  "middle-years-lesson-2",
-  "middle-years-lesson-3",
-  "igcse-lesson-1",
-  "igcse-lesson-2",
-  "igcse-lesson-3",
-  "ib-lesson-1",
-  "ib-lesson-2",
-  "ib-lesson-3",
+const STAGE_CONFIG = [
+  {
+    id: "year7",
+    label: "Year 7",
+    yearGroupLabel: "Year 7",
+    cohortOffset: 7,
+    groups: ["A", "B", "C", "D"],
+    programme: "ks3",
+    buildCode: (cohort, group) => `CsC/${cohort}F${group}`,
+  },
+  {
+    id: "year8",
+    label: "Year 8",
+    yearGroupLabel: "Year 8",
+    cohortOffset: 6,
+    groups: ["A", "B", "C", "D"],
+    programme: "ks3",
+    buildCode: (cohort, group) => `CsC/${cohort}F${group}`,
+  },
+  {
+    id: "year9",
+    label: "Year 9",
+    yearGroupLabel: "Year 9",
+    cohortOffset: 5,
+    groups: ["A", "B", "C", "D"],
+    programme: "ks3",
+    buildCode: (cohort, group) => `CsC/${cohort}F${group}`,
+  },
+  {
+    id: "igcse",
+    label: "IGCSE",
+    yearGroupLabel: "IGCSE",
+    cohortOffset: 4,
+    groups: ["G1", "G2"],
+    programme: "igcse",
+    buildCode: (cohort, group) => `CsC/${cohort}${group}`,
+  },
+  {
+    id: "ib",
+    label: "IB",
+    yearGroupLabel: "IB",
+    cohortOffset: 2,
+    groups: ["SL", "HL"],
+    programme: (group) => (group === "HL" ? "ib-hl" : "ib-sl"),
+    buildCode: (cohort, group) => `CsC/${cohort}${group}`,
+  },
 ];
 
-const PROGRAMMES = [
-  { value: "ks3", label: "Key Stage 3" },
-  { value: "igcse", label: "IGCSE" },
-  { value: "ib-sl", label: "IB Computer Science SL" },
-  { value: "ib-hl", label: "IB Computer Science HL" },
+const CSV_TEMPLATE = "firstName,lastName,username\n";
+const PASSWORD_WORDS = [
+  "Aero",
+  "Blaze",
+  "Comet",
+  "Delta",
+  "Echo",
+  "Frost",
+  "Glimmer",
+  "Helio",
+  "Iris",
+  "Jade",
+  "Kite",
+  "Lumen",
+  "Nova",
+  "Orion",
+  "Pip",
+  "Quill",
+  "Rune",
+  "Sol",
+  "Terra",
+  "Vivid",
+  "Wisp",
+  "Xeno",
+  "Yarrow",
+  "Zephyr",
 ];
+const PASSWORD_SYMBOLS = ["!", "?", "@", "#", "$"];
 
-const REQUIRED_STUDENT_FIELDS = ["programme", "firstName", "lastName", "password"];
-
-function normalizeProgramme(programme, yearGroup) {
-  const value = String(programme || "").trim().toLowerCase();
-  if (PROGRAMMES.some((option) => option.value === value)) {
-    return value;
-  }
-  const numeric = Number(String(yearGroup || "").replace(/\D/g, ""));
-  if (Number.isFinite(numeric)) {
-    if (numeric >= 12) return "ib-hl";
-    if (numeric >= 10) return "igcse";
-    return "ks3";
-  }
-  return "igcse";
+function getStageConfig(stageId) {
+  return STAGE_CONFIG.find((item) => item.id === stageId) ?? STAGE_CONFIG[0];
 }
 
-function formatLabel(value) {
-  if (!value) return "";
-  return value
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+function padCohort(value) {
+  const digits = String(value).replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.slice(-2).padStart(2, "0");
 }
 
-function splitCsvRow(row) {
-  const result = [];
-  let current = "";
-  let inQuotes = false;
+function defaultCohort(offsetYears) {
+  const year = new Date().getFullYear();
+  const cohort = (year % 100) + offsetYears;
+  return padCohort(cohort);
+}
 
-  for (let i = 0; i < row.length; i += 1) {
-    const char = row[i];
+function generateClassCode(stageId, cohort, group) {
+  const config = getStageConfig(stageId);
+  const cleanedGroup = group?.toUpperCase() ?? "";
+  const cleanedCohort = padCohort(cohort || defaultCohort(config.cohortOffset));
+  return config.buildCode(cleanedCohort, cleanedGroup);
+}
 
-    if (char === '"') {
-      if (inQuotes && row[i + 1] === '"') {
-        current += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === "," && !inQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
+function deriveProgramme(stageId, group) {
+  const config = getStageConfig(stageId);
+  if (typeof config.programme === "function") {
+    return config.programme(group?.toUpperCase());
+  }
+  return config.programme;
+}
+
+function deriveYearGroupLabel(stageId, group) {
+  const config = getStageConfig(stageId);
+  if (stageId === "ib") {
+    return `IB ${group?.toUpperCase() === "HL" ? "HL" : "SL"}`;
+  }
+  if (stageId === "igcse") {
+    return "IGCSE";
+  }
+  return config.yearGroupLabel;
+}
+
+function parseClassMeta(classItem) {
+  const className = classItem?.className ?? "";
+  const yearGroup = (classItem?.yearGroup ?? "").toLowerCase();
+  let stageId = null;
+  if (yearGroup.includes("year 7")) stageId = "year7";
+  else if (yearGroup.includes("year 8")) stageId = "year8";
+  else if (yearGroup.includes("year 9")) stageId = "year9";
+  else if (yearGroup.includes("igcse")) stageId = "igcse";
+  else if (yearGroup.includes("hl") || yearGroup.includes("sl") || yearGroup.includes("ib")) stageId = "ib";
+
+  const match = className.match(/^CsC\/(\d{2})([A-Za-z0-9]+)$/);
+  const cohort = match ? match[1] : "";
+  let group = match ? match[2].toUpperCase() : "";
+
+  if (stageId === "year7" || stageId === "year8" || stageId === "year9") {
+    group = group.replace(/^F/, "");
+  }
+  if (stageId === "igcse" && !group.startsWith("G")) {
+    group = `G${group}`;
+  }
+  if (stageId === "ib") {
+    group = group === "HL" ? "HL" : "SL";
   }
 
-  result.push(current.trim());
-  return result;
+  const programme = deriveProgramme(stageId ?? "year7", group);
+  const yearGroupLabel = deriveYearGroupLabel(stageId ?? "year7", group);
+
+  return {
+    stageId: stageId ?? "year7",
+    cohort: cohort || defaultCohort(getStageConfig(stageId ?? "year7").cohortOffset),
+    group: group || getStageConfig(stageId ?? "year7").groups[0],
+    programme,
+    yearGroupLabel,
+  };
 }
 
-function canonicaliseHeader(value) {
-  return value.replace(/[\s_-]+/g, "").toLowerCase();
+function generatePassword() {
+  const word = PASSWORD_WORDS[Math.floor(Math.random() * PASSWORD_WORDS.length)];
+  const number = Math.floor(Math.random() * 90) + 10;
+  const symbol = PASSWORD_SYMBOLS[Math.floor(Math.random() * PASSWORD_SYMBOLS.length)];
+  return `${word}${number}${symbol}`;
 }
 
 function parseCsvStudents(text) {
-  const lines = text
+  const rows = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
-  if (lines.length === 0) {
+  if (rows.length <= 1) {
     return [];
   }
 
-  const headerCells = splitCsvRow(lines[0]);
-  const headerMap = new Map();
+  const header = rows[0].split(/\s*,\s*/).map((h) => h.toLowerCase());
+  const firstNameIndex = header.indexOf("firstname");
+  const lastNameIndex = header.indexOf("lastname");
+  const usernameIndex = header.indexOf("username");
 
-  headerCells.forEach((header, index) => {
-    const canonical = canonicaliseHeader(header);
-    if (canonical === "username") headerMap.set("username", index);
-    if (canonical === "firstname") headerMap.set("firstName", index);
-    if (canonical === "lastname") headerMap.set("lastName", index);
-    if (canonical === "yeargroup") headerMap.set("yearGroup", index);
-    if (canonical === "programme" || canonical === "program") headerMap.set("programme", index);
-    if (canonical === "password") headerMap.set("password", index);
-  });
-
-  const missing = REQUIRED_STUDENT_FIELDS.filter((field) => !headerMap.has(field));
-  if (missing.length > 0) {
-    throw new Error(`CSV is missing required columns: ${missing.join(", ")}`);
+  if (firstNameIndex === -1 || lastNameIndex === -1) {
+    throw new Error("Template must include firstName and lastName columns.");
   }
 
-  const students = [];
-  for (let i = 1; i < lines.length; i += 1) {
-    const row = splitCsvRow(lines[i]);
-    if (row.every((cell) => cell === "")) continue;
-    const student = {
-      username: headerMap.has("username") ? row[headerMap.get("username")] : "",
-      firstName: row[headerMap.get("firstName")] ?? "",
-      lastName: row[headerMap.get("lastName")] ?? "",
-      yearGroup: row[headerMap.get("yearGroup")] ?? "",
-      programme: row[headerMap.get("programme")] ?? "",
-      password: row[headerMap.get("password")] ?? "",
+  return rows.slice(1).map((row) => {
+    const cells = row.split(/\s*,\s*/);
+    return {
+      firstName: cells[firstNameIndex] ?? "",
+      lastName: cells[lastNameIndex] ?? "",
+      username: usernameIndex === -1 ? "" : cells[usernameIndex] ?? "",
     };
+  });
+}
 
-    const missingField = REQUIRED_STUDENT_FIELDS.find((field) => !student[field]?.trim());
-    if (missingField) {
-      throw new Error(`Row ${i + 1} is missing ${missingField}.`);
-    }
-
-    student.programme = normalizeProgramme(student.programme, student.yearGroup);
-    students.push(student);
-  }
-
-  return students;
+function downloadTemplate() {
+  const blob = new Blob([CSV_TEMPLATE], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "ibcs-student-template.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 function TeacherDashboardPage() {
   const { session, ready } = useSession();
   const navigate = useNavigate();
+  const token = session?.token ?? null;
+  const isTeacher = session?.user?.role === "teacher";
 
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
-  const [bulkStatus, setBulkStatus] = useState(null);
-  const [unlockStatus, setUnlockStatus] = useState(null);
-  const [exportStatus, setExportStatus] = useState(null);
-  const [bulkFile, setBulkFile] = useState(null);
+  const [expandedClassId, setExpandedClassId] = useState(null);
 
-  const token = session?.token ?? null;
-  const isTeacher = session?.user?.role === "teacher";
-  const teacherName =
-    dashboard?.teacher?.displayName ?? session?.user?.displayName ?? session?.user?.username ?? "Teacher";
+  const [classModalOpen, setClassModalOpen] = useState(false);
+  const [studentModal, setStudentModal] = useState(null); // { class: object, mode: "single" | "bulk" }
+
+  const [classForm, setClassForm] = useState(() => {
+    const stage = STAGE_CONFIG[0];
+    const cohort = defaultCohort(stage.cohortOffset);
+    const group = stage.groups[0];
+    return {
+      stageId: stage.id,
+      cohort,
+      group,
+      className: generateClassCode(stage.id, cohort, group),
+      description: "",
+    };
+  });
+
+  const [studentForm, setStudentForm] = useState({
+    firstName: "",
+    lastName: "",
+    username: "",
+    password: generatePassword(),
+  });
+
+  const [bulkCsv, setBulkCsv] = useState(null);
+  const [bulkStatus, setBulkStatus] = useState(null);
+  const [passwordLookup, setPasswordLookup] = useState({});
+  const [visiblePasswords, setVisiblePasswords] = useState({});
 
   useEffect(() => {
     if (!ready) return;
@@ -171,210 +265,245 @@ function TeacherDashboardPage() {
     try {
       const data = await getTeacherDashboard(token);
       setDashboard(data);
-      setStatus(null);
     } catch (error) {
       setStatus({ tone: "error", message: error.message || "Failed to load dashboard." });
     } finally {
       setLoading(false);
     }
-  }, [isTeacher, token]);
+  }, [token, isTeacher]);
 
   useEffect(() => {
     if (!ready || !isTeacher) return;
     loadDashboard();
   }, [ready, isTeacher, loadDashboard]);
 
-  const classOptions = useMemo(() => dashboard?.classes ?? [], [dashboard?.classes]);
-  const studentOptions = useMemo(() => dashboard?.students ?? [], [dashboard?.students]);
-  const archivedStudents = useMemo(() => dashboard?.archivedStudents ?? [], [dashboard?.archivedStudents]);
-  const summaryMetrics = useMemo(
-    () => [
-      { label: "Active classes", value: classOptions.length },
-      { label: "Active students", value: studentOptions.length },
-      { label: "Archived students", value: archivedStudents.length },
-    ],
-    [archivedStudents.length, classOptions.length, studentOptions.length],
-  );
-  const recentUnlocks = useMemo(() => {
-    const classItems =
-      (dashboard?.classUnlocks ?? []).map((entry) => ({
-        id: entry.id,
-        label: formatLabel(entry.stageKey),
-        detail: `Class ${entry.classId}`,
-        when: entry.unlockedAt,
-      })) ?? [];
-    const studentItems =
-      (dashboard?.studentUnlocks ?? []).map((entry) => ({
-        id: entry.id,
-        label: formatLabel(entry.stageKey),
-        detail: entry.scope === "lesson" ? `Lesson unlock · ${entry.studentId}` : `Stage unlock · ${entry.studentId}`,
-        when: entry.unlockedAt,
-      })) ?? [];
-    return [...classItems, ...studentItems]
-      .filter((item) => item.when)
-      .sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime())
-      .slice(0, 6);
-  }, [dashboard?.classUnlocks, dashboard?.studentUnlocks]);
+  const classes = useMemo(() => {
+    const list = dashboard?.classes ?? [];
+    return [...list].sort((a, b) => a.className.localeCompare(b.className));
+  }, [dashboard?.classes]);
 
-  const handleCreateClass = async (event) => {
+  const studentsByClass = useMemo(() => {
+    const map = new Map();
+    for (const student of dashboard?.students ?? []) {
+      if (!map.has(student.classId)) {
+        map.set(student.classId, []);
+      }
+      map.get(student.classId).push(student);
+    }
+    for (const value of map.values()) {
+      value.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    }
+    return map;
+  }, [dashboard?.students]);
+
+  const teacherName =
+    dashboard?.teacher?.displayName ?? session?.user?.displayName ?? session?.user?.username ?? "Teacher";
+
+  const overallStudentCount = dashboard?.students?.length ?? 0;
+  const lockedLessons = dashboard?.lessonSummary?.locked ?? 0;
+  const availableLessons = dashboard?.lessonSummary?.available ?? 0;
+  const formativeComplete = dashboard?.lessonSummary?.["formative-complete"] ?? 0;
+  const summativeComplete = dashboard?.lessonSummary?.["summative-complete"] ?? 0;
+
+  const summaryCards = [
+    { label: "Active classes", value: classes.length },
+    { label: "Active students", value: overallStudentCount },
+    { label: "Available lessons", value: availableLessons },
+  ];
+
+  const handleClassStageChange = (key, value) => {
+    setClassForm((prev) => {
+      if (key === "stageId") {
+        const config = getStageConfig(value);
+        const cohort = defaultCohort(config.cohortOffset);
+        const group = config.groups[0];
+        return {
+          stageId: value,
+          cohort,
+          group,
+          description: "",
+          className: generateClassCode(value, cohort, group),
+        };
+      }
+      if (key === "cohort") {
+        return {
+          ...prev,
+          cohort: value,
+          className: generateClassCode(prev.stageId, value, prev.group),
+        };
+      }
+      if (key === "group") {
+        return {
+          ...prev,
+          group: value,
+          className: generateClassCode(prev.stageId, prev.cohort, value),
+        };
+      }
+      return { ...prev, [key]: value };
+    });
+  };
+
+  const openClassModal = () => {
+    const stage = STAGE_CONFIG[0];
+    const cohort = defaultCohort(stage.cohortOffset);
+    const group = stage.groups[0];
+    setClassForm({
+      stageId: stage.id,
+      cohort,
+      group,
+      description: "",
+      className: generateClassCode(stage.id, cohort, group),
+    });
+    setStatus(null);
+    setClassModalOpen(true);
+  };
+
+  const submitClass = async (event) => {
     event.preventDefault();
     if (!token) return;
-
-    const form = event.currentTarget;
-    const className = form.className.value.trim();
-    const description = form.description.value.trim();
-    const yearGroup = form.yearGroup.value.trim();
-
-    if (!className) {
-      setStatus({ tone: "error", message: "Class name is required." });
-      return;
-    }
+    const config = getStageConfig(classForm.stageId);
+    const cohort = padCohort(classForm.cohort) || defaultCohort(config.cohortOffset);
+    const group = classForm.group || config.groups[0];
+    const className = generateClassCode(classForm.stageId, cohort, group);
+    const yearGroup = deriveYearGroupLabel(classForm.stageId, group);
 
     try {
       setStatus({ tone: "info", message: "Creating class…" });
-      await createClass(token, {
+      const created = await createClass(token, {
         className,
-        description: description || undefined,
-        yearGroup: yearGroup || undefined,
+        description: classForm.description || undefined,
+        yearGroup,
       });
-      form.reset();
-      setStatus({ tone: "success", message: `Class "${className}" created.` });
+      setStatus({ tone: "success", message: `Class ${className} created.` });
+      setClassModalOpen(false);
+      setExpandedClassId(created?.id ?? null);
       await loadDashboard();
     } catch (error) {
-      setStatus({ tone: "error", message: error.message || "Failed to create class." });
+      setStatus({ tone: "error", message: error.message || "Unable to create class." });
     }
   };
 
-  const handleAddStudent = async (event) => {
+  const openStudentModal = (classItem, mode = "single") => {
+    const meta = parseClassMeta(classItem);
+    setStudentForm({
+      firstName: "",
+      lastName: "",
+      username: "",
+      password: generatePassword(),
+    });
+    setBulkCsv(null);
+    setBulkStatus(null);
+    setStudentModal({ classItem: classItem, meta, mode });
+  };
+
+  const handleStudentFormChange = (field, value) => {
+    setStudentForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if ((field === "firstName" || field === "lastName") && !prev.username) {
+        const first = (field === "firstName" ? value : prev.firstName).trim();
+        const last = (field === "lastName" ? value : prev.lastName).trim();
+        if (first && last) {
+          next.username = `${first[0] ?? ""}${last}`.toLowerCase().replace(/[^a-z0-9]/g, "");
+        }
+      }
+      return next;
+    });
+  };
+
+  const submitStudent = async (event) => {
     event.preventDefault();
-    if (!token) return;
+    if (!token || !studentModal) return;
 
-    const form = event.currentTarget;
-    const classId = form.classId.value;
-    const firstName = form.firstName.value.trim();
-    const lastName = form.lastName.value.trim();
-    const username = form.username.value.trim();
-    const password = form.password.value;
-    const yearGroup = form.yearGroup.value.trim();
-    const programme = form.programme.value;
+    const meta = studentModal.meta;
+    const classId = studentModal.classItem.id;
+    const firstName = studentForm.firstName.trim();
+    const lastName = studentForm.lastName.trim();
+    const username = studentForm.username.trim();
+    const password = studentForm.password || generatePassword();
 
-    if (!classId) {
-      setStatus({ tone: "error", message: "Select a class." });
-      return;
-    }
-    if (!programme) {
-      setStatus({ tone: "error", message: "Choose a programme." });
+    if (!firstName || !lastName) {
+      setStatus({ tone: "error", message: "First name and surname are required." });
       return;
     }
 
     try {
       setStatus({ tone: "info", message: "Adding student…" });
-      await createStudent(token, {
+      const created = await createStudent(token, {
         classId,
         firstName,
         lastName,
         username: username || undefined,
         password,
-        yearGroup: yearGroup || undefined,
-        programme,
+        yearGroup: meta.yearGroupLabel,
+        programme: meta.programme,
       });
-      form.reset();
-      setStatus({ tone: "success", message: "Student added." });
+      setPasswordLookup((prev) => ({ ...prev, [created.id]: password }));
+      setVisiblePasswords((prev) => ({ ...prev, [created.id]: true }));
+      setStudentModal(null);
       await loadDashboard();
+      setStatus({ tone: "success", message: `${firstName} ${lastName} added to ${studentModal.classItem.className}.` });
     } catch (error) {
-      setStatus({ tone: "error", message: error.message || "Failed to add student." });
+      setStatus({ tone: "error", message: error.message || "Unable to add student." });
     }
   };
 
-  const handleBulkSubmit = async (event) => {
+  const submitBulkStudents = async (event) => {
     event.preventDefault();
-    if (!token) return;
-
-    const form = event.currentTarget;
-    const classId = form.bulkClassId.value;
-    if (!classId) {
-      setBulkStatus({ tone: "error", message: "Choose a class for the import." });
+    if (!token || !studentModal || !bulkCsv) {
+      setBulkStatus({ tone: "error", message: "Attach a CSV file to import." });
       return;
     }
-    if (!bulkFile) {
-      setBulkStatus({ tone: "error", message: "Attach a CSV file first." });
-      return;
-    }
-
     try {
       setBulkStatus({ tone: "info", message: "Parsing CSV…" });
-      const text = await bulkFile.text();
-      const students = parseCsvStudents(text);
-      if (students.length === 0) {
-        throw new Error("CSV did not contain any students.");
+      const text = typeof bulkCsv === "string" ? bulkCsv : await bulkCsv.text();
+      const parsed = parseCsvStudents(text);
+      if (parsed.length === 0) {
+        throw new Error("The CSV file did not contain any students.");
       }
-      setBulkStatus({ tone: "info", message: `Uploading ${students.length} students…` });
-      await bulkCreateStudents(token, { classId, students });
-      setBulkFile(null);
-      form.reset();
-      setBulkStatus({ tone: "success", message: `Added ${students.length} students.` });
-      await loadDashboard();
-    } catch (error) {
-      setBulkStatus({ tone: "error", message: error.message || "Failed to process CSV." });
-    }
-  };
-
-  const handleClassUnlock = async (event) => {
-    event.preventDefault();
-    if (!token) return;
-
-    const form = event.currentTarget;
-    const classId = form.unlockClassId.value;
-    const stageKey = form.stageKey.value.trim();
-
-    if (!classId || !stageKey) {
-      setUnlockStatus({ tone: "error", message: "Select a class and enter a stage to unlock." });
-      return;
-    }
-
-    try {
-      setUnlockStatus({ tone: "info", message: "Recording unlock…" });
-      await unlockClassStage(token, { classId, stageKey });
-      form.reset();
-      setUnlockStatus({ tone: "success", message: `Stage "${stageKey}" unlocked for the class.` });
-      await loadDashboard();
-    } catch (error) {
-      setUnlockStatus({ tone: "error", message: error.message || "Failed to unlock stage." });
-    }
-  };
-
-  const handleStudentUnlock = async (event) => {
-    event.preventDefault();
-    if (!token) return;
-
-    const form = event.currentTarget;
-    const studentId = form.unlockStudentId.value;
-    const stageKey = form.studentStageKey.value.trim();
-    const scope = form.scope.value;
-    const targetId = form.targetId.value.trim();
-
-    if (!studentId || !stageKey) {
-      setUnlockStatus({ tone: "error", message: "Choose a student and enter a stage to unlock." });
-      return;
-    }
-
-    try {
-      setUnlockStatus({ tone: "info", message: "Unlocking for student…" });
-      await unlockStudentStage(token, {
-        studentId,
-        stageKey,
-        scope,
-        targetId: targetId || undefined,
+      const meta = studentModal.meta;
+      const prepared = parsed.map((row) => {
+        const firstName = row.firstName.trim();
+        const lastName = row.lastName.trim();
+        const username = row.username.trim() || `${firstName[0] ?? ""}${lastName}`.toLowerCase();
+        const password = generatePassword();
+        return {
+          firstName,
+          lastName,
+          username,
+          password,
+          passwordPlain: password,
+          programme: meta.programme,
+          yearGroup: meta.yearGroupLabel,
+        };
       });
-      form.reset();
-      setUnlockStatus({ tone: "success", message: `Stage "${stageKey}" unlocked for the student.` });
+
+      setBulkStatus({ tone: "info", message: "Uploading students…" });
+      const created = await bulkCreateStudents(token, {
+        classId: studentModal.classItem.id,
+        students: prepared.map(({ passwordPlain, ...rest }) => rest),
+      });
+
+      const passwordMap = {};
+      created.forEach((student, index) => {
+        passwordMap[student.id] = prepared[index]?.passwordPlain ?? "";
+      });
+      setPasswordLookup((prev) => ({ ...prev, ...passwordMap }));
+      setVisiblePasswords((prev) => ({ ...prev, ...Object.fromEntries(created.map((student) => [student.id, true])) }));
+
+      setBulkStatus({ tone: "success", message: `${created.length} students imported.` });
+      setBulkCsv(null);
+      setStudentModal(null);
       await loadDashboard();
     } catch (error) {
-      setUnlockStatus({ tone: "error", message: error.message || "Failed to unlock for student." });
+      setBulkStatus({ tone: "error", message: error.message || "Unable to import CSV." });
     }
   };
 
-  const handleArchiveStudent = async (studentId) => {
+  const togglePassword = (studentId) => {
+    setVisiblePasswords((prev) => ({ ...prev, [studentId]: !prev[studentId] }));
+  };
+
+  const handleArchive = async (studentId) => {
     if (!token || !studentId) return;
     const confirmArchive = window.confirm("Archive this student? They can be restored later by an administrator.");
     if (!confirmArchive) return;
@@ -383,43 +512,12 @@ function TeacherDashboardPage() {
       setStatus({ tone: "success", message: "Student archived." });
       await loadDashboard();
     } catch (error) {
-      setStatus({ tone: "error", message: error.message || "Failed to archive student." });
-    }
-  };
-
-  const handleExportClass = async (classId) => {
-    if (!token || !classId) return;
-    try {
-      setExportStatus({ tone: "info", message: "Preparing CSV…" });
-      const payload = await exportClassProgress(token, classId);
-      if (!payload?.csv) {
-        throw new Error("Export returned no data.");
-      }
-      const blob = new Blob([payload.csv], { type: payload.mimeType || "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = payload.filename || `class-${classId}-progress.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      setExportStatus({ tone: "success", message: "CSV downloaded." });
-    } catch (error) {
-      setExportStatus({ tone: "error", message: error.message || "Unable to export class data." });
+      setStatus({ tone: "error", message: error.message || "Unable to archive student." });
     }
   };
 
   if (!ready) {
-    return (
-      <div className="page-shell">
-        <div className="dashboard-grid">
-          <section className="card">
-            <p className="muted">Preparing dashboard…</p>
-          </section>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (!isTeacher) {
@@ -427,355 +525,343 @@ function TeacherDashboardPage() {
   }
 
   return (
-    <div className="page-shell">
-      <div className="dashboard-grid">
-      <section className="card card--wide card--summary">
-        <header className="card-header">
-          <div>
-            <h2>Welcome back, {teacherName}</h2>
-            <p className="muted">Snapshot of your classes, unlocks, and student progress at a glance.</p>
-          </div>
-          <div className="card-actions">
-            <Link to="/curriculum" className="button-outline">
-              Curriculum map
-            </Link>
-          </div>
-        </header>
-        {loading && <p className="muted">Refreshing dashboard…</p>}
-        <div className="summary-grid">
-          {summaryMetrics.map((metric) => (
-            <article key={metric.label}>
-              <span className="summary-value">{metric.value}</span>
-              <span className="summary-label">{metric.label}</span>
-            </article>
-          ))}
+    <div className="page-shell page-shell--fluid teacher-page">
+      <section className="page-hero teacher-hero">
+        <div className="page-hero__content">
+          <span className="page-hero__eyebrow">Teacher dashboard</span>
+          <h1 className="page-hero__title">Good day, {teacherName}</h1>
+          <p className="muted">
+            Manage classes, enrol students, and monitor lesson unlocks. Everything updates in real time as your classes
+            progress through the IB Computer Science curriculum.
+          </p>
+        </div>
+        <div className="page-hero__actions">
+          <button type="button" className="pill pill--action" onClick={openClassModal}>
+            Add class
+          </button>
+          {classes.length > 0 && (
+            <button
+              type="button"
+              className="pill"
+              onClick={() => openStudentModal(classes[0], "single")}
+            >
+              Add student
+            </button>
+          )}
         </div>
       </section>
 
-      <section className="card card--wide">
-        <header className="card-header">
-          <div>
-            <h3>Build classes and enrol students</h3>
-            <p className="muted">Capture class context and roster quickly with direct or CSV import.</p>
-          </div>
-        </header>
-        {status && <p className={`status status--${status.tone}`}>{status.message}</p>}
-        <div className="card-columns">
-          <article>
-            <h4>Create class</h4>
-            <form onSubmit={handleCreateClass}>
-              <label>
-                <span>Class name</span>
-                <input name="className" required placeholder="e.g. HL Year 1" />
-              </label>
-              <label>
-                <span>Description</span>
-                <input name="description" placeholder="Optional" />
-              </label>
-              <label>
-                <span>Year group</span>
-                <input name="yearGroup" placeholder="e.g. 12" />
-              </label>
-              <button type="submit" className="dashboard-submit">
-                Create
-              </button>
-            </form>
+      <section className="teacher-summary">
+        {summaryCards.map((card) => (
+          <article key={card.label}>
+            <span className="teacher-summary__value">{card.value}</span>
+            <span className="teacher-summary__label">{card.label}</span>
           </article>
+        ))}
+      </section>
 
-          <article>
-            <h4>Add student</h4>
-            <form onSubmit={handleAddStudent}>
+      {status && <p className={`status-banner status-banner--${status.tone}`}>{status.message}</p>}
+
+      <section className="teacher-class-list">
+        {classes.length === 0 && !loading && (
+          <div className="teacher-empty">
+            <p>No classes yet. Start by adding a class so you can enrol students.</p>
+          </div>
+        )}
+
+        {classes.map((clazz) => {
+          const classMeta = parseClassMeta(clazz);
+          const students = studentsByClass.get(clazz.id) ?? [];
+          const isOpen = expandedClassId === clazz.id;
+          return (
+            <article key={clazz.id} className={`teacher-class ${isOpen ? "is-open" : ""}`}>
+              <header
+                className="teacher-class__header"
+                onClick={() => setExpandedClassId(isOpen ? null : clazz.id)}
+              >
+                <div>
+                  <h2>{clazz.className}</h2>
+                  <p className="muted">{classMeta.yearGroupLabel}</p>
+                </div>
+                <div className="teacher-class__meta">
+                  <span>{students.length} students</span>
+                  <span>{classMeta.cohort}</span>
+                </div>
+              </header>
+
+              {isOpen && (
+                <div className="teacher-class__body">
+                  <div className="teacher-class__toolbar">
+                    <button type="button" className="pill" onClick={() => openStudentModal(clazz, "single")}>
+                      Add student
+                    </button>
+                    <button type="button" className="pill" onClick={() => openStudentModal(clazz, "bulk")}>
+                      Import CSV
+                    </button>
+                  </div>
+
+                  <table className="teacher-class__table">
+                    <thead>
+                      <tr>
+                        <th>Student</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Track</th>
+                        <th>Stage</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {students.map((student) => {
+                        const storedPassword = passwordLookup[student.id] ?? student.password ?? "";
+                        const isHash = typeof storedPassword === "string" && storedPassword.startsWith("$2b$");
+                        const plainPassword = isHash ? "" : storedPassword;
+                        const isVisible = visiblePasswords[student.id];
+                        return (
+                          <tr key={student.id}>
+                            <td>
+                              <span className="teacher-student-name">{student.displayName}</span>
+                              <span className="teacher-student-sub">Joined {new Date(student.createdAt).toLocaleDateString()}</span>
+                            </td>
+                            <td>{student.username || "—"}</td>
+                            <td>
+                              {plainPassword ? (
+                                <button
+                                  type="button"
+                                  className="teacher-password"
+                                  onClick={() => togglePassword(student.id)}
+                                >
+                                  {isVisible ? plainPassword : "••••••"}
+                                </button>
+                              ) : (
+                                <span className="muted">Not available</span>
+                              )}
+                            </td>
+                            <td>{student.curriculumTrack ? student.curriculumTrack.toUpperCase() : "—"}</td>
+                            <td>{student.activeStage ? student.activeStage.toUpperCase() : "—"}</td>
+                            <td className="teacher-table-actions">
+                              <button
+                                type="button"
+                                className="button-outline button-outline--danger"
+                                onClick={() => handleArchive(student.id)}
+                              >
+                                Archive
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {students.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="muted">
+                            No students yet. Use “Add student” to enrol the first learner.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </section>
+
+      <section className="teacher-progress">
+        <article>
+          <h3>Lesson progress snapshot</h3>
+          <div className="teacher-progress__cards">
+            <div>
+              <span className="teacher-summary__value">{summativeComplete}</span>
+              <span className="teacher-summary__label">Summative complete</span>
+            </div>
+            <div>
+              <span className="teacher-summary__value">{formativeComplete}</span>
+              <span className="teacher-summary__label">Formative complete</span>
+            </div>
+            <div>
+              <span className="teacher-summary__value">{availableLessons}</span>
+              <span className="teacher-summary__label">Available lessons</span>
+            </div>
+            <div>
+              <span className="teacher-summary__value">{lockedLessons}</span>
+              <span className="teacher-summary__label">Locked lessons</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      {classModalOpen && (
+        <div className="teacher-modal" role="dialog" aria-modal="true">
+          <div className="teacher-modal__dialog">
+            <header>
+              <h2>Create class</h2>
+              <button type="button" aria-label="Close" onClick={() => setClassModalOpen(false)}>
+                ×
+              </button>
+            </header>
+            <form onSubmit={submitClass} className="teacher-modal__content">
               <label>
-                <span>Class</span>
-                <select name="classId" required defaultValue="">
-                  <option value="" disabled>
-                    Select class
-                  </option>
-                  {classOptions.map((clazz) => (
-                    <option key={clazz.id} value={clazz.id}>
-                      {clazz.className}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Programme</span>
-                <select name="programme" required defaultValue="">
-                  <option value="" disabled>
-                    Select programme
-                  </option>
-                  {PROGRAMMES.map((option) => (
-                    <option key={option.value} value={option.value}>
+                <span>Stage</span>
+                <select
+                  value={classForm.stageId}
+                  onChange={(event) => handleClassStageChange("stageId", event.target.value)}
+                  required
+                >
+                  {STAGE_CONFIG.map((option) => (
+                    <option key={option.id} value={option.id}>
                       {option.label}
                     </option>
                   ))}
                 </select>
               </label>
               <label>
-                <span>First name</span>
-                <input name="firstName" required placeholder="First name" />
-              </label>
-              <label>
-                <span>Last name</span>
-                <input name="lastName" required placeholder="Last name" />
-              </label>
-              <label>
-                <span>Username (optional)</span>
-                <input name="username" placeholder="username" />
-              </label>
-              <label>
-                <span>Year group (optional)</span>
-                <input name="yearGroup" placeholder="e.g. 10" />
-              </label>
-              <label>
-                <span>Password</span>
-                <input name="password" type="password" required placeholder="Temporary password" />
-              </label>
-              <button type="submit" className="dashboard-submit">
-                Add student
-              </button>
-            </form>
-          </article>
-
-          <article>
-            <h4>Bulk import from CSV</h4>
-            <form onSubmit={handleBulkSubmit}>
-              <label>
-                <span>Class</span>
-                <select name="bulkClassId" required defaultValue="">
-                  <option value="" disabled>
-                    Select class
-                  </option>
-                  {classOptions.map((clazz) => (
-                    <option key={clazz.id} value={clazz.id}>
-                      {clazz.className}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>CSV file</span>
+                <span>Cohort (two digits)</span>
                 <input
-                  name="bulkCsv"
-                  type="file"
-                  accept=".csv,text/csv"
-                  onChange={(event) => {
-                    const file = event.currentTarget.files?.[0] ?? null;
-                    setBulkFile(file);
-                  }}
+                  value={classForm.cohort}
+                  onChange={(event) => handleClassStageChange("cohort", event.target.value)}
+                  placeholder="32"
                   required
                 />
               </label>
-              <p className="muted small">
-                Columns required: programme, firstName, lastName, password. Optional: username, yearGroup. Programme
-                values: {PROGRAMMES.map((option) => option.value).join(", ")}.
-              </p>
-              <button type="submit" className="dashboard-submit">
-                Import CSV
-              </button>
-            </form>
-            {bulkStatus && <p className={`status status--${bulkStatus.tone}`}>{bulkStatus.message}</p>}
-          </article>
-        </div>
-      </section>
-
-      <section className="card">
-        <h3>Your classes</h3>
-        {exportStatus && <p className={`status status--${exportStatus.tone}`}>{exportStatus.message}</p>}
-        <div className="class-grid">
-          {classOptions.length === 0 && <p className="muted">No classes yet. Create one above to get started.</p>}
-          {classOptions.map((clazz) => {
-            const studentCount = studentOptions.filter((student) => student.classId === clazz.id).length;
-            const createdOn = clazz.createdAt ? new Date(clazz.createdAt).toLocaleDateString() : "—";
-            return (
-              <article key={clazz.id} className="class-card">
-                <header>
-                  <strong>{clazz.className}</strong>
-                  {clazz.yearGroup && <span className="badge">Year {clazz.yearGroup}</span>}
-                </header>
-                {clazz.description && <p className="muted">{clazz.description}</p>}
-                <ul>
-                  <li>
-                    <span className="muted">Class ID</span>
-                    <span>{clazz.id}</span>
-                  </li>
-                  <li>
-                    <span className="muted">Students</span>
-                    <span>{studentCount}</span>
-                  </li>
-                  <li>
-                    <span className="muted">Created</span>
-                    <span>{createdOn}</span>
-                  </li>
-                </ul>
-                <div className="class-card__actions">
-                  <button type="button" className="button-outline" onClick={() => handleExportClass(clazz.id)}>
-                    Download CSV
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="card">
-        <h3>Unlock curriculum</h3>
-        <datalist id="stage-presets">
-          {STAGE_PRESETS.map((preset) => (
-            <option key={preset} value={preset} />
-          ))}
-        </datalist>
-        <div className="unlock-grid">
-          <article>
-            <h4>Whole class</h4>
-            <form onSubmit={handleClassUnlock}>
               <label>
-                <span>Class</span>
-                <select name="unlockClassId" required defaultValue="">
-                  <option value="" disabled>
-                    Select class
-                  </option>
-                  {classOptions.map((clazz) => (
-                    <option key={clazz.id} value={clazz.id}>
-                      {clazz.className}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Stage key</span>
-                <input name="stageKey" list="stage-presets" placeholder="e.g. igcse-lesson-1" required />
-              </label>
-              <button type="submit" className="dashboard-submit">
-                Unlock class stage
-              </button>
-            </form>
-          </article>
-          <article>
-            <h4>Individual student</h4>
-            <form onSubmit={handleStudentUnlock}>
-              <label>
-                <span>Student</span>
-                <select name="unlockStudentId" required defaultValue="">
-                  <option value="" disabled>
-                    Select student
-                  </option>
-                  {studentOptions.map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.displayName} · {student.classId}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Stage key</span>
-                <input name="studentStageKey" list="stage-presets" placeholder="e.g. ib-lesson-2" required />
-              </label>
-              <label>
-                <span>Scope</span>
-                <select name="scope" defaultValue="stage">
-                  <option value="stage">Stage</option>
-                  <option value="lesson">Lesson</option>
-                </select>
-              </label>
-              <label>
-                <span>Target ID (optional)</span>
-                <input name="targetId" placeholder="Use for specific lesson unlocks" />
-              </label>
-              <button type="submit" className="dashboard-submit">
-                Unlock student stage
-              </button>
-            </form>
-          </article>
-        </div>
-        {unlockStatus && <p className={`status status--${unlockStatus.tone}`}>{unlockStatus.message}</p>}
-        <div className="timeline">
-          <h4>Recent unlock activity</h4>
-          <ul>
-            {recentUnlocks.map((item) => (
-              <li key={item.id}>
-                <strong>{item.label}</strong> · {item.detail} ·{" "}
-                <span className="muted">{new Date(item.when).toLocaleString()}</span>
-              </li>
-            ))}
-            {recentUnlocks.length === 0 && <li className="muted">No unlocks recorded yet.</li>}
-          </ul>
-        </div>
-      </section>
-
-      <section className="card">
-        <h3>Active students</h3>
-        <ul className="list">
-          {studentOptions.length === 0 && <li className="muted">No students enrolled yet.</li>}
-          {studentOptions.map((student) => (
-            <li key={student.id}>
-              <div className="student-header">
-                <strong>{student.displayName}</strong>
-                <span className="muted">{student.username || "No username"}</span>
-              </div>
-              <div className="student-meta">
-                <span className="badge">{formatLabel(student.curriculumTrack) || "Track pending"}</span>
-                <span className="muted">Year {student.yearGroup}</span>
-                <span className="muted">Active stage: {formatLabel(student.activeStage)}</span>
-              </div>
-              <div className="student-meta">
-                <span className="muted">Class ID: {student.classId}</span>
-                <span className="muted">Enrolled: {new Date(student.createdAt).toLocaleDateString()}</span>
-              </div>
-              <div className="student-actions">
-                <button
-                  type="button"
-                  className="button-outline button-outline--danger"
-                  onClick={() => handleArchiveStudent(student.id)}
+                <span>Group</span>
+                <select
+                  value={classForm.group}
+                  onChange={(event) => handleClassStageChange("group", event.target.value)}
+                  required
                 >
-                  Archive student
-                </button>
+                  {getStageConfig(classForm.stageId).groups.map((group) => (
+                    <option key={group} value={group}>
+                      {group}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Description (optional)</span>
+                <input
+                  value={classForm.description}
+                  onChange={(event) => setClassForm((prev) => ({ ...prev, description: event.target.value }))}
+                  placeholder="Notes for this class"
+                />
+              </label>
+              <div className="teacher-modal__preview">
+                <span>Generated code</span>
+                <strong>{generateClassCode(classForm.stageId, classForm.cohort, classForm.group)}</strong>
               </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {archivedStudents.length > 0 && (
-        <section className="card">
-          <h3>Archived students</h3>
-          <ul className="list">
-            {archivedStudents.map((student) => (
-              <li key={student.id}>
-                <strong>{student.displayName}</strong>
-                <span className="muted">Year {student.yearGroup}</span>
-                <span className="muted">Archived: {new Date(student.archivedAt).toLocaleDateString()}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+              <footer>
+                <button type="button" onClick={() => setClassModalOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="pill pill--action">
+                  Create class
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
       )}
 
-      <section className="card">
-        <h3>Progress snapshot</h3>
-        <div className="progress-grid">
-          <article>
-            <span className="progress-value">{dashboard?.lessonSummary?.["summative-complete"] ?? 0}</span>
-            <span className="muted">Summative complete</span>
-          </article>
-          <article>
-            <span className="progress-value">{dashboard?.lessonSummary?.["formative-complete"] ?? 0}</span>
-            <span className="muted">Formative complete</span>
-          </article>
-          <article>
-            <span className="progress-value">{dashboard?.lessonSummary?.available ?? 0}</span>
-            <span className="muted">Available</span>
-          </article>
-          <article>
-            <span className="progress-value">{dashboard?.lessonSummary?.locked ?? 0}</span>
-            <span className="muted">Locked</span>
-          </article>
+      {studentModal && (
+        <div className="teacher-modal" role="dialog" aria-modal="true">
+          <div className="teacher-modal__dialog">
+            <header>
+              <h2>
+                {studentModal.mode === "bulk"
+                  ? `Import students · ${studentModal.classItem.className}`
+                  : `Add student · ${studentModal.classItem.className}`}
+              </h2>
+              <button type="button" aria-label="Close" onClick={() => setStudentModal(null)}>
+                ×
+              </button>
+            </header>
+
+            {studentModal.mode === "single" ? (
+              <form onSubmit={submitStudent} className="teacher-modal__content">
+                <label>
+                  <span>First name</span>
+                  <input
+                    value={studentForm.firstName}
+                    onChange={(event) => handleStudentFormChange("firstName", event.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  <span>Surname</span>
+                  <input
+                    value={studentForm.lastName}
+                    onChange={(event) => handleStudentFormChange("lastName", event.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  <span>Username (optional)</span>
+                  <input
+                    value={studentForm.username}
+                    onChange={(event) => handleStudentFormChange("username", event.target.value)}
+                    placeholder="auto-generated if left blank"
+                  />
+                </label>
+                <label>
+                  <span>Generated password</span>
+                  <input
+                    value={studentForm.password}
+                    onChange={(event) => handleStudentFormChange("password", event.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="teacher-modal__ghost"
+                    onClick={() => setStudentForm((prev) => ({ ...prev, password: generatePassword() }))}
+                  >
+                    Regenerate
+                  </button>
+                </label>
+                <footer>
+                  <button type="button" onClick={() => setStudentModal(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="pill pill--action">
+                    Add student
+                  </button>
+                </footer>
+              </form>
+            ) : (
+              <form onSubmit={submitBulkStudents} className="teacher-modal__content">
+                <p className="muted">
+                  Upload a CSV with the columns <code>firstName</code>, <code>lastName</code>, and optional
+                  <code>username</code>. Passwords are auto-generated for each row.
+                </p>
+                <button type="button" className="teacher-modal__ghost" onClick={downloadTemplate}>
+                  Download blank template
+                </button>
+                <label>
+                  <span>CSV file</span>
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={(event) => setBulkCsv(event.target.files?.[0] ?? null)}
+                    required
+                  />
+                </label>
+                {bulkStatus && <p className={`status status--${bulkStatus.tone}`}>{bulkStatus.message}</p>}
+                <footer>
+                  <button type="button" onClick={() => setStudentModal(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="pill pill--action">
+                    Import students
+                  </button>
+                </footer>
+              </form>
+            )}
+          </div>
         </div>
-      </section>
+      )}
     </div>
-  </div>
   );
 }
 
 export default TeacherDashboardPage;
+

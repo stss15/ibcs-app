@@ -170,7 +170,7 @@
   padding: clamp(1.6rem, 5vw, 3.4rem) clamp(1.2rem, 4vw, 3.2rem);
 }
 
-.layout-main > *:first-child {
+.layout-main > .layout-contained {
   max-width: 1120px;
   margin: 0 auto;
 }
@@ -204,7 +204,7 @@
     width: 100%;
   }
 
-  .layout-main > *:first-child {
+  .layout-main > .layout-contained {
     max-width: none;
   }
 }

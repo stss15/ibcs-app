@@ -5,7 +5,7 @@ import logo from "../assets/logo.svg";
 import "./Layout.css";
 
 function Layout({ children }) {
-  const { session, clear } = useSession();
+  const { session, clear, ready } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -59,7 +59,7 @@ function Layout({ children }) {
     }
   };
 
-  const isAuthenticated = Boolean(role);
+  const isAuthenticated = ready && Boolean(role);
 
   return (
     <div className="layout-root">
@@ -74,13 +74,13 @@ function Layout({ children }) {
           </Link>
 
           <div className="layout-actions">
-            {!isAuthenticated && (
+            {ready && !isAuthenticated && (
               <Link to="/" className="layout-login-link">
                 Log in
               </Link>
             )}
 
-            {isAuthenticated && (
+            {ready && isAuthenticated && (
               <div className="layout-account" onBlur={handleAccountBlur}>
                 <button
                   type="button"

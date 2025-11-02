@@ -2,105 +2,127 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getStudentDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
+import { useCurriculumManifest } from "../hooks/useCurriculumManifest.js";
 import "./StudentDashboardPage.css";
 
-function formatLabel(value) {
-  if (!value) return "";
-  return value
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+function normaliseStatus(status) {
+  if (!status) return "locked";
+  return status.toLowerCase();
+}
+
+function isLessonComplete(status) {
+  const value = normaliseStatus(status);
+  return value === "formative-complete" || value === "summative-complete";
+}
+
+function progressLabel(status) {
+  switch (normaliseStatus(status)) {
+    case "summative-complete":
+      return "Summative complete";
+    case "formative-complete":
+      return "Formative complete";
+    case "available":
+      return "Ready to start";
+    default:
+      return "Locked";
+  }
 }
 
 function StudentDashboardPage() {
   const { session, ready } = useSession();
   const navigate = useNavigate();
-  const [student, setStudent] = useState(null);
-  const [classInfo, setClassInfo] = useState(null);
-  const [unlocks, setUnlocks] = useState([]);
-  const [progress, setProgress] = useState([]);
+  const token = session?.token ?? null;
+  const studentSession = session?.user?.role === "student" ? session.user : null;
+
+  const [payload, setPayload] = useState(null);
   const [status, setStatus] = useState(null);
 
-  const studentSession = session?.user?.role === "student" ? session.user : null;
-  const token = session?.token || null;
-  const studentName = studentSession?.displayName ?? studentSession?.username ?? "Student";
+  const { manifest } = useCurriculumManifest();
 
   useEffect(() => {
-    if (!ready) {
-      return;
-    }
+    if (!ready) return;
     if (!studentSession) {
       navigate("/", { replace: true });
       return;
     }
 
     let active = true;
-    setStatus({ tone: "info", message: "Loading your journey…" });
+    setStatus({ tone: "info", message: "Loading your dashboard…" });
 
     (async () => {
       try {
-        if (!token) {
-          throw new Error("Session expired");
-        }
-        const payload = await getStudentDashboard(token);
+        if (!token) throw new Error("Session expired");
+        const response = await getStudentDashboard(token);
         if (!active) return;
-        setStudent(payload?.student || null);
-        setClassInfo(payload?.class || null);
-        setUnlocks(payload?.unlocks || []);
-        setProgress(payload?.progress || []);
+        setPayload(response);
         setStatus(null);
       } catch (error) {
         if (!active) return;
-        setStatus({ tone: "error", message: error.message || "Failed to load student" });
+        setStatus({ tone: "error", message: error.message || "Unable to load dashboard" });
       }
     })();
 
     return () => {
       active = false;
     };
-  }, [studentSession, navigate, token, ready]);
+  }, [ready, studentSession, token, navigate]);
 
-  const progressSummary = useMemo(() => {
-    const totals = {
-      locked: 0,
-      available: 0,
-      "formative-complete": 0,
-      "summative-complete": 0,
-    };
+  const student = payload?.student ?? null;
+  const classInfo = payload?.class ?? null;
+  const progress = payload?.progress ?? [];
+
+  const lessonStatusMap = useMemo(() => {
+    const map = new Map();
     for (const record of progress) {
-      if (record?.status && totals[record.status] !== undefined) {
-        totals[record.status] += 1;
-      }
+      map.set(record.lessonSlug, normaliseStatus(record.status));
     }
-    return totals;
+    return map;
   }, [progress]);
-  const summaryMetrics = useMemo(
-    () => [
-      { label: "Curriculum track", value: formatLabel(student?.curriculumTrack) || "TBC" },
-      { label: "Active stage", value: formatLabel(student?.activeStage) || "Not unlocked" },
-      { label: "Year group", value: student?.yearGroup || "—" },
-    ],
-    [student?.activeStage, student?.curriculumTrack, student?.yearGroup],
-  );
-  const recentUnlocks = useMemo(
-    () =>
-      [...unlocks]
-        .sort((a, b) => new Date(b.unlockedAt || 0).getTime() - new Date(a.unlockedAt || 0).getTime())
-        .slice(0, 6),
-    [unlocks],
-  );
+
+  const track = student?.curriculumTrack ?? studentSession?.curriculumTrack ?? "ib-sl";
+
+  const unitSummaries = useMemo(() => {
+    if (!manifest) return [];
+    const units = manifest.units ?? [];
+    return units
+      .filter((unit) => !unit.availableFor || unit.availableFor.includes(track))
+      .map((unit) => {
+        const chapters = unit.subtopics ?? [];
+        const lessons = [];
+        chapters.forEach((chapter) => {
+          (chapter.lessons ?? [])
+            .filter((lesson) => !lesson.availableFor || lesson.availableFor.includes(track))
+            .forEach((lesson) => {
+              lessons.push({
+                id: lesson.id,
+                title: lesson.title,
+                status: lessonStatusMap.get(lesson.id) ?? "locked",
+              });
+            });
+        });
+        const total = lessons.length || 1;
+        const completed = lessons.filter((lesson) => isLessonComplete(lesson.status)).length;
+        const unlocked = lessons.filter((lesson) => lesson.status !== "locked").length;
+        const percentage = Math.round((completed / total) * 100);
+        return {
+          id: unit.id,
+          title: unit.title,
+          description: unit.summary,
+          completed,
+          unlocked,
+          total,
+          percentage,
+          firstChapter: chapters[0]?.id ?? null,
+        };
+      });
+  }, [manifest, lessonStatusMap, track]);
+
+  const totalLessons = unitSummaries.reduce((sum, unit) => sum + unit.total, 0);
+  const totalCompleted = unitSummaries.reduce((sum, unit) => sum + unit.completed, 0);
+  const overallPercentage = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0;
 
   if (!ready) {
-    return (
-      <div className="page-shell">
-        <div className="student-grid">
-          <section className="card">
-            <p className="muted">Checking session…</p>
-          </section>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (!studentSession) {
@@ -108,120 +130,117 @@ function StudentDashboardPage() {
   }
 
   return (
-    <div className="page-shell">
-      <div className="student-grid">
-      <section className="card card--wide card--summary">
-        <header className="card-header">
+    <div className="page-shell page-shell--fluid student-page">
+      <section className="page-hero student-hero">
+        <div className="page-hero__content">
+          <span className="page-hero__eyebrow">Student dashboard</span>
+          <h1 className="page-hero__title">Hi {studentSession.displayName ?? studentSession.username}</h1>
+          <p className="muted">
+            Your progress through the IB Computer Science pathway lives here. Lessons unlock as your teacher enables
+            them—use this page to see what to tackle next.
+          </p>
+        </div>
+        <div className="student-overview">
           <div>
-            <h2>Hi {studentName}</h2>
-            <p>
-              Track your progress through the Computer Science curriculum. Unlocks appear here as your teacher enables
-              new lessons.
-            </p>
+            <span className="student-overview__label">Track</span>
+            <strong>{track.toUpperCase()}</strong>
           </div>
-          <Link to="/curriculum" className="button-outline">
-            Curriculum map
-          </Link>
-        </header>
-        {status && <p className={`status status--${status.tone}`}>{status.message}</p>}
-        <div className="student-summary-grid">
-          {summaryMetrics.map((metric) => (
-            <article key={metric.label}>
-              <span className="summary-value">{metric.value}</span>
-              <span className="summary-label">{metric.label}</span>
-            </article>
-          ))}
+          <div>
+            <span className="student-overview__label">Active stage</span>
+            <strong>{student?.activeStage ?? "Pending"}</strong>
+          </div>
+          <div>
+            <span className="student-overview__label">Overall progress</span>
+            <strong>{overallPercentage}%</strong>
+          </div>
         </div>
       </section>
 
-      <section className="card">
-        <h3>Your class</h3>
+      {status && <p className={`status-banner status-banner--${status.tone}`}>{status.message}</p>}
+
+      <section className="student-class-card">
+        <header>
+          <h2>Your class</h2>
+          <Link to="/curriculum/ib" className="pill">
+            View curriculum map
+          </Link>
+        </header>
         {classInfo ? (
-          <div className="student-class">
+          <div className="student-class-card__body">
             <div>
               <strong>{classInfo.className}</strong>
               {classInfo.description && <p className="muted">{classInfo.description}</p>}
             </div>
-            <ul>
-              <li>
-                <span className="muted">Class ID</span>
-                <span>{classInfo.id}</span>
-              </li>
-              <li>
-                <span className="muted">Teacher</span>
-                <span>{classInfo.teacherUsername ?? "Your teacher"}</span>
-              </li>
-              {classInfo.yearGroup && (
-                <li>
-                  <span className="muted">Year group</span>
-                  <span>{classInfo.yearGroup}</span>
-                </li>
-              )}
-            </ul>
+            <div className="student-class-card__meta">
+              <span>Teacher · {classInfo.teacherUsername ?? "Assigned"}</span>
+              {classInfo.yearGroup && <span>Year group · {classInfo.yearGroup}</span>}
+              <span>Class code · {classInfo.id}</span>
+            </div>
           </div>
         ) : (
-          <p className="muted">No class assigned yet. Check in with your teacher.</p>
+          <p className="muted">Your teacher will place you into a class soon.</p>
         )}
       </section>
 
-      <section className="card">
-        <h3>Unlocked milestones</h3>
-        <ul className="list">
-          {recentUnlocks.length === 0 && (
-            <li className="muted">No additional unlocks yet — complete your current lesson.</li>
+      <section className="student-units">
+        <header>
+          <div>
+            <h2>IB Computer Science units</h2>
+            <p className="muted">Work through each unit in turn. Completed lessons fill the bar for that topic.</p>
+          </div>
+          <span className="student-unit-progress">{totalCompleted} of {totalLessons} lessons complete</span>
+        </header>
+        <div className="student-unit-grid">
+          {unitSummaries.map((unit) => (
+            <article key={unit.id} className="student-unit-card">
+              <header>
+                <h3>{unit.title}</h3>
+                <span>{unit.percentage}%</span>
+              </header>
+              {unit.description && <p className="muted">{unit.description}</p>}
+              <div className="student-progress-bar" aria-label={`${unit.completed} of ${unit.total} lessons complete`}>
+                <div style={{ width: `${Math.min(unit.percentage, 100)}%` }} />
+              </div>
+              <div className="student-unit-stats">
+                <span>{unit.completed} complete</span>
+                <span>{unit.unlocked} unlocked</span>
+                <span>{unit.total} total</span>
+              </div>
+              <Link to={`/curriculum/ib`} state={{ focusUnit: unit.id, focusChapter: unit.firstChapter }}>
+                Continue unit
+              </Link>
+            </article>
+          ))}
+          {unitSummaries.length === 0 && (
+            <p className="muted">Units will appear once your teacher shares the curriculum with your class.</p>
           )}
-          {recentUnlocks.map((unlock) => (
-            <li key={unlock.id}>
-              <strong>{formatLabel(unlock.stageKey)}</strong>
+        </div>
+      </section>
+
+      <section className="student-lesson-feed">
+        <header>
+          <h2>Recent lesson updates</h2>
+        </header>
+        <ul>
+          {progress.length === 0 && <li className="muted">No lessons tracked yet — start with your first unlocked topic.</li>}
+          {progress.map((record) => (
+            <li key={record.id}>
+              <div>
+                <strong>{record.lessonSlug}</strong>
+                <span className={`student-tag student-tag--${normaliseStatus(record.status)}`}>
+                  {progressLabel(record.status)}
+                </span>
+              </div>
               <span className="muted">
-                {unlock.scope === "lesson" ? "Lesson" : "Stage"} unlock · {new Date(unlock.unlockedAt).toLocaleString()}
+                Updated {record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "recently"}
               </span>
             </li>
           ))}
         </ul>
       </section>
-
-      <section className="card card--wide">
-        <h3>Your progress</h3>
-        <div className="student-progress-grid">
-          <article>
-            <span className="progress-big">{progressSummary["summative-complete"]}</span>
-            <span className="muted">Summative complete</span>
-          </article>
-          <article>
-            <span className="progress-big">{progressSummary["formative-complete"]}</span>
-            <span className="muted">Formative complete</span>
-          </article>
-          <article>
-            <span className="progress-big">{progressSummary.available}</span>
-            <span className="muted">Available lessons</span>
-          </article>
-          <article>
-            <span className="progress-big">{progressSummary.locked}</span>
-            <span className="muted">Locked lessons</span>
-          </article>
-        </div>
-        <div className="student-progress-list">
-          <h4>Lesson details</h4>
-          <ul>
-            {progress.length === 0 && <li className="muted">Lesson tracking will appear here once you begin.</li>}
-            {progress.map((record) => (
-              <li key={record.id}>
-                <div>
-                  <strong>{formatLabel(record.lessonSlug)}</strong>
-                  <span className="badge">{formatLabel(record.status)}</span>
-                </div>
-                <div className="muted">
-                  Updated {record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "recently"}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
     </div>
-  </div>
   );
 }
 
 export default StudentDashboardPage;
+
