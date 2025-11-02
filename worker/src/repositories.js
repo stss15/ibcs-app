@@ -1,4 +1,5 @@
 import { id, tx } from './instant.js';
+import manifest from '../curriculum/manifest.json' assert { type: 'json' };
 
 /* ------------------------------------------------------------------ *
  * Sanitizers ensure we never leak password hashes back to callers.
@@ -267,24 +268,58 @@ export async function archiveClass(db, classId) {
   return archivedAt;
 }
 
-function getTrackForYearGroup(yearGroup) {
-  const numeric = Number(String(yearGroup).replace(/\D/g, ''));
-  if (!Number.isFinite(numeric)) {
-    return { track: 'middle-years', initialStage: 'middle-years-lesson-1' };
+const TRACKS = manifest?.tracks ?? {};
+const TRACK_KEYS = Object.keys(TRACKS);
+const DEFAULT_TRACK = 'igcse';
+
+function normalizeTrackInput(programme) {
+  const raw = String(programme ?? '').trim().toLowerCase();
+  if (!raw) return null;
+  if (TRACKS[raw]) return raw;
+
+  const collapsed = raw.replace(/[^a-z0-9]/g, '');
+  for (const key of TRACK_KEYS) {
+    const collapsedKey = key.replace(/[^a-z0-9]/g, '');
+    if (collapsed === collapsedKey) {
+      return key;
+    }
   }
-  if (numeric >= 12) {
-    return { track: 'ib', initialStage: 'ib-lesson-1' };
-  }
-  if (numeric >= 10) {
-    return { track: 'igcse', initialStage: 'igcse-lesson-1' };
-  }
-  return { track: 'middle-years', initialStage: 'middle-years-lesson-1' };
+
+  if (collapsed.startsWith('keystage3') || collapsed === 'middleyears') return 'ks3';
+  if (collapsed.includes('igcse')) return 'igcse';
+  if (collapsed.includes('standardlevel') || collapsed === 'sl') return 'ib-sl';
+  if (collapsed.includes('higherlevel') || collapsed === 'hl') return 'ib-hl';
+
+  return null;
 }
 
-export async function createStudent(db, { username, password, firstName, lastName, classId, teacherId, teacherUsername, yearGroup }) {
+function resolveTrack({ programme, yearGroup }) {
+  const normalized = normalizeTrackInput(programme);
+  if (normalized) {
+    return normalized;
+  }
+  const numeric = Number(String(yearGroup ?? '').replace(/\D/g, ''));
+  if (Number.isFinite(numeric)) {
+    if (numeric >= 12) return 'ib-hl';
+    if (numeric >= 10) return 'igcse';
+    return 'ks3';
+  }
+  return DEFAULT_TRACK;
+}
+
+function getDefaultLessonsForTrack(track) {
+  return TRACKS[track]?.defaultLessons ?? TRACKS[DEFAULT_TRACK]?.defaultLessons ?? [];
+}
+
+export async function createStudent(
+  db,
+  { username, password, firstName, lastName, classId, teacherId, teacherUsername, yearGroup, programme },
+) {
   const studentId = id();
   const createdAt = new Date().toISOString();
-  const { track, initialStage } = getTrackForYearGroup(yearGroup);
+  const track = resolveTrack({ programme, yearGroup });
+  const defaultLessons = getDefaultLessonsForTrack(track);
+  const initialStage = defaultLessons.length > 0 ? defaultLessons[0] : 'A1.1.1';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || username || 'Student';
 
   await db.transact([
@@ -294,7 +329,7 @@ export async function createStudent(db, { username, password, firstName, lastNam
       firstName,
       lastName,
       displayName,
-      yearGroup,
+      yearGroup: yearGroup || null,
       curriculumTrack: track,
       classId,
       teacherId,
@@ -303,6 +338,18 @@ export async function createStudent(db, { username, password, firstName, lastNam
       status: 'active',
       createdAt,
     }),
+    ...defaultLessons.map((lessonId) =>
+      tx.studentUnlocks[id()].update({
+        studentId,
+        classId,
+        teacherId,
+        teacherUsername,
+        stageKey: lessonId,
+        unlockedBy: teacherUsername ?? 'system',
+        unlockedAt: createdAt,
+        scope: 'lesson',
+      }),
+    ),
   ]);
 
   return {
@@ -311,7 +358,7 @@ export async function createStudent(db, { username, password, firstName, lastNam
     firstName,
     lastName,
     displayName,
-    yearGroup,
+    yearGroup: yearGroup || null,
     curriculumTrack: track,
     classId,
     teacherId,
@@ -348,7 +395,9 @@ export async function bulkCreateStudents(db, students) {
 
   for (const student of students) {
     const studentId = id();
-    const { track, initialStage } = getTrackForYearGroup(student.yearGroup);
+    const track = resolveTrack({ programme: student.programme, yearGroup: student.yearGroup });
+    const defaultLessons = getDefaultLessonsForTrack(track);
+    const initialStage = defaultLessons.length > 0 ? defaultLessons[0] : 'A1.1.1';
     const displayName = [student.firstName, student.lastName].filter(Boolean).join(' ') || student.username || 'Student';
 
     mutations.push(
@@ -358,7 +407,7 @@ export async function bulkCreateStudents(db, students) {
         firstName: student.firstName,
         lastName: student.lastName,
         displayName,
-        yearGroup: student.yearGroup,
+        yearGroup: student.yearGroup || null,
         curriculumTrack: track,
         classId: student.classId,
         teacherId: student.teacherId,
@@ -367,6 +416,18 @@ export async function bulkCreateStudents(db, students) {
         status: 'active',
         createdAt: now,
       }),
+      ...defaultLessons.map((lessonId) =>
+        tx.studentUnlocks[id()].update({
+          studentId,
+          classId: student.classId,
+          teacherId: student.teacherId,
+          teacherUsername: student.teacherUsername,
+          stageKey: lessonId,
+          unlockedBy: student.teacherUsername ?? 'system',
+          unlockedAt: now,
+          scope: 'lesson',
+        }),
+      ),
     );
 
     created.push({
@@ -375,7 +436,7 @@ export async function bulkCreateStudents(db, students) {
       firstName: student.firstName,
       lastName: student.lastName,
       displayName,
-      yearGroup: student.yearGroup,
+      yearGroup: student.yearGroup || null,
       curriculumTrack: track,
       classId: student.classId,
       teacherId: student.teacherId,

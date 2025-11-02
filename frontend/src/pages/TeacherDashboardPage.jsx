@@ -11,6 +11,7 @@ import {
   unlockStudentStage,
 } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
+import { useCurriculumManifest, getTrackLabel } from "../hooks/useCurriculumManifest.js";
 import "./TeacherDashboardPage.css";
 
 const STAGE_PRESETS = [
@@ -25,7 +26,28 @@ const STAGE_PRESETS = [
   "ib-lesson-3",
 ];
 
-const REQUIRED_STUDENT_FIELDS = ["firstName", "lastName", "yearGroup", "password"];
+const PROGRAMMES = [
+  { value: "ks3", label: "Key Stage 3" },
+  { value: "igcse", label: "IGCSE" },
+  { value: "ib-sl", label: "IB Computer Science SL" },
+  { value: "ib-hl", label: "IB Computer Science HL" },
+];
+
+const REQUIRED_STUDENT_FIELDS = ["programme", "firstName", "lastName", "password"];
+
+function normalizeProgramme(programme, yearGroup) {
+  const value = String(programme || "").trim().toLowerCase();
+  if (PROGRAMMES.some((option) => option.value === value)) {
+    return value;
+  }
+  const numeric = Number(String(yearGroup || "").replace(/\D/g, ""));
+  if (Number.isFinite(numeric)) {
+    if (numeric >= 12) return "ib-hl";
+    if (numeric >= 10) return "igcse";
+    return "ks3";
+  }
+  return "igcse";
+}
 
 function formatLabel(value) {
   if (!value) return "";
@@ -86,6 +108,7 @@ function parseCsvStudents(text) {
     if (canonical === "firstname") headerMap.set("firstName", index);
     if (canonical === "lastname") headerMap.set("lastName", index);
     if (canonical === "yeargroup") headerMap.set("yearGroup", index);
+    if (canonical === "programme" || canonical === "program") headerMap.set("programme", index);
     if (canonical === "password") headerMap.set("password", index);
   });
 
@@ -103,6 +126,7 @@ function parseCsvStudents(text) {
       firstName: row[headerMap.get("firstName")] ?? "",
       lastName: row[headerMap.get("lastName")] ?? "",
       yearGroup: row[headerMap.get("yearGroup")] ?? "",
+      programme: row[headerMap.get("programme")] ?? "",
       password: row[headerMap.get("password")] ?? "",
     };
 
@@ -111,6 +135,7 @@ function parseCsvStudents(text) {
       throw new Error(`Row ${i + 1} is missing ${missingField}.`);
     }
 
+    student.programme = normalizeProgramme(student.programme, student.yearGroup);
     students.push(student);
   }
 
@@ -232,9 +257,14 @@ function TeacherDashboardPage() {
     const username = form.username.value.trim();
     const password = form.password.value;
     const yearGroup = form.yearGroup.value.trim();
+    const programme = form.programme.value;
 
     if (!classId) {
       setStatus({ tone: "error", message: "Select a class." });
+      return;
+    }
+    if (!programme) {
+      setStatus({ tone: "error", message: "Choose a programme." });
       return;
     }
 
@@ -246,7 +276,8 @@ function TeacherDashboardPage() {
         lastName,
         username: username || undefined,
         password,
-        yearGroup,
+        yearGroup: yearGroup || undefined,
+        programme,
       });
       form.reset();
       setStatus({ tone: "success", message: "Student added." });
@@ -466,6 +497,19 @@ function TeacherDashboardPage() {
                 </select>
               </label>
               <label>
+                <span>Programme</span>
+                <select name="programme" required defaultValue="">
+                  <option value="" disabled>
+                    Select programme
+                  </option>
+                  {PROGRAMMES.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
                 <span>First name</span>
                 <input name="firstName" required placeholder="First name" />
               </label>
@@ -478,8 +522,8 @@ function TeacherDashboardPage() {
                 <input name="username" placeholder="username" />
               </label>
               <label>
-                <span>Year group</span>
-                <input name="yearGroup" required placeholder="e.g. 10" />
+                <span>Year group (optional)</span>
+                <input name="yearGroup" placeholder="e.g. 10" />
               </label>
               <label>
                 <span>Password</span>
@@ -521,7 +565,8 @@ function TeacherDashboardPage() {
                 />
               </label>
               <p className="muted small">
-                Columns required: firstName, lastName, yearGroup, password. Optional: username.
+                Columns required: programme, firstName, lastName, password. Optional: username, yearGroup. Programme
+                values: {PROGRAMMES.map((option) => option.value).join(", ")}.
               </p>
               <button type="submit" className="dashboard-submit">
                 Import CSV

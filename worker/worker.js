@@ -372,9 +372,10 @@ async function handleCreateStudent(request, env, session) {
   const username = String(body.username || '').trim();
   const password = String(body.password || '');
   const yearGroup = String(body.yearGroup || '').trim();
+  const programme = String(body.programme || '').trim();
 
-  if (!classId || !firstName || !lastName || !password || !yearGroup) {
-    return json({ error: 'classId, firstName, lastName, yearGroup, and password are required.' }, 400);
+  if (!classId || !firstName || !lastName || !password || !programme) {
+    return json({ error: 'classId, firstName, lastName, programme, and password are required.' }, 400);
   }
 
   const db = getDb(env);
@@ -416,6 +417,7 @@ async function handleCreateStudent(request, env, session) {
     teacherId: teacher.id,
     teacherUsername: teacher.username,
     yearGroup,
+    programme,
   });
 
   return json({ student: stripPassword(created) }, 201);
@@ -459,9 +461,10 @@ async function handleBulkCreateStudentsHandler(request, env, session) {
     const yearGroup = String(row.yearGroup || '').trim();
     const username = String(row.username || '').trim();
     const password = String(row.password || '');
+    const programme = String(row.programme || '').trim();
 
-    if (!firstName || !lastName || !yearGroup || !password) {
-      return json({ error: 'Each student requires firstName, lastName, yearGroup, and password.' }, 400);
+    if (!firstName || !lastName || !programme || !password) {
+      return json({ error: 'Each student requires firstName, lastName, programme, and password.' }, 400);
     }
 
     if (username) {
@@ -481,6 +484,7 @@ async function handleBulkCreateStudentsHandler(request, env, session) {
       teacherId: teacher.id,
       teacherUsername: teacher.username,
       yearGroup,
+      programme,
     });
   }
 
