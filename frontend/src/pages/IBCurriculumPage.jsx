@@ -34,7 +34,11 @@ function computeLessonStatus({
   unit,
   subtopic,
   track,
+  isTeacher,
 }) {
+  if (isTeacher) {
+    return "unlocked";
+  }
   const unitAvailable = Array.isArray(unit.availableFor)
     ? unit.availableFor.includes(track)
     : true;
@@ -56,9 +60,11 @@ function computeLessonStatus({
 function IBCurriculumPage() {
   const { session } = useSession();
   const { manifest, status, error } = useCurriculumManifest();
+  const role = session?.user?.role ?? null;
+  const isTeacher = role === "teacher";
   const [selectedUnitId, setSelectedUnitId] = useState(null);
   const [selectedTrack, setSelectedTrack] = useState(() =>
-    resolveInitialTrack(session?.user?.curriculumTrack, [
+    resolveInitialTrack(isTeacher ? "ib-hl" : session?.user?.curriculumTrack, [
       { id: "ib-sl" },
       { id: "ib-hl" },
     ]),
@@ -75,9 +81,9 @@ function IBCurriculumPage() {
   useEffect(() => {
     if (!manifest) return;
     const options = getTrackOptions(manifest);
-    const resolved = resolveInitialTrack(session?.user?.curriculumTrack, options);
+    const resolved = resolveInitialTrack(isTeacher ? "ib-hl" : session?.user?.curriculumTrack, options);
     setSelectedTrack(resolved);
-  }, [manifest, session?.user?.curriculumTrack]);
+  }, [manifest, session?.user?.curriculumTrack, isTeacher]);
 
   const trackOptions = useMemo(() => getTrackOptions(manifest), [manifest]);
 
@@ -117,7 +123,9 @@ function IBCurriculumPage() {
     return null;
   }
 
-  const currentTrackLabel = getTrackLabel(manifest, selectedTrack);
+  const currentTrackLabel = isTeacher
+    ? `${getTrackLabel(manifest, selectedTrack)} · Teacher view`
+    : getTrackLabel(manifest, selectedTrack);
   const unitMeta = selectedUnit ? IB_UNIT_METADATA[selectedUnit.id] ?? {} : {};
 
   return (
@@ -158,7 +166,7 @@ function IBCurriculumPage() {
           {manifest.units?.map((unit) => {
             const metadata = IB_UNIT_METADATA[unit.id] ?? {};
             const isActive = unit.id === selectedUnitId;
-            const isTrackAvailable = !unit.availableFor || unit.availableFor.includes(selectedTrack);
+            const isTrackAvailable = isTeacher || !unit.availableFor || unit.availableFor.includes(selectedTrack);
 
             return (
               <button
@@ -220,20 +228,21 @@ function IBCurriculumPage() {
                       </div>
                       <div className="ib-chapter__actions">
                         <Link
-                          to={isChapterAvailable ? `/topic/${encodeURIComponent(subtopic.id)}` : "#"}
-                          className={`ib-chapter__link ${isChapterAvailable ? "" : "is-disabled"}`}
+                          to={isTeacher || isChapterAvailable ? `/topic/${encodeURIComponent(subtopic.id)}` : "#"}
+                          className={`ib-chapter__link ${isTeacher || isChapterAvailable ? "" : "is-disabled"}`}
                           onClick={(event) => {
-                            if (!isChapterAvailable) {
+                            if (!isTeacher && !isChapterAvailable) {
                               event.preventDefault();
                             }
                           }}
                         >
                           View chapter
                         </Link>
-                        {!isChapterAvailable && (
+                        {!isTeacher && !isChapterAvailable && (
                           <span className="ib-badge ib-badge--muted">Locked</span>
                         )}
-                        {isChapterAvailable && (
+                        {isTeacher && <span className="ib-badge ib-badge--outline">Teacher view</span>}
+                        {!isTeacher && isChapterAvailable && (
                           <span className="ib-badge ib-badge--outline">First page unlocked</span>
                         )}
                       </div>
@@ -247,6 +256,7 @@ function IBCurriculumPage() {
                           unit: selectedUnit,
                           subtopic,
                           track: selectedTrack,
+                          isTeacher,
                         });
 
                         const unlocked = status === "unlocked";
@@ -258,8 +268,9 @@ function IBCurriculumPage() {
                             <span className="ib-lesson__title">{lesson.title}</span>
                             <span className="ib-lesson__status">
                               {unlocked && <span className="ib-status-pill is-unlocked">Unlocked</span>}
-                              {hlOnly && <span className="ib-status-pill is-hl">HL only</span>}
-                              {!unlocked && !hlOnly && <span className="ib-status-pill">Locked</span>}
+                              {isTeacher && <span className="ib-status-pill is-teacher">Teacher view</span>}
+                              {!isTeacher && hlOnly && <span className="ib-status-pill is-hl">HL only</span>}
+                              {!isTeacher && !unlocked && !hlOnly && <span className="ib-status-pill">Locked</span>}
                             </span>
                           </li>
                         );

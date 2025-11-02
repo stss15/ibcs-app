@@ -278,6 +278,11 @@
   color: #5d4037;
 }
 
+.ib-status-pill.is-teacher {
+  background: rgba(12, 41, 124, 0.14);
+  color: var(--cs-blue);
+}
+
 .ib-badge {
   display: inline-flex;
   align-items: center;

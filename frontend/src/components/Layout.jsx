@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSession } from "../hooks/useSession.js";
 import logo from "../assets/logo.svg";
@@ -13,106 +13,108 @@ function Layout({ children }) {
 
   const role = session?.user?.role ?? null;
   const firstName = (session?.user?.firstName || "").trim();
-  const displayName = session?.user?.displayName ?? session?.user?.username ?? "";
+  const displayName = (session?.user?.displayName || session?.user?.username || "").trim();
   const greetingName = firstName || displayName.split(" ")[0] || "";
+  const initials = useMemo(() => {
+    if (!displayName) return "CS";
+    const parts = displayName.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return displayName.slice(0, 2).toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }, [displayName]);
 
-  const navItems = useMemo(() => {
-    if (role === "teacher") {
-      return [
-        { to: "/dashboard", label: "Teacher dashboard" },
-        { to: "/curriculum", label: "Curriculum map" },
-      ];
-    }
-    if (role === "student") {
-      return [
-        { to: "/student", label: "Student dashboard" },
-        { to: "/curriculum", label: "Curriculum map" },
-      ];
-    }
-    if (role === "admin") {
-      return [
-        { to: "/admin", label: "Admin dashboard" },
-        { to: "/curriculum", label: "Curriculum map" },
-      ];
-    }
-    return [
-      { to: "/", label: "Login" },
-      { to: "/dashboard", label: "Teacher dashboard" },
-      { to: "/student", label: "Student dashboard" },
-      { to: "/curriculum", label: "Curriculum map" },
-    ];
+  const dashboardLink = useMemo(() => {
+    if (role === "teacher") return "/dashboard";
+    if (role === "student") return "/student";
+    if (role === "admin") return "/admin";
+    return null;
   }, [role]);
 
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
     clear();
+    setMenuOpen(false);
     if (location.pathname !== "/") {
       navigate("/", { replace: true });
     }
-    setMenuOpen(false);
-  };
+  }, [clear, navigate, location.pathname]);
 
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  const accountLabel = role ? `Hi, ${greetingName || "there"}` : null;
+  const menuItems = useMemo(() => {
+    if (!role) return [];
+    const items = [];
+    if (dashboardLink) {
+      items.push({ type: "link", to: dashboardLink, label: "My dashboard" });
+    }
+    items.push({ type: "link", to: "/account", label: "My account" });
+    items.push({ type: "action", label: "Log out", onClick: handleSignOut });
+    return items;
+  }, [role, dashboardLink, handleSignOut]);
+
   const handleAccountBlur = (event) => {
     if (!event.currentTarget.contains(event.relatedTarget)) {
       setMenuOpen(false);
     }
   };
 
+  const isAuthenticated = Boolean(role);
+
   return (
     <div className="layout-root">
       <header className="layout-header">
         <div className="layout-header__content">
-          <Link to="/curriculum" className="layout-brand">
+          <Link to="/curriculum" className="layout-brand" aria-label="Computer Science Department home">
             <img src={logo} alt="School crest" className="layout-brand__mark" />
-            <div>
+            <div className="layout-brand__text">
               <span className="layout-brand__title">Computer Science Department</span>
-              <small className="layout-brand__subtitle">
-                St Georges British International Schools Group Germany
-              </small>
+              <small className="layout-brand__subtitle">St Georges British International Schools Group Germany</small>
             </div>
           </Link>
 
-          <nav className="layout-nav">
-            {navItems.map((item) => (
-              <Link key={item.to} to={item.to}>
-                {item.label}
+          <div className="layout-actions">
+            {!isAuthenticated && (
+              <Link to="/" className="layout-login-link">
+                Log in
               </Link>
-            ))}
-          </nav>
+            )}
 
-          {role && (
-            <div className="layout-account" onBlur={handleAccountBlur}>
-              <button
-                type="button"
-                className="layout-account__button"
-                onClick={() => setMenuOpen((prev) => !prev)}
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-              >
-                <span className="layout-account__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" focusable="false">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M4 19c0-3.5 3.1-6 8-6s8 2.5 8 6" />
+            {isAuthenticated && (
+              <div className="layout-account" onBlur={handleAccountBlur}>
+                <button
+                  type="button"
+                  className="layout-account__button"
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                >
+                  <span className="layout-account__avatar" aria-hidden="true">
+                    {initials}
+                  </span>
+                  <span className="layout-account__greeting">{greetingName ? `Hi, ${greetingName}` : "Account"}</span>
+                  <svg className="layout-account__chevron" viewBox="0 0 12 8" aria-hidden="true">
+                    <path d="M1 1.5 6 6.5 11 1.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                </span>
-                <span className="layout-account__label">{accountLabel}</span>
-              </button>
-              {menuOpen && (
-                <div className="layout-account__menu" role="menu">
-                  <Link to="/account" role="menuitem">
-                    My account
-                  </Link>
-                  <button type="button" onClick={handleSignOut} role="menuitem">
-                    Sign out
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                </button>
+                {menuOpen && (
+                  <div className="layout-account__menu" role="menu">
+                    {menuItems.map((item) =>
+                      item.type === "link" ? (
+                        <Link key={item.label} to={item.to} role="menuitem">
+                          {item.label}
+                        </Link>
+                      ) : (
+                        <button key={item.label} type="button" onClick={item.onClick} role="menuitem">
+                          {item.label}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </header>
       <main className="layout-main">{children}</main>

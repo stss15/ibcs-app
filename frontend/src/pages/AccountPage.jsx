@@ -42,20 +42,23 @@ function AccountPage() {
 
   if (!user) {
     return (
-      <div className="account-grid">
-        <section className="card">
-          <h2>No session found</h2>
-          <p className="muted">
-            Please <Link to="/">return to the login screen</Link> to sign in.
-          </p>
-        </section>
+      <div className="page-shell">
+        <div className="account-grid">
+          <section className="card">
+            <h2>No session found</h2>
+            <p className="muted">
+              Please <Link to="/">return to the login screen</Link> to sign in.
+            </p>
+          </section>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="account-grid">
-      <section className="card">
+    <div className="page-shell">
+      <div className="account-grid">
+        <section className="card">
         <header className="card-header">
           <div>
             <h2>Account overview</h2>
@@ -80,7 +83,8 @@ function AccountPage() {
             </div>
           ))}
         </dl>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

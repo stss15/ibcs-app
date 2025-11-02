@@ -56,34 +56,53 @@ function LessonPage() {
     return { unit: null, subtopic: null };
   }, [manifest, subtopic]);
 
+  const role = session?.user?.role ?? null;
+  const isTeacher = role === "teacher";
+
   const userProgramme = useMemo(() => {
+    if (isTeacher) return "ib-hl";
     const track = session?.user?.curriculumTrack;
     if (typeof track === "string" && track.toLowerCase().startsWith("ib")) {
       return track;
     }
     return "ib-sl";
-  }, [session?.user?.curriculumTrack]);
+  }, [session?.user?.curriculumTrack, isTeacher]);
 
-  const trackLabel = useMemo(() => getTrackLabel(manifest, userProgramme), [manifest, userProgramme]);
+  const trackLabel = useMemo(() => {
+    const base = getTrackLabel(manifest, userProgramme);
+    return isTeacher ? `${base} · Teacher view` : base;
+  }, [manifest, userProgramme, isTeacher]);
 
   const chapterAccessible = useMemo(() => {
+    if (isTeacher) return true;
     if (!subtopicData) return false;
     const unitAccess = !subtopicData.unitAvailableFor || subtopicData.unitAvailableFor.includes(userProgramme);
     const subtopicAccess = !subtopicData.availableFor || subtopicData.availableFor.includes(userProgramme);
     return unitAccess && subtopicAccess;
-  }, [subtopicData, userProgramme]);
+  }, [subtopicData, userProgramme, isTeacher]);
 
   const lessons = useMemo(() => {
     if (!subtopicData) return [];
     const rawLessons = subtopicData.lessons ?? [];
 
     return rawLessons.map((item, index) => {
+      if (isTeacher) {
+        return {
+          ...item,
+          status: "unlocked",
+          isUnlocked: true,
+          isHLOnly: Boolean(item.hlOnly),
+          teacherUnlocked: true,
+          isCompleted: false,
+        };
+      }
       if (!chapterAccessible) {
         return {
           ...item,
           status: "hl-only",
           isUnlocked: false,
           isHLOnly: true,
+          teacherUnlocked: false,
           isCompleted: false,
         };
       }
@@ -94,6 +113,7 @@ function LessonPage() {
           status: "hl-only",
           isUnlocked: false,
           isHLOnly: true,
+          teacherUnlocked: false,
           isCompleted: false,
         };
       }
@@ -104,10 +124,11 @@ function LessonPage() {
         status: isUnlocked ? "unlocked" : "locked",
         isUnlocked,
         isHLOnly: Boolean(item.hlOnly),
+        teacherUnlocked: false,
         isCompleted: false,
       };
     });
-  }, [subtopicData, chapterAccessible, userProgramme]);
+  }, [subtopicData, chapterAccessible, userProgramme, isTeacher]);
   
   const currentIndex = useMemo(() => {
     return lessons.findIndex((l) => l.id === lessonId);
@@ -167,6 +188,10 @@ function LessonPage() {
   };
   
   const handleNavigateToLesson = (lessonItem) => {
+    if (isTeacher) {
+      navigate(`/lesson/${lessonItem.id}`);
+      return;
+    }
     if (lessonItem.status === "hl-only") {
       alert("This lesson is only available to Higher Level students.");
       return;
@@ -254,7 +279,7 @@ function LessonPage() {
               Part of {unitData?.id ?? subtopic?.split('.')[0]} · {unitData?.title ?? "IB Computer Science"}
             </p>
             <p className="muted small">Viewing as {trackLabel}</p>
-            {!chapterAccessible && (
+            {!isTeacher && !chapterAccessible && (
               <span className="lesson-sidebar__alert">Locked for SL · Higher Level pathway</span>
             )}
           </div>
@@ -262,7 +287,7 @@ function LessonPage() {
           <nav className="lesson-nav">
             {lessons.map((l) => {
               const isCurrent = l.id === lessonId;
-              const isLocked = (l.status !== "unlocked" && !assessmentComplete) || l.status === "hl-only";
+              const isLocked = !isTeacher && ((l.status !== "unlocked" && !assessmentComplete) || l.status === "hl-only");
               
               return (
                 <button
@@ -290,13 +315,15 @@ function LessonPage() {
           
           {/* End of chapter test button */}
           <div className="lesson-sidebar__footer">
-            <button className="btn-test" disabled>
+            <button className="btn-test" disabled aria-disabled="true">
               <svg viewBox="0 0 24 24" width="18" height="18">
                 <path fill="currentColor" d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm0 4c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-1.4c0-2 4-3.1 6-3.1s6 1.1 6 3.1V19z"/>
               </svg>
-              End of Chapter Test
+              {isTeacher ? "Teacher preview" : "End of Chapter Test"}
             </button>
-            <p className="muted small">Complete all lessons to unlock</p>
+            <p className="muted small">
+              {isTeacher ? "Students must complete all lessons to unlock" : "Complete all lessons to unlock"}
+            </p>
           </div>
         </aside>
         
@@ -308,6 +335,7 @@ function LessonPage() {
               <span className="badge badge--primary">{subtopic}</span>
               <span className="badge badge--muted">{trackLabel}</span>
               {currentLessonMeta?.isHLOnly && <span className="badge badge--hl">HL focus</span>}
+              {isTeacher && <span className="badge badge--teacher">Teacher view</span>}
               {lesson.isCompleted && <span className="badge badge--success">Completed</span>}
             </div>
           </header>
@@ -367,7 +395,7 @@ function LessonPage() {
                   </button>
                 )}
                 
-                {(assessmentComplete || !lesson.hasFormativeAssessment) && nextLesson && (
+                {(assessmentComplete || !lesson.hasFormativeAssessment || isTeacher) && nextLesson && (
                   <button
                     className="btn btn--primary"
                     onClick={() => navigate(`/lesson/${nextLesson.id}`)}
@@ -426,7 +454,7 @@ function LessonPage() {
         <div className="lesson-progress__track">
           {lessons.map((l, index) => {
             const isCurrent = l.id === lessonId;
-            const isLocked = (l.status !== "unlocked" && !assessmentComplete) || l.status === "hl-only";
+            const isLocked = !isTeacher && ((l.status !== "unlocked" && !assessmentComplete) || l.status === "hl-only");
             
             return (
               <button

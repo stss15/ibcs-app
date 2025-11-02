@@ -412,10 +412,12 @@ function TeacherDashboardPage() {
 
   if (!ready) {
     return (
-      <div className="dashboard-grid">
-        <section className="card">
-          <p className="muted">Preparing dashboard…</p>
-        </section>
+      <div className="page-shell">
+        <div className="dashboard-grid">
+          <section className="card">
+            <p className="muted">Preparing dashboard…</p>
+          </section>
+        </div>
       </div>
     );
   }
@@ -425,7 +427,8 @@ function TeacherDashboardPage() {
   }
 
   return (
-    <div className="dashboard-grid">
+    <div className="page-shell">
+      <div className="dashboard-grid">
       <section className="card card--wide card--summary">
         <header className="card-header">
           <div>
@@ -771,6 +774,7 @@ function TeacherDashboardPage() {
         </div>
       </section>
     </div>
+  </div>
   );
 }
 

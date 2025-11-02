@@ -28,32 +28,48 @@ function TopicPage() {
     return null;
   }, [manifest, id]);
 
+  const role = session?.user?.role ?? null;
+  const isTeacher = role === "teacher";
+
   const userProgramme = useMemo(() => {
+    if (isTeacher) return "ib-hl";
     const track = session?.user?.curriculumTrack;
     if (typeof track === "string" && track.toLowerCase().startsWith("ib")) {
       return track;
     }
     return "ib-sl";
-  }, [session?.user?.curriculumTrack]);
+  }, [session?.user?.curriculumTrack, isTeacher]);
 
-  const trackLabel = useMemo(() => getTrackLabel(manifest, userProgramme), [manifest, userProgramme]);
+  const trackLabel = useMemo(() => {
+    const base = getTrackLabel(manifest, userProgramme);
+    return isTeacher ? `${base} · Teacher view` : base;
+  }, [manifest, userProgramme, isTeacher]);
 
   const chapterAccessible = useMemo(() => {
     if (!subtopic) return false;
+    if (isTeacher) return true;
     const unitAccess = !subtopic.unitAvailableFor || subtopic.unitAvailableFor.includes(userProgramme);
     const subtopicAccess = !subtopic.availableFor || subtopic.availableFor.includes(userProgramme);
     return unitAccess && subtopicAccess;
-  }, [subtopic, userProgramme]);
+  }, [subtopic, userProgramme, isTeacher]);
 
   const lessonsWithStatus = useMemo(() => {
     if (!subtopic) return [];
     const lessons = subtopic.lessons ?? [];
 
     return lessons.map((lesson, index) => {
+      if (isTeacher) {
+        return {
+          ...lesson,
+          status: "unlocked",
+          teacherUnlocked: true,
+        };
+      }
       if (!chapterAccessible) {
         return {
           ...lesson,
           status: "hl-only",
+          teacherUnlocked: false,
         };
       }
 
@@ -61,15 +77,17 @@ function TopicPage() {
         return {
           ...lesson,
           status: "hl-only",
+          teacherUnlocked: false,
         };
       }
 
       return {
         ...lesson,
         status: index === 0 ? "unlocked" : "locked",
+        teacherUnlocked: false,
       };
     });
-  }, [subtopic, chapterAccessible, userProgramme]);
+  }, [subtopic, chapterAccessible, userProgramme, isTeacher]);
 
   useEffect(() => {
     if (!ready) {
@@ -121,7 +139,7 @@ function TopicPage() {
           <p className="muted">
             Part of {subtopic.unitId}: {subtopic.unitTitle} · Viewing as {trackLabel}
           </p>
-          {!chapterAccessible && (
+          {!isTeacher && !chapterAccessible && (
             <p className="topic-alert">This chapter is part of the Higher Level pathway. Ask your teacher to unlock it.</p>
           )}
         </header>
@@ -136,7 +154,8 @@ function TopicPage() {
               const isUnlocked = lesson.status === "unlocked";
               const isLocked = lesson.status === "locked";
               const isHLOnly = lesson.status === "hl-only";
-              const isAccessible = isUnlocked;
+              const teacherUnlocked = !!lesson.teacherUnlocked;
+              const isAccessible = teacherUnlocked || isUnlocked;
 
               const handleClick = (event) => {
                 if (!isAccessible) {
@@ -153,13 +172,14 @@ function TopicPage() {
                 <Link
                   key={lesson.id}
                   to={isAccessible ? `/lesson/${lesson.id}` : "#"}
-                  className={`lesson-card ${isUnlocked ? "unlocked" : ""} ${isLocked || isHLOnly ? "locked" : ""}`}
+                  className={`lesson-card ${(isUnlocked || teacherUnlocked) ? "unlocked" : ""} ${(!teacherUnlocked && (isLocked || isHLOnly)) ? "locked" : ""}`}
                   onClick={handleClick}
                   aria-disabled={!isAccessible}
                 >
                   <div className="lesson-card__header">
                     <span className="lesson-card__number">{lesson.id.split(".").pop()}</span>
-                    {isHLOnly && <span className="badge badge--hl">HL only</span>}
+                    {teacherUnlocked && <span className="badge badge--teacher">Teacher view</span>}
+                    {!teacherUnlocked && isHLOnly && <span className="badge badge--hl">HL only</span>}
                     {isUnlocked && <span className="badge badge--unlocked">Unlocked</span>}
                   </div>
                   <h3 className="lesson-card__title">{lesson.title}</h3>
@@ -182,9 +202,11 @@ function TopicPage() {
             <div className="topic-test">
               <h3>End of Chapter Test</h3>
               <p className="muted">
-                {chapterAccessible
-                  ? "Complete every lesson to unlock the chapter test."
-                  : "Available for Higher Level students once the chapter is unlocked."
+                {isTeacher
+                  ? "Teacher preview mode. Students must complete every lesson to unlock the test."
+                  : chapterAccessible
+                    ? "Complete every lesson to unlock the chapter test."
+                    : "Available for Higher Level students once the chapter is unlocked."
                 }
               </p>
               <button className="btn btn--primary" disabled>

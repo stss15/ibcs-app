@@ -93,10 +93,12 @@ function StudentDashboardPage() {
 
   if (!ready) {
     return (
-      <div className="student-grid">
-        <section className="card">
-          <p className="muted">Checking session…</p>
-        </section>
+      <div className="page-shell">
+        <div className="student-grid">
+          <section className="card">
+            <p className="muted">Checking session…</p>
+          </section>
+        </div>
       </div>
     );
   }
@@ -106,7 +108,8 @@ function StudentDashboardPage() {
   }
 
   return (
-    <div className="student-grid">
+    <div className="page-shell">
+      <div className="student-grid">
       <section className="card card--wide card--summary">
         <header className="card-header">
           <div>
@@ -217,6 +220,7 @@ function StudentDashboardPage() {
         </div>
       </section>
     </div>
+  </div>
   );
 }
 

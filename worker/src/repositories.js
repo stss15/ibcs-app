@@ -1,5 +1,5 @@
 import { id, tx } from './instant.js';
-import manifest from '../../curriculum/manifest.json' assert { type: 'json' };
+import manifest from './manifest.js';
 
 /* ------------------------------------------------------------------ *
  * Sanitizers ensure we never leak password hashes back to callers.

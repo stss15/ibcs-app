@@ -286,6 +286,11 @@
   color: #d35400;
 }
 
+.badge--teacher {
+  background: rgba(12, 41, 124, 0.14);
+  color: var(--cs-blue);
+}
+
 .badge--success {
   background: #e8f5e9;
   color: #2e7d32;

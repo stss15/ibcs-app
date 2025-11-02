@@ -200,6 +200,11 @@
   color: #2e7d32;
 }
 
+.badge--teacher {
+  background: rgba(12, 41, 124, 0.12);
+  color: var(--cs-blue);
+}
+
 /* Topic Footer */
 .topic-footer {
   margin-top: 2rem;

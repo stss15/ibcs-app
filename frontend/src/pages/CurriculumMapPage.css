@@ -1,36 +1,47 @@
-.curriculum-grid {
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  align-content: start;
+.curriculum-page .page-hero {
+  position: relative;
 }
 
-.curriculum-card {
+.curriculum-page .page-hero::before {
+  content: "";
+  position: absolute;
+  inset: auto -20% -40% auto;
+  width: min(260px, 35vw);
+  height: min(260px, 35vw);
+  background: radial-gradient(circle, rgba(178, 133, 65, 0.35) 0%, rgba(178, 133, 65, 0) 70%);
+  opacity: 0.6;
+}
+
+.curriculum-panel {
   background: var(--cs-white);
-  border-radius: 16px;
-  padding: clamp(1.2rem, 3vw, 1.8rem);
-  border: 1px solid rgba(12, 41, 124, 0.1);
-  box-shadow: 0 18px 32px rgba(12, 41, 124, 0.12);
+  border-radius: 20px;
+  border: 1px solid rgba(12, 41, 124, 0.08);
+  box-shadow: 0 24px 46px rgba(12, 41, 124, 0.12);
+  padding: clamp(1.6rem, 3.5vw, 2.3rem);
   display: grid;
-  gap: 1.1rem;
+  gap: 1.2rem;
 }
 
-.curriculum-card--wide {
-  grid-column: 1 / -1;
+.curriculum-panel--highlight {
+  background: linear-gradient(130deg, rgba(12, 41, 124, 0.08) 0%, rgba(178, 133, 65, 0.08) 100%);
+  border-color: rgba(12, 41, 124, 0.16);
+  box-shadow: 0 26px 52px rgba(12, 41, 124, 0.18);
 }
 
-.curriculum-card header {
+.curriculum-panel__header {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.8rem;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
-.curriculum-card--highlight {
-  border: 1px solid rgba(178, 133, 65, 0.35);
-  box-shadow: 0 22px 42px rgba(178, 133, 65, 0.2);
-  background: linear-gradient(145deg, rgba(178, 133, 65, 0.08), rgba(12, 41, 124, 0.04));
+.curriculum-panel__header > div h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.curriculum-panel__body {
+  display: grid;
+  gap: 1rem;
 }
 
 .curriculum-buttons {
@@ -75,19 +86,6 @@
   box-shadow: 0 14px 32px rgba(12, 41, 124, 0.28);
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  background: rgba(12, 41, 124, 0.12);
-  color: var(--cs-blue);
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.badge--muted {
-  background: rgba(12, 41, 124, 0.08);
-  color: var(--cs-muted);
+.curriculum-panel--highlight .pill--action {
+  box-shadow: 0 18px 36px rgba(12, 41, 124, 0.28);
 }
