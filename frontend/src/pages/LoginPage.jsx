@@ -13,7 +13,8 @@ function LoginPage() {
   const { setSession } = useSession();
   const navigate = useNavigate();
 
-  const roleLabel = role === "teacher" ? "Teacher" : "Student";
+  const roleLabel =
+    role === "teacher" ? "Teacher" : role === "student" ? "Student" : "Admin";
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -35,7 +36,13 @@ function LoginPage() {
       }
       setSession({ token: response.token, user: response.user });
       setStatus({ status: "success", message: "Signed in." });
-      navigate(response.user.role === "teacher" ? "/dashboard" : "/student", { replace: true });
+      if (response.user.role === "admin") {
+        navigate("/admin", { replace: true });
+      } else if (response.user.role === "teacher") {
+        navigate("/dashboard", { replace: true });
+      } else {
+        navigate("/student", { replace: true });
+      }
     } catch (error) {
       setStatus({ status: "error", message: error.message || "Login failed" });
     }
@@ -75,6 +82,16 @@ function LoginPage() {
             >
               Student
             </button>
+            <button
+              type="button"
+              className={role === "admin" ? "active" : ""}
+              onClick={() => {
+                setRole("admin");
+                setStatus(initialState);
+              }}
+            >
+              Admin
+            </button>
           </div>
         </div>
 
@@ -95,8 +112,8 @@ function LoginPage() {
 
         <footer className="login-footnote">
           <p className="muted">
-            Staff and students share the same sign-in screen—select your role above so we can route you
-            to the right dashboard.
+            Admins manage teacher accounts. Teachers manage classes and unlock curriculum. Students track their own
+            journey. Choose the right role above so we can route you to the correct dashboard.
           </p>
         </footer>
       </section>

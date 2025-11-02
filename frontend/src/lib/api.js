@@ -60,11 +60,11 @@ export async function getTeacherDashboard(token) {
   });
 }
 
-export async function createClass(token, { className, description }) {
+export async function createClass(token, { className, description, yearGroup }) {
   return request("/teacher/classes", {
     method: "POST",
     token,
-    body: { className, description },
+    body: { className, description, yearGroup },
   });
 }
 
@@ -76,6 +76,45 @@ export async function createStudent(token, payload) {
   });
 }
 
+export async function bulkCreateStudents(token, payload) {
+  return request("/teacher/students/bulk", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function unlockClassStage(token, payload) {
+  return request("/teacher/classes/unlocks", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function unlockStudentStage(token, payload) {
+  return request("/teacher/students/unlocks", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function archiveStudent(token, payload) {
+  return request("/teacher/students/archive", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function exportClassProgress(token, classId) {
+  return request(`/teacher/classes/${classId}/export`, {
+    method: "GET",
+    token,
+  });
+}
+
 export async function getStudentDashboard(token) {
   return request("/student/dashboard", {
     method: "GET",
@@ -83,4 +122,25 @@ export async function getStudentDashboard(token) {
   });
 }
 
+export async function getAdminDashboard(token) {
+  return request("/admin/dashboard", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function createTeacher(token, payload) {
+  return request("/admin/teachers", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteTeacher(token, username) {
+  return request(`/admin/teachers/${encodeURIComponent(username)}`, {
+    method: "DELETE",
+    token,
+  });
+}
 

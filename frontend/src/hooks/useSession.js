@@ -33,6 +33,13 @@ export function useSession() {
   const [session, setSessionState] = useState(() => readSession());
   const [ready, setReady] = useState(false);
 
+  const mergeUsers = useCallback((prevUser = {}, nextUser = {}) => {
+    return {
+      ...prevUser,
+      ...nextUser,
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -47,14 +54,10 @@ export function useSession() {
         if (data?.valid && data.user) {
           setSessionState((prev) => {
             if (!prev) return prev;
+            const mergedUser = mergeUsers(prev.user, data.user);
             const nextSession = {
               token: prev.token,
-              user: {
-                username: data.user.username ?? prev.user?.username,
-                role: data.user.role ?? prev.user?.role,
-                classId: data.user.classId ?? prev.user?.classId ?? null,
-                displayName: data.user.displayName ?? prev.user?.displayName ?? null,
-              },
+              user: mergedUser,
             };
             writeSession(nextSession);
             return nextSession;
@@ -78,9 +81,15 @@ export function useSession() {
     return () => {
       cancelled = true;
     };
-  }, [session?.token]);
+  }, [mergeUsers, session?.token]);
 
   const setSession = useCallback((value) => {
+    if (value && value.user) {
+      value = {
+        token: value.token,
+        user: { ...value.user },
+      };
+    }
     writeSession(value);
     setSessionState(value);
   }, []);

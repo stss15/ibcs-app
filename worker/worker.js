@@ -1,18 +1,38 @@
 import bcrypt from 'bcryptjs';
 import { getDb } from './src/instant.js';
 import {
+  findAdminByUsername,
   findTeacherByUsername,
   findStudentByUsername,
   createTeacher as createTeacherRecord,
   createClass as createClassRecord,
   createStudent as createStudentRecord,
+  bulkCreateStudents,
+  createClassUnlock,
+  createStudentUnlock,
   getTeacherDashboardData,
   getStudentDashboardData,
+  listTeachers,
+  archiveTeacher,
+  archiveClass,
+  archiveStudent,
+  setStudentActiveStage,
 } from './src/repositories.js';
 import { json, readJson, withCors } from './src/http.js';
 import { createToken, verifyToken } from './src/jwt.js';
 
 const BCRYPT_ROUNDS = 8;
+const CSV_HEADER = [
+  'Student name',
+  'Username',
+  'Year group',
+  'Curriculum track',
+  'Active stage',
+  'Completed lessons',
+  'In-progress lessons',
+  'Formative attempts',
+  'Latest summative score',
+];
 
 export default {
   async fetch(request, env) {
@@ -32,6 +52,21 @@ export default {
         return withCors(handleVerify(request, env), request, env);
       }
 
+      if (pathname === '/admin/dashboard' && request.method === 'GET') {
+        return requireRole(request, env, 'admin', handleAdminDashboard);
+      }
+
+      if (pathname === '/admin/teachers' && request.method === 'POST') {
+        return requireRole(request, env, 'admin', handleAdminCreateTeacher);
+      }
+
+      if (pathname.startsWith('/admin/teachers/') && request.method === 'DELETE') {
+        const username = decodeURIComponent(pathname.split('/')[3] || '');
+        return requireRole(request, env, 'admin', (req, env, session) =>
+          handleAdminDeleteTeacher(req, env, session, username),
+        );
+      }
+
       if (pathname === '/teacher/dashboard' && request.method === 'GET') {
         return requireRole(request, env, 'teacher', handleTeacherDashboard);
       }
@@ -42,6 +77,30 @@ export default {
 
       if (pathname === '/teacher/students' && request.method === 'POST') {
         return requireRole(request, env, 'teacher', handleCreateStudent);
+      }
+
+      if (pathname === '/teacher/students/bulk' && request.method === 'POST') {
+        return requireRole(request, env, 'teacher', handleBulkCreateStudentsHandler);
+      }
+
+      if (pathname === '/teacher/classes/unlocks' && request.method === 'POST') {
+        return requireRole(request, env, 'teacher', handleClassUnlock);
+      }
+
+      if (pathname === '/teacher/students/unlocks' && request.method === 'POST') {
+        return requireRole(request, env, 'teacher', handleStudentUnlock);
+      }
+
+      if (pathname === '/teacher/students/archive' && request.method === 'POST') {
+        return requireRole(request, env, 'teacher', handleArchiveStudent);
+      }
+
+      if (pathname.startsWith('/teacher/classes/') && pathname.endsWith('/export') && request.method === 'GET') {
+        const segments = pathname.split('/');
+        const classId = decodeURIComponent(segments[3] || '');
+        return requireRole(request, env, 'teacher', (req, env, session) =>
+          handleClassExport(req, env, session, classId),
+        );
       }
 
       if (pathname === '/student/dashboard' && request.method === 'GET') {
@@ -71,15 +130,20 @@ async function handleLogin(request, env) {
   if (!normalizedUsername || !normalizedPassword) {
     return json({ error: 'Username and password are required.' }, 400);
   }
-  if (!['teacher', 'student'].includes(normalizedRole)) {
-    return json({ error: "Role must be 'teacher' or 'student'." }, 400);
+  if (!['admin', 'teacher', 'student'].includes(normalizedRole)) {
+    return json({ error: "Role must be 'admin', 'teacher', or 'student'." }, 400);
   }
 
   const db = getDb(env);
-  const userDoc =
-    normalizedRole === 'teacher'
-      ? await findTeacherByUsername(db, normalizedUsername)
-      : await findStudentByUsername(db, normalizedUsername);
+  let userDoc = null;
+
+  if (normalizedRole === 'admin') {
+    userDoc = await findAdminByUsername(db, normalizedUsername);
+  } else if (normalizedRole === 'teacher') {
+    userDoc = await findTeacherByUsername(db, normalizedUsername);
+  } else {
+    userDoc = await findStudentByUsername(db, normalizedUsername);
+  }
 
   if (!userDoc?.password) {
     return json({ error: 'Invalid credentials' }, 401);
@@ -88,6 +152,10 @@ async function handleLogin(request, env) {
   const passwordMatches = await bcrypt.compare(normalizedPassword, userDoc.password);
   if (!passwordMatches) {
     return json({ error: 'Invalid credentials' }, 401);
+  }
+
+  if (userDoc.archivedAt) {
+    return json({ error: 'Account archived' }, 403);
   }
 
   const token = await createToken(
@@ -114,12 +182,17 @@ async function handleVerify(request, env) {
   try {
     const payload = await verifyToken(token, env.TOKEN_SECRET);
     const db = getDb(env);
-    const doc =
-      payload.role === 'teacher'
-        ? await findTeacherByUsername(db, payload.username)
-        : await findStudentByUsername(db, payload.username);
+    let doc = null;
 
-    if (!doc) {
+    if (payload.role === 'admin') {
+      doc = await findAdminByUsername(db, payload.username);
+    } else if (payload.role === 'teacher') {
+      doc = await findTeacherByUsername(db, payload.username);
+    } else {
+      doc = await findStudentByUsername(db, payload.username);
+    }
+
+    if (!doc || doc.archivedAt) {
       return json({ valid: false }, 401);
     }
 
@@ -128,93 +201,521 @@ async function handleVerify(request, env) {
       user: formatSessionUser(payload.role, doc),
     });
   } catch (error) {
-    return json({ valid: false, error: error.message }, 401);
+    console.warn('Token verification failed', error);
+    return json({ valid: false }, 401);
   }
 }
 
-async function handleTeacherDashboard(request, env, session) {
+async function handleAdminDashboard(_request, env, session) {
   const db = getDb(env);
-  const { classes, students } = await getTeacherDashboardData(db, session.username);
+  const [adminDoc, teachers] = await Promise.all([
+    findAdminByUsername(db, session.username),
+    listTeachers(db, { includeArchived: true }),
+  ]);
 
-  return withCors(
-    Promise.resolve(
-      json({
-        classes: classes.map(stripPassword),
-        students: students.map(stripPassword),
-      }),
-    ),
-    request,
-    env,
-  );
+  if (!adminDoc) {
+    return json({ error: 'Admin not found' }, 404);
+  }
+
+  const teacherDetails = [];
+  for (const teacher of teachers) {
+    const summary = await getTeacherDashboardData(db, { teacherId: teacher.id, username: teacher.username });
+    const safeTeacher = stripPassword(teacher);
+    const activeStudents = summary.students.filter((student) => student.status === 'active').length;
+    const archivedStudents = summary.students.filter((student) => student.status === 'archived').length;
+    teacherDetails.push({
+      id: safeTeacher.id,
+      username: safeTeacher.username,
+      firstName: safeTeacher.firstName ?? null,
+      lastName: safeTeacher.lastName ?? null,
+      displayName: safeTeacher.displayName ?? safeTeacher.username,
+      createdAt: safeTeacher.createdAt ?? null,
+      archivedAt: safeTeacher.archivedAt ?? null,
+      totals: {
+        classes: summary.classes.filter((clazz) => !clazz.archivedAt).length,
+        activeStudents,
+        archivedStudents,
+      },
+    });
+  }
+
+  return json({
+    admin: formatSessionUser('admin', adminDoc),
+    teachers: teacherDetails,
+  });
+}
+
+async function handleAdminCreateTeacher(request, env) {
+  const body = await readJson(request);
+  const username = String(body.username || '').trim();
+  const password = String(body.password || '');
+  const firstName = String(body.firstName || '').trim();
+  const lastName = String(body.lastName || '').trim();
+  const displayName = String(body.displayName || '').trim() || [firstName, lastName].filter(Boolean).join(' ') || username;
+
+  if (!username || !password || !firstName || !lastName) {
+    return json({ error: 'username, password, firstName, and lastName are required.' }, 400);
+  }
+
+  const db = getDb(env);
+  const existing = await findTeacherByUsername(db, username);
+  if (existing) {
+    return json({ error: 'Teacher already exists.' }, 409);
+  }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const created = await createTeacherRecord(db, {
+    username,
+    password: passwordHash,
+    firstName,
+    lastName,
+    displayName,
+  });
+
+  return json({ teacher: stripPassword(created) }, 201);
+}
+
+async function handleAdminDeleteTeacher(_request, env, _session, username) {
+  if (!username) {
+    return json({ error: 'Teacher username required' }, 400);
+  }
+
+  const db = getDb(env);
+  const teacher = await findTeacherByUsername(db, username);
+  if (!teacher) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const summary = await getTeacherDashboardData(db, { teacherId: teacher.id, username: teacher.username });
+
+  const archivedAt = await archiveTeacher(db, teacher.id);
+  let classesArchived = 0;
+  for (const clazz of summary.classes) {
+    if (!clazz.archivedAt) {
+      await archiveClass(db, clazz.id);
+      classesArchived += 1;
+    }
+  }
+
+  let studentsArchived = 0;
+  for (const student of summary.students) {
+    if (student.status !== 'archived') {
+      await archiveStudent(db, student.id);
+      studentsArchived += 1;
+    }
+  }
+
+  return json({
+    ok: true,
+    archivedAt,
+    classesArchived,
+    studentsArchived,
+  });
+}
+
+async function handleTeacherDashboard(_request, env, session) {
+  const db = getDb(env);
+  const teacher = await findTeacherByUsername(db, session.username);
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const data = await getTeacherDashboardData(db, { teacherId: teacher.id, username: teacher.username });
+  const safeStudents = data.students.map(stripPassword);
+
+  const lessonSummary = summarizeLessons(data.progress);
+
+  return json({
+    teacher: formatSessionUser('teacher', teacher),
+    classes: data.classes.filter((clazz) => !clazz.archivedAt),
+    students: safeStudents.filter((student) => student.status !== 'archived'),
+    archivedStudents: safeStudents.filter((student) => student.status === 'archived'),
+    classUnlocks: data.classUnlocks,
+    studentUnlocks: data.studentUnlocks,
+    progress: data.progress,
+    lessonSummary,
+  });
 }
 
 async function handleCreateClass(request, env, session) {
   const body = await readJson(request);
   const className = String(body.className || '').trim();
   const description = String(body.description || '').trim();
+  const yearGroup = body.yearGroup ? String(body.yearGroup).trim() : null;
 
   if (!className) {
-    return json({ error: 'className is required.' }, 400);
+    return json({ error: 'Class name is required.' }, 400);
   }
 
   const db = getDb(env);
+  const teacher = await findTeacherByUsername(db, session.username);
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
   const created = await createClassRecord(db, {
     className,
     description: description || null,
-    teacherUsername: session.username,
+    teacherId: teacher.id,
+    teacherUsername: teacher.username,
+    yearGroup,
   });
 
-  return withCors(Promise.resolve(json(created, 201)), request, env);
+  return json({ class: created }, 201);
 }
 
 async function handleCreateStudent(request, env, session) {
   const body = await readJson(request);
   const classId = String(body.classId || '').trim();
-  const studentName = String(body.studentName || '').trim();
+  const firstName = String(body.firstName || '').trim();
+  const lastName = String(body.lastName || '').trim();
   const username = String(body.username || '').trim();
   const password = String(body.password || '');
+  const yearGroup = String(body.yearGroup || '').trim();
 
-  if (!classId || !studentName || !password) {
-    return json({ error: 'classId, studentName, and password are required.' }, 400);
+  if (!classId || !firstName || !lastName || !password || !yearGroup) {
+    return json({ error: 'classId, firstName, lastName, yearGroup, and password are required.' }, 400);
   }
 
   const db = getDb(env);
-  const { classes } = await getTeacherDashboardData(db, session.username);
-  const ownsClass = classes.some((item) => item.teacherUsername === session.username && item.id === classId);
-  if (!ownsClass) {
+  const [teacher, classQuery] = await Promise.all([
+    findTeacherByUsername(db, session.username),
+    db.query({
+      classes: {
+        $: {
+          where: { id: classId },
+          limit: 1,
+        },
+      },
+    }),
+  ]);
+
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const classDoc = classQuery?.classes?.[0];
+  if (!classDoc || classDoc.teacherUsername !== teacher.username) {
     return json({ error: 'Not authorised for this class.' }, 403);
+  }
+
+  if (username) {
+    const existingStudent = await findStudentByUsername(db, username);
+    if (existingStudent) {
+      return json({ error: 'Student username already exists.' }, 409);
+    }
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const created = await createStudentRecord(db, {
-    name: studentName,
     username: username || null,
     password: passwordHash,
+    firstName,
+    lastName,
     classId,
-    teacherUsername: session.username,
+    teacherId: teacher.id,
+    teacherUsername: teacher.username,
+    yearGroup,
   });
 
-  return withCors(Promise.resolve(json(stripPassword(created), 201)), request, env);
+  return json({ student: stripPassword(created) }, 201);
 }
 
-async function handleStudentDashboard(request, env, session) {
+async function handleBulkCreateStudentsHandler(request, env, session) {
+  const body = await readJson(request);
+  const classId = String(body.classId || '').trim();
+  const rows = Array.isArray(body.students) ? body.students : [];
+
+  if (!classId || rows.length === 0) {
+    return json({ error: 'classId and students array are required.' }, 400);
+  }
+  if (rows.length > 200) {
+    return json({ error: 'Bulk upload limited to 200 students at a time.' }, 400);
+  }
+
+  const db = getDb(env);
+  const teacher = await findTeacherByUsername(db, session.username);
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const classQuery = await db.query({
+    classes: {
+      $: {
+        where: { id: classId },
+        limit: 1,
+      },
+    },
+  });
+  const classDoc = classQuery?.classes?.[0];
+  if (!classDoc || classDoc.teacherUsername !== teacher.username) {
+    return json({ error: 'Not authorised for this class.' }, 403);
+  }
+
+  const prepared = [];
+  for (const row of rows) {
+    const firstName = String(row.firstName || '').trim();
+    const lastName = String(row.lastName || '').trim();
+    const yearGroup = String(row.yearGroup || '').trim();
+    const username = String(row.username || '').trim();
+    const password = String(row.password || '');
+
+    if (!firstName || !lastName || !yearGroup || !password) {
+      return json({ error: 'Each student requires firstName, lastName, yearGroup, and password.' }, 400);
+    }
+
+    if (username) {
+      const existingStudent = await findStudentByUsername(db, username);
+      if (existingStudent) {
+        return json({ error: `Student username already exists: ${username}` }, 409);
+      }
+    }
+
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    prepared.push({
+      username: username || null,
+      password: passwordHash,
+      firstName,
+      lastName,
+      classId,
+      teacherId: teacher.id,
+      teacherUsername: teacher.username,
+      yearGroup,
+    });
+  }
+
+  const created = await bulkCreateStudents(db, prepared);
+  return json({
+    created: created.map(stripPassword),
+    count: created.length,
+  }, 201);
+}
+
+async function handleClassUnlock(request, env, session) {
+  const body = await readJson(request);
+  const classId = String(body.classId || '').trim();
+  const stageKey = String(body.stageKey || '').trim();
+
+  if (!classId || !stageKey) {
+    return json({ error: 'classId and stageKey are required.' }, 400);
+  }
+
+  const db = getDb(env);
+  const [teacher, classQuery] = await Promise.all([
+    findTeacherByUsername(db, session.username),
+    db.query({
+      classes: {
+        $: {
+          where: { id: classId },
+          limit: 1,
+        },
+      },
+    }),
+  ]);
+
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const classDoc = classQuery?.classes?.[0];
+  if (!classDoc || classDoc.teacherUsername !== teacher.username) {
+    return json({ error: 'Not authorised for this class.' }, 403);
+  }
+
+  const unlock = await createClassUnlock(db, {
+    classId,
+    stageKey,
+    unlockedBy: teacher.username,
+    teacherId: teacher.id,
+    teacherUsername: teacher.username,
+  });
+
+  return json({ unlock }, 201);
+}
+
+async function handleStudentUnlock(request, env, session) {
+  const body = await readJson(request);
+  const studentId = String(body.studentId || '').trim();
+  const stageKey = String(body.stageKey || '').trim();
+  const scope = body.scope ? String(body.scope).trim() : 'stage';
+  const targetId = body.targetId ? String(body.targetId).trim() : null;
+
+  if (!studentId || !stageKey) {
+    return json({ error: 'studentId and stageKey are required.' }, 400);
+  }
+
+  const db = getDb(env);
+  const [teacher, studentQuery] = await Promise.all([
+    findTeacherByUsername(db, session.username),
+    db.query({
+      students: {
+        $: {
+          where: { id: studentId },
+          limit: 1,
+        },
+      },
+    }),
+  ]);
+
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const studentDoc = studentQuery?.students?.[0];
+  if (!studentDoc || studentDoc.teacherUsername !== teacher.username) {
+    return json({ error: 'Not authorised for this student.' }, 403);
+  }
+
+  const unlock = await createStudentUnlock(db, {
+    studentId,
+    classId: studentDoc.classId,
+    teacherId: teacher.id,
+    teacherUsername: teacher.username,
+    stageKey,
+    unlockedBy: teacher.username,
+    scope,
+    targetId,
+  });
+
+  if (scope === 'stage') {
+    await setStudentActiveStage(db, studentId, stageKey);
+  }
+
+  return json({ unlock }, 201);
+}
+
+async function handleArchiveStudent(request, env, session) {
+  const body = await readJson(request);
+  const studentId = String(body.studentId || '').trim();
+
+  if (!studentId) {
+    return json({ error: 'studentId is required.' }, 400);
+  }
+
+  const db = getDb(env);
+  const [teacher, studentQuery] = await Promise.all([
+    findTeacherByUsername(db, session.username),
+    db.query({
+      students: {
+        $: {
+          where: { id: studentId },
+          limit: 1,
+        },
+      },
+    }),
+  ]);
+
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const studentDoc = studentQuery?.students?.[0];
+  if (!studentDoc || studentDoc.teacherUsername !== teacher.username) {
+    return json({ error: 'Not authorised for this student.' }, 403);
+  }
+
+  const archivedAt = await archiveStudent(db, studentId);
+  return json({ archivedAt });
+}
+
+async function handleClassExport(_request, env, session, classId) {
+  if (!classId) {
+    return json({ error: 'Class ID required' }, 400);
+  }
+
+  const db = getDb(env);
+  const teacher = await findTeacherByUsername(db, session.username);
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const data = await getTeacherDashboardData(db, { teacherId: teacher.id, username: teacher.username });
+  const clazz = data.classes.find((item) => item.id === classId && !item.archivedAt);
+  if (!clazz) {
+    return json({ error: 'Class not found' }, 404);
+  }
+
+  const students = data.students.filter((student) => student.classId === classId && student.status !== 'archived');
+  const progressMap = new Map();
+  for (const record of data.progress) {
+    if (record.classId !== classId) continue;
+    const list = progressMap.get(record.studentId) || [];
+    list.push(record);
+    progressMap.set(record.studentId, list);
+  }
+
+  const rows = students.map((student) => {
+    const studentProgress = progressMap.get(student.id) || [];
+    let completed = 0;
+    let inProgress = 0;
+    let attempts = 0;
+    let latestSummative = '';
+
+    for (const record of studentProgress) {
+      if (record.status === 'summative-complete') completed += 1;
+      else if (record.status !== 'locked') inProgress += 1;
+      if (typeof record.formativeAttempts === 'number') attempts += record.formativeAttempts;
+      if (typeof record.summativeScore === 'number') {
+        latestSummative = record.summativeScore.toString();
+      }
+    }
+
+    return {
+      studentName: student.displayName || `${student.firstName} ${student.lastName}`.trim(),
+      username: student.username || '',
+      yearGroup: student.yearGroup || '',
+      curriculumTrack: student.curriculumTrack || '',
+      activeStage: student.activeStage || '',
+      completedLessons: completed,
+      inProgressLessons: inProgress,
+      formativeAttempts: attempts,
+      latestSummativeScore: latestSummative,
+    };
+  });
+
+  const csvLines = [CSV_HEADER.join(',')];
+  for (const row of rows) {
+    csvLines.push(
+      [
+        row.studentName,
+        row.username,
+        row.yearGroup,
+        row.curriculumTrack,
+        row.activeStage,
+        row.completedLessons,
+        row.inProgressLessons,
+        row.formativeAttempts,
+        row.latestSummativeScore,
+      ]
+        .map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`)
+        .join(','),
+    );
+  }
+
+  return json({
+    class: clazz,
+    generatedAt: new Date().toISOString(),
+    rows,
+    csv: csvLines.join('\n'),
+    filename: `class-${classId}-progress.csv`,
+    mimeType: 'text/csv',
+  });
+}
+
+async function handleStudentDashboard(_request, env, session) {
   const db = getDb(env);
   const data = await getStudentDashboardData(db, session.username);
 
   if (!data.student) {
-    return withCors(Promise.resolve(json({ error: 'Student record not found' }, 404)), request, env);
+    return json({ error: 'Student record not found' }, 404);
   }
 
-  return withCors(
-    Promise.resolve(
-      json({
-        student: stripPassword(data.student),
-        class: data.class,
-      }),
-    ),
-    request,
-    env,
-  );
+  return json({
+    student: formatSessionUser('student', data.student),
+    class: data.class,
+    unlocks: data.unlocks,
+    progress: data.progress,
+  });
 }
 
 async function handleSeed(request, env) {
@@ -232,6 +733,10 @@ async function handleSeed(request, env) {
     return json({ error: 'teacher.username and teacher.password required' }, 400);
   }
 
+  const firstName = teacher.firstName || 'Admin';
+  const lastName = teacher.lastName || 'Teacher';
+  const displayName = teacher.displayName || `${firstName} ${lastName}`.trim();
+
   const db = getDb(env);
   const existing = await findTeacherByUsername(db, teacher.username);
   if (existing) {
@@ -242,7 +747,9 @@ async function handleSeed(request, env) {
   const created = await createTeacherRecord(db, {
     username: teacher.username,
     password: hash,
-    displayName: teacher.displayName || teacher.username,
+    firstName,
+    lastName,
+    displayName,
   });
 
   return json({ ok: true, seeded: true, teacher: created }, 201);
@@ -250,7 +757,8 @@ async function handleSeed(request, env) {
 
 /* ------------------------------ Middleware ----------------------------- */
 
-async function requireRole(request, env, role, handler) {
+async function requireRole(request, env, allowedRoles, handler) {
+  const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
   const authHeader = request.headers.get('authorization') || '';
   if (!authHeader.startsWith('Bearer ')) {
     return withCors(Promise.resolve(json({ error: 'Missing authorization' }, 401)), request, env);
@@ -258,11 +766,12 @@ async function requireRole(request, env, role, handler) {
 
   try {
     const session = await verifyToken(authHeader.slice(7), env.TOKEN_SECRET);
-    if (session.role !== role) {
-      return withCors(Promise.resolve(json({ error: `${role} role required` }, 403)), request, env);
+    if (!roles.includes(session.role)) {
+      return withCors(Promise.resolve(json({ error: `${roles.join(', ')} role required` }, 403)), request, env);
     }
 
-    return handler(request, env, session);
+    const response = await handler(request, env, session);
+    return withCors(Promise.resolve(response), request, env);
   } catch (error) {
     return withCors(Promise.resolve(json({ error: 'Invalid or expired token' }, 401)), request, env);
   }
@@ -270,22 +779,49 @@ async function requireRole(request, env, role, handler) {
 
 /* ------------------------------- Helpers ------------------------------- */
 
-function formatSessionUser(role, doc) {
-  const safeDoc = stripPassword(doc);
-  if (role === 'teacher') {
-    return {
-      username: safeDoc.username,
-      role,
-      displayName: safeDoc.displayName ?? safeDoc.username,
-    };
+function summarizeLessons(progressRecords) {
+  const totals = {
+    locked: 0,
+    available: 0,
+    'formative-complete': 0,
+    'summative-complete': 0,
+  };
+
+  for (const record of progressRecords) {
+    if (record?.status && totals.hasOwnProperty(record.status)) {
+      totals[record.status] += 1;
+    }
   }
 
-  return {
-    username: safeDoc.username ?? safeDoc.name,
+  return totals;
+}
+
+function formatSessionUser(role, doc) {
+  const safeDoc = stripPassword(doc) || {};
+  const base = {
+    id: safeDoc.id ?? safeDoc._id ?? null,
+    username: safeDoc.username ?? null,
     role,
-    displayName: safeDoc.name ?? safeDoc.username,
-    classId: safeDoc.classId ?? null,
+    displayName: safeDoc.displayName ?? safeDoc.username ?? null,
   };
+
+  if (role === 'admin' || role === 'teacher') {
+    base.firstName = safeDoc.firstName ?? null;
+    base.lastName = safeDoc.lastName ?? null;
+    base.archivedAt = safeDoc.archivedAt ?? null;
+  }
+
+  if (role === 'student') {
+    base.firstName = safeDoc.firstName ?? null;
+    base.lastName = safeDoc.lastName ?? null;
+    base.classId = safeDoc.classId ?? null;
+    base.curriculumTrack = safeDoc.curriculumTrack ?? null;
+    base.activeStage = safeDoc.activeStage ?? null;
+    base.status = safeDoc.status ?? null;
+    base.yearGroup = safeDoc.yearGroup ?? null;
+  }
+
+  return base;
 }
 
 function stripPassword(entity) {

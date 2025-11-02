@@ -57,6 +57,21 @@ button {
   color: #8e2f23;
 }
 
+.dashboard-submit {
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1.4rem;
+  background: linear-gradient(135deg, var(--cs-blue), #2647a8);
+  color: #f4f6ff;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(12, 41, 124, 0.2);
+}
+
 .muted {
   color: var(--cs-muted);
 }

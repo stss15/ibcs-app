@@ -1,12 +1,38 @@
 import { id, tx } from './instant.js';
 
+/* ------------------------------------------------------------------ *
+ * Sanitizers ensure we never leak password hashes back to callers.
+ * ------------------------------------------------------------------ */
+
+function extractId(doc) {
+  return doc?.id ?? doc?._id ?? null;
+}
+
+function sanitizeAdmin(doc) {
+  if (!doc) return null;
+  const fallbackName = [doc.firstName, doc.lastName].filter(Boolean).join(' ').trim() || doc.username;
+  return {
+    id: extractId(doc),
+    username: doc.username,
+    firstName: doc.firstName ?? '',
+    lastName: doc.lastName ?? '',
+    displayName: doc.displayName ?? fallbackName,
+    createdAt: doc.createdAt ?? null,
+    password: doc.password,
+  };
+}
+
 function sanitizeTeacher(doc) {
   if (!doc) return null;
+  const fallbackName = [doc.firstName, doc.lastName].filter(Boolean).join(' ').trim() || doc.username;
   return {
-    id: doc.id ?? doc._id ?? null,
+    id: extractId(doc),
     username: doc.username,
-    displayName: doc.displayName ?? doc.username ?? null,
+    firstName: doc.firstName ?? '',
+    lastName: doc.lastName ?? '',
+    displayName: doc.displayName ?? fallbackName,
     createdAt: doc.createdAt ?? null,
+    archivedAt: doc.archivedAt ?? null,
     password: doc.password,
   };
 }
@@ -14,25 +40,99 @@ function sanitizeTeacher(doc) {
 function sanitizeClass(doc) {
   if (!doc) return null;
   return {
-    id: doc.id ?? doc._id ?? null,
+    id: extractId(doc),
     className: doc.className ?? '',
     description: doc.description ?? null,
+    teacherId: doc.teacherId ?? null,
     teacherUsername: doc.teacherUsername ?? null,
+    yearGroup: doc.yearGroup ?? null,
     createdAt: doc.createdAt ?? null,
+    archivedAt: doc.archivedAt ?? null,
   };
 }
 
 function sanitizeStudent(doc) {
   if (!doc) return null;
+  const fallbackName =
+    [doc.firstName, doc.lastName].filter(Boolean).join(' ').trim() || doc.username || doc.name || 'Student';
   return {
-    id: doc.id ?? doc._id ?? null,
-    name: doc.name ?? '',
+    id: extractId(doc),
     username: doc.username ?? null,
+    firstName: doc.firstName ?? '',
+    lastName: doc.lastName ?? '',
+    displayName: doc.displayName ?? fallbackName,
+    yearGroup: doc.yearGroup ?? null,
+    curriculumTrack: doc.curriculumTrack ?? null,
     classId: doc.classId ?? null,
+    teacherId: doc.teacherId ?? null,
     teacherUsername: doc.teacherUsername ?? null,
+    activeStage: doc.activeStage ?? null,
+    status: doc.status ?? 'active',
+    archivedAt: doc.archivedAt ?? null,
     createdAt: doc.createdAt ?? null,
     password: doc.password,
   };
+}
+
+function sanitizeClassUnlock(doc) {
+  if (!doc) return null;
+  return {
+    id: extractId(doc),
+    classId: doc.classId ?? null,
+    teacherId: doc.teacherId ?? null,
+    teacherUsername: doc.teacherUsername ?? null,
+    stageKey: doc.stageKey ?? null,
+    unlockedBy: doc.unlockedBy ?? null,
+    unlockedAt: doc.unlockedAt ?? null,
+  };
+}
+
+function sanitizeStudentUnlock(doc) {
+  if (!doc) return null;
+  return {
+    id: extractId(doc),
+    studentId: doc.studentId ?? null,
+    classId: doc.classId ?? null,
+    teacherId: doc.teacherId ?? null,
+    teacherUsername: doc.teacherUsername ?? null,
+    stageKey: doc.stageKey ?? null,
+    unlockedBy: doc.unlockedBy ?? null,
+    unlockedAt: doc.unlockedAt ?? null,
+    scope: doc.scope ?? 'stage',
+    targetId: doc.targetId ?? null,
+  };
+}
+
+function sanitizeStudentProgress(doc) {
+  if (!doc) return null;
+  return {
+    id: extractId(doc),
+    studentId: doc.studentId ?? null,
+    lessonSlug: doc.lessonSlug ?? null,
+    classId: doc.classId ?? null,
+    teacherId: doc.teacherId ?? null,
+    teacherUsername: doc.teacherUsername ?? null,
+    status: doc.status ?? 'locked',
+    formativeAttempts: doc.formativeAttempts ?? null,
+    summativeScore: doc.summativeScore ?? null,
+    updatedAt: doc.updatedAt ?? null,
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * Lookup helpers
+ * ------------------------------------------------------------------ */
+
+export async function findAdminByUsername(db, username) {
+  const result = await db.query({
+    admins: {
+      $: {
+        where: { username },
+        limit: 1,
+      },
+    },
+  });
+  return sanitizeAdmin(result?.admins?.[0]);
 }
 
 export async function findTeacherByUsername(db, username) {
@@ -47,27 +147,6 @@ export async function findTeacherByUsername(db, username) {
   return sanitizeTeacher(result?.teachers?.[0]);
 }
 
-export async function createTeacher(db, { username, password, displayName }) {
-  const teacherId = id();
-  const createdAt = new Date().toISOString();
-
-  await db.transact([
-    tx.teachers[teacherId].update({
-      username,
-      password,
-      displayName,
-      createdAt,
-    }),
-  ]);
-
-  return {
-    id: teacherId,
-    username,
-    displayName,
-    createdAt,
-  };
-}
-
 export async function findStudentByUsername(db, username) {
   const result = await db.query({
     students: {
@@ -80,7 +159,71 @@ export async function findStudentByUsername(db, username) {
   return sanitizeStudent(result?.students?.[0]);
 }
 
-export async function createClass(db, { className, description, teacherUsername }) {
+/* ------------------------------------------------------------------ *
+ * Mutations
+ * ------------------------------------------------------------------ */
+
+export async function createAdmin(db, { username, password, firstName, lastName, displayName }) {
+  const adminId = id();
+  const createdAt = new Date().toISOString();
+
+  await db.transact([
+    tx.admins[adminId].update({
+      username,
+      password,
+      firstName,
+      lastName,
+      displayName,
+      createdAt,
+    }),
+  ]);
+
+  return {
+    id: adminId,
+    username,
+    firstName,
+    lastName,
+    displayName,
+    createdAt,
+  };
+}
+
+export async function createTeacher(db, { username, password, firstName, lastName, displayName }) {
+  const teacherId = id();
+  const createdAt = new Date().toISOString();
+
+  await db.transact([
+    tx.teachers[teacherId].update({
+      username,
+      password,
+      firstName,
+      lastName,
+      displayName,
+      createdAt,
+    }),
+  ]);
+
+  return {
+    id: teacherId,
+    username,
+    firstName,
+    lastName,
+    displayName,
+    createdAt,
+  };
+}
+
+export async function archiveTeacher(db, teacherId) {
+  const archivedAt = new Date().toISOString();
+  await db.transact([
+    tx.teachers[teacherId].update({
+      archivedAt,
+    }),
+  ]);
+  return archivedAt;
+}
+
+export async function createClass(db, { className, description, teacherId, teacherUsername, yearGroup }) {
   const classId = id();
   const createdAt = new Date().toISOString();
 
@@ -88,7 +231,9 @@ export async function createClass(db, { className, description, teacherUsername 
     tx.classes[classId].update({
       className,
       description: description || null,
+      teacherId,
       teacherUsername,
+      yearGroup: yearGroup || null,
       createdAt,
     }),
   ]);
@@ -97,38 +242,270 @@ export async function createClass(db, { className, description, teacherUsername 
     id: classId,
     className,
     description: description || null,
+    teacherId,
     teacherUsername,
+    yearGroup: yearGroup || null,
     createdAt,
   };
 }
 
-export async function createStudent(db, { name, username, password, classId, teacherUsername }) {
+export async function updateClassYearGroup(db, classId, yearGroup) {
+  await db.transact([
+    tx.classes[classId].update({
+      yearGroup: yearGroup || null,
+    }),
+  ]);
+}
+
+export async function archiveClass(db, classId) {
+  const archivedAt = new Date().toISOString();
+  await db.transact([
+    tx.classes[classId].update({
+      archivedAt,
+    }),
+  ]);
+  return archivedAt;
+}
+
+function getTrackForYearGroup(yearGroup) {
+  const numeric = Number(String(yearGroup).replace(/\D/g, ''));
+  if (!Number.isFinite(numeric)) {
+    return { track: 'middle-years', initialStage: 'middle-years-lesson-1' };
+  }
+  if (numeric >= 12) {
+    return { track: 'ib', initialStage: 'ib-lesson-1' };
+  }
+  if (numeric >= 10) {
+    return { track: 'igcse', initialStage: 'igcse-lesson-1' };
+  }
+  return { track: 'middle-years', initialStage: 'middle-years-lesson-1' };
+}
+
+export async function createStudent(db, { username, password, firstName, lastName, classId, teacherId, teacherUsername, yearGroup }) {
   const studentId = id();
   const createdAt = new Date().toISOString();
+  const { track, initialStage } = getTrackForYearGroup(yearGroup);
+  const displayName = [firstName, lastName].filter(Boolean).join(' ') || username || 'Student';
 
   await db.transact([
     tx.students[studentId].update({
-      name,
       username: username || null,
       password,
+      firstName,
+      lastName,
+      displayName,
+      yearGroup,
+      curriculumTrack: track,
       classId,
+      teacherId,
       teacherUsername,
+      activeStage: initialStage,
+      status: 'active',
       createdAt,
     }),
   ]);
 
   return {
     id: studentId,
-    name,
     username: username || null,
+    firstName,
+    lastName,
+    displayName,
+    yearGroup,
+    curriculumTrack: track,
     classId,
+    teacherId,
     teacherUsername,
+    activeStage: initialStage,
+    status: 'active',
     createdAt,
   };
 }
 
-export async function getTeacherDashboardData(db, username) {
+export async function archiveStudent(db, studentId) {
+  const archivedAt = new Date().toISOString();
+  await db.transact([
+    tx.students[studentId].update({
+      status: 'archived',
+      archivedAt,
+    }),
+  ]);
+  return archivedAt;
+}
+
+export async function setStudentActiveStage(db, studentId, stageKey) {
+  await db.transact([
+    tx.students[studentId].update({
+      activeStage: stageKey,
+    }),
+  ]);
+}
+
+export async function bulkCreateStudents(db, students) {
+  const now = new Date().toISOString();
+  const mutations = [];
+  const created = [];
+
+  for (const student of students) {
+    const studentId = id();
+    const { track, initialStage } = getTrackForYearGroup(student.yearGroup);
+    const displayName = [student.firstName, student.lastName].filter(Boolean).join(' ') || student.username || 'Student';
+
+    mutations.push(
+      tx.students[studentId].update({
+        username: student.username || null,
+        password: student.password,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        displayName,
+        yearGroup: student.yearGroup,
+        curriculumTrack: track,
+        classId: student.classId,
+        teacherId: student.teacherId,
+        teacherUsername: student.teacherUsername,
+        activeStage: initialStage,
+        status: 'active',
+        createdAt: now,
+      }),
+    );
+
+    created.push({
+      id: studentId,
+      username: student.username || null,
+      firstName: student.firstName,
+      lastName: student.lastName,
+      displayName,
+      yearGroup: student.yearGroup,
+      curriculumTrack: track,
+      classId: student.classId,
+      teacherId: student.teacherId,
+      teacherUsername: student.teacherUsername,
+      activeStage: initialStage,
+      status: 'active',
+      createdAt: now,
+    });
+  }
+
+  if (mutations.length > 0) {
+    await db.transact(mutations);
+  }
+
+  return created;
+}
+
+export async function createClassUnlock(db, { classId, stageKey, unlockedBy, teacherId, teacherUsername }) {
+  const unlockId = id();
+  const unlockedAt = new Date().toISOString();
+
+  await db.transact([
+    tx.classUnlocks[unlockId].update({
+      classId,
+      teacherId,
+      teacherUsername,
+      stageKey,
+      unlockedBy,
+      unlockedAt,
+    }),
+  ]);
+
+  return {
+    id: unlockId,
+    classId,
+    stageKey,
+    teacherId,
+    teacherUsername,
+    unlockedAt,
+  };
+}
+
+export async function createStudentUnlock(
+  db,
+  { studentId, classId, teacherId, teacherUsername, stageKey, unlockedBy, scope = 'stage', targetId = null },
+) {
+  const unlockId = id();
+  const unlockedAt = new Date().toISOString();
+
+  await db.transact([
+    tx.studentUnlocks[unlockId].update({
+      studentId,
+      classId,
+      teacherId,
+      teacherUsername,
+      stageKey,
+      unlockedBy,
+      unlockedAt,
+      scope,
+      targetId,
+    }),
+  ]);
+
+  return {
+    id: unlockId,
+    studentId,
+    classId,
+    teacherId,
+    teacherUsername,
+    stageKey,
+    unlockedBy,
+    unlockedAt,
+    scope,
+    targetId,
+  };
+}
+
+export async function setStudentProgress(
+  db,
+  { studentId, classId, teacherId, teacherUsername, lessonSlug, status, formativeAttempts, summativeScore },
+) {
+  const recordId = id();
+  const updatedAt = new Date().toISOString();
+
+  await db.transact([
+    tx.studentProgress[recordId].update({
+      studentId,
+      lessonSlug,
+      classId,
+      teacherId,
+      teacherUsername,
+      status,
+      formativeAttempts: typeof formativeAttempts === 'number' ? formativeAttempts : null,
+      summativeScore: typeof summativeScore === 'number' ? summativeScore : null,
+      updatedAt,
+    }),
+  ]);
+
+  return {
+    id: recordId,
+    studentId,
+    classId,
+    teacherId,
+    teacherUsername,
+    lessonSlug,
+    status,
+    formativeAttempts: typeof formativeAttempts === 'number' ? formativeAttempts : null,
+    summativeScore: typeof summativeScore === 'number' ? summativeScore : null,
+    updatedAt,
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * Aggregations
+ * ------------------------------------------------------------------ */
+
+export async function listTeachers(db, { includeArchived = false } = {}) {
+  const where = includeArchived ? {} : { archivedAt: null };
   const result = await db.query({
+    teachers: {
+      $: {
+        where,
+      },
+    },
+  });
+  return (result?.teachers ?? []).map(sanitizeTeacher);
+}
+
+export async function getTeacherDashboardData(db, { teacherId, username }) {
+  const classesResult = await db.query({
     classes: {
       $: {
         where: { teacherUsername: username },
@@ -139,19 +516,41 @@ export async function getTeacherDashboardData(db, username) {
         where: { teacherUsername: username },
       },
     },
+    classUnlocks: {
+      $: {
+        where: { teacherUsername: username },
+      },
+    },
+    studentUnlocks: {
+      $: {
+        where: { teacherUsername: username },
+      },
+    },
+    studentProgress: {
+      $: {
+        where: { teacherUsername: username },
+      },
+    },
   });
 
-  const classes = (result?.classes ?? []).map(sanitizeClass);
-  const students = (result?.students ?? []).map(sanitizeStudent);
+  const classes = (classesResult?.classes ?? []).map(sanitizeClass).filter((item) => !item.archivedAt);
+  const students = (classesResult?.students ?? []).map(sanitizeStudent);
+
+  const classUnlocks = (classesResult?.classUnlocks ?? []).map(sanitizeClassUnlock);
+  const studentUnlocks = (classesResult?.studentUnlocks ?? []).map(sanitizeStudentUnlock);
+  const progress = (classesResult?.studentProgress ?? []).map(sanitizeStudentProgress);
 
   return {
     classes,
     students,
+    classUnlocks,
+    studentUnlocks,
+    progress,
   };
 }
 
 export async function getStudentDashboardData(db, username) {
-  const result = await db.query({
+  const studentResult = await db.query({
     students: {
       $: {
         where: { username },
@@ -160,24 +559,44 @@ export async function getStudentDashboardData(db, username) {
     },
   });
 
-  const student = sanitizeStudent(result?.students?.[0]);
-  if (!student) {
-    return { student: null, class: null };
+  const student = sanitizeStudent(studentResult?.students?.[0]);
+  if (!student || student.status === 'archived') {
+    return { student: null, class: null, unlocks: [], progress: [] };
   }
 
-  const classes = await db.query({
-    classes: {
-      $: {
-        where: { id: student.classId },
-        limit: 1,
+  const [classResult, unlocksResult, progressResult] = await Promise.all([
+    db.query({
+      classes: {
+        $: {
+          where: { id: student.classId },
+          limit: 1,
+        },
       },
-    },
-  });
+    }),
+    db.query({
+      studentUnlocks: {
+        $: {
+          where: { studentId: student.id },
+        },
+      },
+    }),
+    db.query({
+      studentProgress: {
+        $: {
+          where: { studentId: student.id },
+        },
+      },
+    }),
+  ]);
 
-  const classDoc = sanitizeClass(classes?.classes?.[0]);
+  const classDoc = sanitizeClass(classResult?.classes?.[0]);
+  const unlocks = (unlocksResult?.studentUnlocks ?? []).map(sanitizeStudentUnlock);
+  const progress = (progressResult?.studentProgress ?? []).map(sanitizeStudentProgress);
 
   return {
     student,
     class: classDoc,
+    unlocks,
+    progress,
   };
 }
