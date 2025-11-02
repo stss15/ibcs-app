@@ -14,7 +14,7 @@ function formatLabel(value) {
 }
 
 function StudentDashboardPage() {
-  const { session, clear, ready } = useSession();
+  const { session, ready } = useSession();
   const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [classInfo, setClassInfo] = useState(null);
@@ -75,6 +75,21 @@ function StudentDashboardPage() {
     }
     return totals;
   }, [progress]);
+  const summaryMetrics = useMemo(
+    () => [
+      { label: "Curriculum track", value: formatLabel(student?.curriculumTrack) || "TBC" },
+      { label: "Active stage", value: formatLabel(student?.activeStage) || "Not unlocked" },
+      { label: "Year group", value: student?.yearGroup || "—" },
+    ],
+    [student?.activeStage, student?.curriculumTrack, student?.yearGroup],
+  );
+  const recentUnlocks = useMemo(
+    () =>
+      [...unlocks]
+        .sort((a, b) => new Date(b.unlockedAt || 0).getTime() - new Date(a.unlockedAt || 0).getTime())
+        .slice(0, 6),
+    [unlocks],
+  );
 
   if (!ready) {
     return (
@@ -92,7 +107,7 @@ function StudentDashboardPage() {
 
   return (
     <div className="student-grid">
-      <section className="card">
+      <section className="card card--wide card--summary">
         <header className="card-header">
           <div>
             <h2>Hi {studentName}</h2>
@@ -101,38 +116,19 @@ function StudentDashboardPage() {
               new lessons.
             </p>
           </div>
-          <div className="card-actions">
-            <Link to="/curriculum" className="button-outline">
-              Curriculum map
-            </Link>
-            <button
-              className="button-outline button-outline--danger"
-              onClick={() => {
-                clear();
-                navigate("/", { replace: true });
-              }}
-            >
-              Sign out
-            </button>
-          </div>
+          <Link to="/curriculum" className="button-outline">
+            Curriculum map
+          </Link>
         </header>
         {status && <p className={`status status--${status.tone}`}>{status.message}</p>}
-        {student && (
-          <div className="student-summary">
-            <div>
-              <span className="muted">Learning track</span>
-              <strong>{formatLabel(student.curriculumTrack) || "TBC"}</strong>
-            </div>
-            <div>
-              <span className="muted">Active stage</span>
-              <strong>{formatLabel(student.activeStage)}</strong>
-            </div>
-            <div>
-              <span className="muted">Year group</span>
-              <strong>{student.yearGroup}</strong>
-            </div>
-          </div>
-        )}
+        <div className="student-summary-grid">
+          {summaryMetrics.map((metric) => (
+            <article key={metric.label}>
+              <span className="summary-value">{metric.value}</span>
+              <span className="summary-label">{metric.label}</span>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="card">
@@ -168,8 +164,10 @@ function StudentDashboardPage() {
       <section className="card">
         <h3>Unlocked milestones</h3>
         <ul className="list">
-          {unlocks.length === 0 && <li className="muted">No additional unlocks yet — complete your current lesson.</li>}
-          {unlocks.map((unlock) => (
+          {recentUnlocks.length === 0 && (
+            <li className="muted">No additional unlocks yet — complete your current lesson.</li>
+          )}
+          {recentUnlocks.map((unlock) => (
             <li key={unlock.id}>
               <strong>{formatLabel(unlock.stageKey)}</strong>
               <span className="muted">
@@ -180,7 +178,7 @@ function StudentDashboardPage() {
         </ul>
       </section>
 
-      <section className="card">
+      <section className="card card--wide">
         <h3>Your progress</h3>
         <div className="student-progress-grid">
           <article>

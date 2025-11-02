@@ -118,7 +118,7 @@ function parseCsvStudents(text) {
 }
 
 function TeacherDashboardPage() {
-  const { session, clear, ready } = useSession();
+  const { session, ready } = useSession();
   const navigate = useNavigate();
 
   const [dashboard, setDashboard] = useState(null);
@@ -163,11 +163,34 @@ function TeacherDashboardPage() {
   const classOptions = useMemo(() => dashboard?.classes ?? [], [dashboard?.classes]);
   const studentOptions = useMemo(() => dashboard?.students ?? [], [dashboard?.students]);
   const archivedStudents = useMemo(() => dashboard?.archivedStudents ?? [], [dashboard?.archivedStudents]);
-
-  const handleSignOut = () => {
-    clear();
-    navigate("/", { replace: true });
-  };
+  const summaryMetrics = useMemo(
+    () => [
+      { label: "Active classes", value: classOptions.length },
+      { label: "Active students", value: studentOptions.length },
+      { label: "Archived students", value: archivedStudents.length },
+    ],
+    [archivedStudents.length, classOptions.length, studentOptions.length],
+  );
+  const recentUnlocks = useMemo(() => {
+    const classItems =
+      (dashboard?.classUnlocks ?? []).map((entry) => ({
+        id: entry.id,
+        label: formatLabel(entry.stageKey),
+        detail: `Class ${entry.classId}`,
+        when: entry.unlockedAt,
+      })) ?? [];
+    const studentItems =
+      (dashboard?.studentUnlocks ?? []).map((entry) => ({
+        id: entry.id,
+        label: formatLabel(entry.stageKey),
+        detail: entry.scope === "lesson" ? `Lesson unlock · ${entry.studentId}` : `Stage unlock · ${entry.studentId}`,
+        when: entry.unlockedAt,
+      })) ?? [];
+    return [...classItems, ...studentItems]
+      .filter((item) => item.when)
+      .sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime())
+      .slice(0, 6);
+  }, [dashboard?.classUnlocks, dashboard?.studentUnlocks]);
 
   const handleCreateClass = async (event) => {
     event.preventDefault();
@@ -357,7 +380,7 @@ function TeacherDashboardPage() {
     }
   };
 
-  if (!ready || !isTeacher) {
+  if (!ready) {
     return (
       <div className="dashboard-grid">
         <section className="card">
@@ -367,29 +390,46 @@ function TeacherDashboardPage() {
     );
   }
 
+  if (!isTeacher) {
+    return null;
+  }
+
   return (
     <div className="dashboard-grid">
-      <section className="card">
+      <section className="card card--wide card--summary">
         <header className="card-header">
           <div>
             <h2>Welcome back, {teacherName}</h2>
-            <p>Manage your classes, unlock curriculum, and monitor student progress.</p>
+            <p className="muted">Snapshot of your classes, unlocks, and student progress at a glance.</p>
           </div>
           <div className="card-actions">
             <Link to="/curriculum" className="button-outline">
               Curriculum map
             </Link>
-            <button className="button-outline button-outline--danger" onClick={handleSignOut} type="button">
-              Sign out
-            </button>
+          </div>
+        </header>
+        {loading && <p className="muted">Refreshing dashboard…</p>}
+        <div className="summary-grid">
+          {summaryMetrics.map((metric) => (
+            <article key={metric.label}>
+              <span className="summary-value">{metric.value}</span>
+              <span className="summary-label">{metric.label}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="card card--wide">
+        <header className="card-header">
+          <div>
+            <h3>Build classes and enrol students</h3>
+            <p className="muted">Capture class context and roster quickly with direct or CSV import.</p>
           </div>
         </header>
         {status && <p className={`status status--${status.tone}`}>{status.message}</p>}
-        {exportStatus && <p className={`status status--${exportStatus.tone}`}>{exportStatus.message}</p>}
-        {loading && <p className="muted">Loading dashboard…</p>}
         <div className="card-columns">
           <article>
-            <h3>Create class</h3>
+            <h4>Create class</h4>
             <form onSubmit={handleCreateClass}>
               <label>
                 <span>Class name</span>
@@ -410,7 +450,7 @@ function TeacherDashboardPage() {
           </article>
 
           <article>
-            <h3>Add student</h3>
+            <h4>Add student</h4>
             <form onSubmit={handleAddStudent}>
               <label>
                 <span>Class</span>
@@ -452,7 +492,7 @@ function TeacherDashboardPage() {
           </article>
 
           <article>
-            <h3>Bulk import from CSV</h3>
+            <h4>Bulk import from CSV</h4>
             <form onSubmit={handleBulkSubmit}>
               <label>
                 <span>Class</span>
@@ -494,11 +534,7 @@ function TeacherDashboardPage() {
 
       <section className="card">
         <h3>Your classes</h3>
-        <datalist id="stage-presets">
-          {STAGE_PRESETS.map((preset) => (
-            <option key={preset} value={preset} />
-          ))}
-        </datalist>
+        {exportStatus && <p className={`status status--${exportStatus.tone}`}>{exportStatus.message}</p>}
         <div className="class-grid">
           {classOptions.length === 0 && <p className="muted">No classes yet. Create one above to get started.</p>}
           {classOptions.map((clazz) => {
@@ -538,6 +574,11 @@ function TeacherDashboardPage() {
 
       <section className="card">
         <h3>Unlock curriculum</h3>
+        <datalist id="stage-presets">
+          {STAGE_PRESETS.map((preset) => (
+            <option key={preset} value={preset} />
+          ))}
+        </datalist>
         <div className="unlock-grid">
           <article>
             <h4>Whole class</h4>
@@ -605,22 +646,13 @@ function TeacherDashboardPage() {
         <div className="timeline">
           <h4>Recent unlock activity</h4>
           <ul>
-            {dashboard?.classUnlocks?.map((entry) => (
-              <li key={entry.id}>
-                <strong>{formatLabel(entry.stageKey)}</strong> unlocked for class {entry.classId} ·{" "}
-                <span className="muted">{new Date(entry.unlockedAt).toLocaleString()}</span>
+            {recentUnlocks.map((item) => (
+              <li key={item.id}>
+                <strong>{item.label}</strong> · {item.detail} ·{" "}
+                <span className="muted">{new Date(item.when).toLocaleString()}</span>
               </li>
             ))}
-            {dashboard?.studentUnlocks?.map((entry) => (
-              <li key={entry.id}>
-                <strong>{formatLabel(entry.stageKey)}</strong> unlocked for student {entry.studentId} (
-                {entry.scope === "lesson" ? "lesson" : "stage"}) ·{" "}
-                <span className="muted">{new Date(entry.unlockedAt).toLocaleString()}</span>
-              </li>
-            ))}
-            {(!dashboard?.classUnlocks?.length && !dashboard?.studentUnlocks?.length) && (
-              <li className="muted">No unlocks recorded yet.</li>
-            )}
+            {recentUnlocks.length === 0 && <li className="muted">No unlocks recorded yet.</li>}
           </ul>
         </div>
       </section>
@@ -637,7 +669,7 @@ function TeacherDashboardPage() {
               </div>
               <div className="student-meta">
                 <span className="badge">{formatLabel(student.curriculumTrack) || "Track pending"}</span>
-              <span className="muted">Year {student.yearGroup}</span>
+                <span className="muted">Year {student.yearGroup}</span>
                 <span className="muted">Active stage: {formatLabel(student.activeStage)}</span>
               </div>
               <div className="student-meta">
@@ -645,7 +677,11 @@ function TeacherDashboardPage() {
                 <span className="muted">Enrolled: {new Date(student.createdAt).toLocaleDateString()}</span>
               </div>
               <div className="student-actions">
-                <button type="button" className="button-outline button-outline--danger" onClick={() => handleArchiveStudent(student.id)}>
+                <button
+                  type="button"
+                  className="button-outline button-outline--danger"
+                  onClick={() => handleArchiveStudent(student.id)}
+                >
                   Archive student
                 </button>
               </div>

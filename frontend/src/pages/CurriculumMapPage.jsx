@@ -13,7 +13,7 @@ const tracks = {
 function CurriculumMapPage() {
   return (
     <div className="curriculum-grid">
-      <section className="curriculum-card">
+      <section className="curriculum-card curriculum-card--wide">
         <h1>Curriculum map</h1>
         <p className="muted">
           We are sequencing the full learning journey from Key Stage 3 through IB Computer Science. Use
@@ -51,7 +51,7 @@ function CurriculumMapPage() {
         </div>
       </section>
 
-      <section className="curriculum-card curriculum-card--highlight">
+      <section className="curriculum-card curriculum-card--highlight curriculum-card--wide">
         <header>
           <h2>IB Computer Science</h2>
           <span className="badge">Available</span>
@@ -71,4 +71,3 @@ function CurriculumMapPage() {
 }
 
 export default CurriculumMapPage;
-

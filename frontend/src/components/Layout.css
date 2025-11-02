@@ -14,11 +14,11 @@
 .layout-header__content {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .layout-brand {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 1rem;
   color: inherit;
@@ -43,51 +43,102 @@
 .layout-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
-.layout-nav a,
-.layout-nav__logout {
+.layout-nav a {
   border-radius: 999px;
-  padding: 0.5rem 1.1rem;
-  border: 1px solid rgba(12, 41, 124, 0.18);
+  padding: 0.45rem 1rem;
+  border: 1px solid rgba(12, 41, 124, 0.12);
   color: var(--cs-blue);
   font-weight: 600;
-  background: rgba(12, 41, 124, 0.06);
-  transition: background 0.2s ease, color 0.2s ease;
+  background: rgba(12, 41, 124, 0.05);
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .layout-nav a:hover,
-.layout-nav a:focus-visible,
-.layout-nav__logout:hover,
-.layout-nav__logout:focus-visible {
+.layout-nav a:focus-visible {
   background: var(--cs-blue);
   color: var(--cs-white);
+  border-color: transparent;
 }
 
-.layout-nav__logout {
-  font: inherit;
-  cursor: pointer;
-}
-
-.layout-greeting {
+.layout-account {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.75rem;
-  color: var(--cs-muted);
+  position: relative;
 }
 
-.layout-greeting__hello {
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.75rem;
-}
-
-.layout-greeting__name {
+.layout-account__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: rgba(12, 41, 124, 0.08);
+  border: 1px solid rgba(12, 41, 124, 0.12);
   color: var(--cs-blue);
-  font-size: 1rem;
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.layout-account__button:hover,
+.layout-account__button:focus-visible {
+  background: var(--cs-blue);
+  color: var(--cs-white);
+  border-color: transparent;
+}
+
+.layout-account__icon svg {
+  width: 1.45rem;
+  height: 1.45rem;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.layout-account__icon svg circle {
+  fill: currentColor;
+  opacity: 0.12;
+  stroke: none;
+}
+
+.layout-account__label {
+  font-size: 0.95rem;
+}
+
+.layout-account__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  min-width: 210px;
+  background: var(--cs-white);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(12, 41, 124, 0.12);
+  box-shadow: 0 16px 36px rgba(12, 41, 124, 0.16);
+  padding: 0.35rem 0;
+  display: grid;
+}
+
+.layout-account__menu a,
+.layout-account__menu button {
+  text-align: left;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: none;
+  font: inherit;
+  color: var(--cs-blue);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.layout-account__menu a:hover,
+.layout-account__menu a:focus-visible,
+.layout-account__menu button:hover,
+.layout-account__menu button:focus-visible {
+  background: rgba(12, 41, 124, 0.08);
 }
 
 .layout-main {
@@ -105,11 +156,7 @@
 @media (min-width: 900px) {
   .layout-header__content {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-  }
-
-  .layout-greeting {
-    margin-top: 0;
   }
 }
