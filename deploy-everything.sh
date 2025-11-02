@@ -5,47 +5,42 @@ echo "🚀 IBCS App - Complete Deployment"
 echo "=================================="
 echo ""
 
-APP_ID="83df1c1d-6e07-47fa-845b-a147c33850c6"
-ADMIN_TOKEN="eb523163-447b-4fac-bb0f-c262b7df2765"
-WORKER_URL="https://ibcs-auth.stevengstewart25.workers.dev"
+ROOT="/Users/StevenStewart/ibcs-app"
+FRONTEND="$ROOT/frontend"
+WORKER="$ROOT/worker"
 
-# Step 1: Push schema via InstantDB CLI
+# Step 1: Push schema via helper script
 echo "📊 Step 1: Pushing schema to InstantDB..."
-cd /Users/StevenStewart/ibcs-app
-npx instant-cli@latest push schema --app "$APP_ID" --token "$ADMIN_TOKEN" --yes 2>&1 || echo "Schema push may have had issues, continuing..."
+cd "$ROOT"
+./push-schema.sh || echo "Schema push may have had issues, continuing..."
 echo ""
 
 # Step 2: Build frontend
 echo "🔨 Step 2: Building frontend..."
-cd /Users/StevenStewart/ibcs-app/frontend
+cd "$FRONTEND"
 npm install --silent
 npm run build
 echo ""
 
 # Step 3: Deploy Worker
 echo "☁️  Step 3: Deploying Cloudflare Worker..."
-cd /Users/StevenStewart/ibcs-app/worker
+cd "$WORKER"
+npm install --silent
 npx wrangler deploy
 echo ""
 
-# Step 4: Seed teacher account
+# Step 4: Seed teacher account (idempotent)
 echo "👨‍🏫 Step 4: Seeding teacher account..."
-curl -X POST "$WORKER_URL/setup/seed" \
-  -H "Content-Type: application/json" \
-  -H "x-seed-key: SGSD-seed-2024" \
-  -d '{
-    "teacher": {
-      "username": "MrStewart",
-      "password": "SGSD2024!",
-      "displayName": "Mr. Stewart"
-    }
-  }'
-echo ""
+cd "$ROOT"
+node worker/seed-teacher.js \
+  --username=MrStewart \
+  --password=SGSD2024! \
+  --display-name="Mr. Stewart" || echo "Seed step completed with warnings"
 echo ""
 
 # Step 5: Commit and push to GitHub
 echo "📦 Step 5: Deploying to GitHub Pages..."
-cd /Users/StevenStewart/ibcs-app
+cd "$ROOT"
 git add -A
 git commit -m "Deploy working app" || echo "Nothing to commit"
 git push origin main

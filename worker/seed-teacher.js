@@ -1,16 +1,45 @@
 #!/usr/bin/env node
 
-import readline from 'readline';
+import readline from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import bcrypt from 'bcryptjs';
+import { getDb } from './src/instant.js';
+import { findTeacherByUsername, createTeacher as createTeacherRecord } from './src/repositories.js';
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+const BCRYPT_ROUNDS = 8;
 
-function question(prompt) {
-  return new Promise((resolve) => {
-    rl.question(prompt, resolve);
-  });
+function parseArgs() {
+  const args = {};
+  for (let i = 2; i < process.argv.length; i += 1) {
+    const part = process.argv[i];
+    if (!part.startsWith('--')) continue;
+    const [key, value] = part.split('=');
+    const name = key.slice(2);
+    args[name] = value ?? process.argv[i + 1];
+    if (value === undefined) {
+      i += 1;
+    }
+  }
+  return args;
+}
+
+async function loadInstantConfig() {
+  const rootDir = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
+  const configPath = path.join(rootDir, 'instant.config.json');
+  const raw = await fs.readFile(configPath, 'utf8');
+  const config = JSON.parse(raw);
+
+  if (!config?.app_id || !config?.admin_token) {
+    throw new Error('instant.config.json is missing app_id or admin_token');
+  }
+
+  return {
+    INSTANT_APP_ID: config.app_id,
+    INSTANT_ADMIN_TOKEN: config.admin_token,
+  };
 }
 
 async function seedTeacher() {
@@ -18,55 +47,50 @@ async function seedTeacher() {
   console.log('  Seed Initial Teacher Account');
   console.log('============================================\n');
 
-  const workerUrl = await question('Enter your Cloudflare Worker URL: ');
-  const seedKey = await question('Enter your SEED_KEY: ');
-  const username = await question('Teacher username [MrStewart]: ') || 'MrStewart';
-  const password = await question('Teacher password: ');
-  const displayName = await question('Display name [Mr. Stewart]: ') || 'Mr. Stewart';
+  const env = await loadInstantConfig();
+  const db = getDb(env);
+  const cliArgs = parseArgs();
 
-  rl.close();
+  const needsPrompt = !cliArgs.username || !cliArgs.password || !cliArgs['display-name'];
+  const rl = needsPrompt ? readline.createInterface({ input, output }) : null;
 
-  if (!workerUrl || !seedKey || !password) {
-    console.error('\n❌ Error: Worker URL, seed key, and password are required.');
-    process.exit(1);
+  const usernameInput = cliArgs.username ?? (await rl.question('Teacher username [MrStewart]: '));
+  const passwordInput = cliArgs.password ?? (await rl.question('Teacher password: '));
+  const displayNameInput = cliArgs['display-name'] ?? (await rl.question('Display name [Mr. Stewart]: '));
+
+  if (rl) rl.close();
+
+  const username = usernameInput.trim() || 'MrStewart';
+  const password = passwordInput.trim();
+  const displayName = displayNameInput.trim() || 'Mr. Stewart';
+
+  if (!password) {
+    throw new Error('Password is required');
   }
 
-  const url = `${workerUrl.replace(/\/$/, '')}/setup/seed`;
-  
-  console.log('\n📡 Sending request to:', url);
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-seed-key': seedKey
-      },
-      body: JSON.stringify({
-        teacher: {
-          username,
-          password,
-          displayName
-        }
-      })
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      console.log('\n✅ Success!');
-      console.log(JSON.stringify(data, null, 2));
-      console.log('\n🎉 Teacher account created!');
-      console.log(`\nLogin credentials:\n  Username: ${username}\n  Password: ${password}\n  Role: Teacher`);
-    } else {
-      console.error('\n❌ Error:', response.status);
-      console.error(JSON.stringify(data, null, 2));
-    }
-  } catch (error) {
-    console.error('\n❌ Failed to seed teacher:', error.message);
-    process.exit(1);
+  const existing = await findTeacherByUsername(db, username);
+  if (existing) {
+    console.log('\n⚠️  Teacher already exists. No changes made.');
+    console.log(JSON.stringify(existing, null, 2));
+    return;
   }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const created = await createTeacherRecord(db, {
+    username,
+    password: passwordHash,
+    displayName,
+  });
+
+  console.log('\n✅ Teacher account created!');
+  console.log(JSON.stringify(created, null, 2));
+  console.log('\nLogin credentials:');
+  console.log(`  Username: ${username}`);
+  console.log(`  Password: ${password}`);
 }
 
-seedTeacher();
+seedTeacher().catch((error) => {
+  console.error('\n❌ Failed to seed teacher:', error.message);
+  process.exit(1);
+});
 

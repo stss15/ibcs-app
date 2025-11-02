@@ -1,7 +1,8 @@
 {
   "name": "ibcs-app",
   "version": "1.0.0",
-  "description": "IB Computer Science learning platform",
-  "private": true
+  "type": "module",
+  "dependencies": {
+    "@instantdb/react": "^0.22.41"
+  }
 }
-

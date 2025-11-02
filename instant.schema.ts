@@ -1,11 +1,8 @@
 // IBCS App Schema for InstantDB
-// Docs: https://www.instantdb.com/docs/modeling-data
-// Copy this entire file content and paste it in the InstantDB dashboard Schema editor
+import { i } from '@instantdb/react';
 
-import { i } from "@instantdb/core";
-
-const _schema = i.schema({
-  entities: {
+const _schema = i.graph(
+  {
     teachers: i.entity({
       username: i.string().unique().indexed(),
       password: i.string(),
@@ -27,14 +24,12 @@ const _schema = i.schema({
       createdAt: i.string(),
     }),
   },
-  links: {},
-  rooms: {}
-});
+  {}
+);
 
-// This helps Typescript display nicer intellisense
 type _AppSchema = typeof _schema;
 interface AppSchema extends _AppSchema {}
 const schema: AppSchema = _schema;
 
-export type { AppSchema }
+export type { AppSchema };
 export default schema;
