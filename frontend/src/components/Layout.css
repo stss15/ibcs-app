@@ -18,8 +18,8 @@
 .layout-header__content {
   display: flex;
   align-items: center;
-  gap: clamp(1rem, 3vw, 2.5rem);
-  padding: clamp(0.75rem, 2vw, 1.1rem) clamp(1rem, 4vw, 3.5rem);
+  gap: clamp(0.75rem, 2.5vw, 2rem);
+  padding: clamp(0.6rem, 1.8vw, 0.95rem) clamp(0.85rem, 3vw, 2.6rem);
 }
 
 .layout-brand {
@@ -32,7 +32,7 @@
 }
 
 .layout-brand__mark {
-  width: clamp(52px, 6vw, 68px);
+  width: clamp(48px, 5.5vw, 60px);
   height: auto;
   filter: drop-shadow(0 6px 18px rgba(12, 41, 124, 0.12));
 }
@@ -57,7 +57,7 @@
 .layout-nav {
   display: flex;
   align-items: center;
-  gap: clamp(0.75rem, 2vw, 1.5rem);
+  gap: clamp(0.65rem, 1.8vw, 1.4rem);
   flex: 1;
   min-width: 0;
 }
@@ -69,8 +69,8 @@
   gap: 0.4rem;
   padding: 0.25rem 0;
   font-weight: 600;
-  font-size: 0.95rem;
-  color: rgba(12, 41, 124, 0.58);
+  font-size: 0.92rem;
+  color: rgba(12, 41, 124, 0.56);
   transition: color 0.2s ease;
   white-space: nowrap;
 }
@@ -80,7 +80,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -0.35rem;
+  bottom: -0.25rem;
   height: 2px;
   background: transparent;
   transform: scaleX(0);
@@ -215,7 +215,8 @@
 
 .layout-main {
   flex: 1;
-  padding: clamp(1.2rem, 4vw, 3rem) clamp(1.1rem, 4vw, 3.2rem) clamp(2rem, 6vw, 4rem);
+  padding: clamp(1rem, 3vw, 2.4rem) clamp(1rem, 3.5vw, 2.8rem) clamp(1.6rem, 5vw, 3.6rem);
+  position: relative;
 }
 
 .layout-main > .layout-contained {

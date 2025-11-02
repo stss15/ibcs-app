@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
+import manifestUrl from "../data/curriculumManifest.json?url";
+import fallbackManifest from "../data/curriculumManifest.json";
 
-const MANIFEST_URL = `${import.meta.env.BASE_URL}curriculum/manifest.json`;
 let manifestCache = null;
 let manifestPromise = null;
 
-function loadManifest() {
-  if (manifestCache) return Promise.resolve(manifestCache);
+function cloneManifest(data) {
+  return JSON.parse(JSON.stringify(data));
+}
+
+async function loadManifest() {
+  if (manifestCache) return manifestCache;
   if (!manifestPromise) {
-    manifestPromise = fetch(MANIFEST_URL, { headers: { "cache-control": "no-cache" } })
+    manifestPromise = fetch(manifestUrl, { cache: "no-cache" })
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to load curriculum manifest");
@@ -19,15 +24,23 @@ function loadManifest() {
         return data;
       })
       .catch((error) => {
+        console.warn("Falling back to bundled curriculum manifest:", error);
+        manifestCache = cloneManifest(fallbackManifest);
+        return manifestCache;
+      })
+      .finally(() => {
         manifestPromise = null;
-        throw error;
       });
   }
   return manifestPromise;
 }
 
 export function useCurriculumManifest() {
-  const [state, setState] = useState({ status: "loading", manifest: manifestCache, error: null });
+  const [state, setState] = useState(() => ({
+    status: manifestCache ? "ready" : "loading",
+    manifest: manifestCache,
+    error: null,
+  }));
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +52,7 @@ export function useCurriculumManifest() {
       })
       .catch((error) => {
         if (!cancelled) {
-          setState({ status: "error", manifest: null, error });
+          setState({ status: "ready", manifest: cloneManifest(fallbackManifest), error });
         }
       });
     return () => {

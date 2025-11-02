@@ -87,6 +87,29 @@ const PASSWORD_WORDS = [
 ];
 const PASSWORD_SYMBOLS = ["!", "?", "@", "#", "$"];
 
+const PASSWORD_STORAGE_KEY = "ibcs.teacherPasswords";
+
+function readStoredPasswords() {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(PASSWORD_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredPasswords(map) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PASSWORD_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // Ignore storage write failures (private browsing, etc.)
+  }
+}
+
 function getStageConfig(stageId) {
   return STAGE_CONFIG.find((item) => item.id === stageId) ?? STAGE_CONFIG[0];
 }
@@ -172,6 +195,26 @@ function generatePassword() {
   return `${word}${number}${symbol}`;
 }
 
+function extractPlainPassword(student) {
+  const candidates = [
+    student?.passwordPlain,
+    student?.initialPassword,
+    student?.passwordPreview,
+    student?.defaultPassword,
+    student?.password,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const trimmed = candidate.trim();
+    if (!trimmed) continue;
+    if (/^\$2[aby]\$/.test(trimmed)) {
+      continue;
+    }
+    return trimmed;
+  }
+  return "";
+}
+
 function parseCsvStudents(text) {
   const rows = text
     .split(/\r?\n/)
@@ -249,15 +292,24 @@ function TeacherDashboardPage() {
 
   const [bulkCsv, setBulkCsv] = useState(null);
   const [bulkStatus, setBulkStatus] = useState(null);
-  const [passwordLookup, setPasswordLookup] = useState({});
+  const [passwordLookup, setPasswordLookupState] = useState(() => readStoredPasswords());
   const [visiblePasswords, setVisiblePasswords] = useState({});
+
+  const updatePasswordLookup = useCallback((updater) => {
+    setPasswordLookupState((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater || {};
+      writeStoredPasswords(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!ready) return;
     if (!isTeacher) {
+      updatePasswordLookup({});
       navigate("/", { replace: true });
     }
-  }, [ready, isTeacher, navigate]);
+  }, [ready, isTeacher, navigate, updatePasswordLookup]);
 
   const loadDashboard = useCallback(async () => {
     if (!token || !isTeacher) return;
@@ -265,12 +317,24 @@ function TeacherDashboardPage() {
     try {
       const data = await getTeacherDashboard(token);
       setDashboard(data);
+      if (Array.isArray(data?.students)) {
+        const updates = {};
+        for (const student of data.students) {
+          const plain = extractPlainPassword(student);
+          if (plain) {
+            updates[student.id] = plain;
+          }
+        }
+        if (Object.keys(updates).length > 0) {
+          updatePasswordLookup((prev) => ({ ...prev, ...updates }));
+        }
+      }
     } catch (error) {
       setStatus({ tone: "error", message: error.message || "Failed to load dashboard." });
     } finally {
       setLoading(false);
     }
-  }, [token, isTeacher]);
+  }, [token, isTeacher, updatePasswordLookup]);
 
   useEffect(() => {
     if (!ready || !isTeacher) return;
@@ -437,7 +501,7 @@ function TeacherDashboardPage() {
         yearGroup: meta.yearGroupLabel,
         programme: meta.programme,
       });
-      setPasswordLookup((prev) => ({ ...prev, [created.id]: password }));
+      updatePasswordLookup((prev) => ({ ...prev, [created.id]: password }));
       setVisiblePasswords((prev) => ({ ...prev, [created.id]: true }));
       setStudentModal(null);
       await loadDashboard();
@@ -493,7 +557,7 @@ function TeacherDashboardPage() {
       created.forEach((student, index) => {
         passwordMap[student.id] = prepared[index]?.passwordPlain ?? "";
       });
-      setPasswordLookup((prev) => ({ ...prev, ...passwordMap }));
+      updatePasswordLookup((prev) => ({ ...prev, ...passwordMap }));
       setVisiblePasswords((prev) => ({ ...prev, ...Object.fromEntries(created.map((student) => [student.id, true])) }));
 
       setBulkStatus({ tone: "success", message: `${created.length} students imported.` });

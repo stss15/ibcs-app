@@ -81,6 +81,7 @@ button {
   gap: clamp(1.5rem, 3vw, 2.6rem);
   width: min(1160px, 100%);
   margin: 0 auto;
+  padding-top: clamp(1.2rem, 5vw, 3rem);
   padding-bottom: clamp(2rem, 6vw, 4rem);
 }
 
@@ -100,6 +101,8 @@ button {
   gap: 0.9rem;
   position: relative;
   overflow: hidden;
+  min-height: clamp(20rem, 62vh, 32rem);
+  align-content: center;
 }
 
 .page-hero::after {

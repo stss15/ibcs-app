@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import LoginPage from "./pages/LoginPage.jsx";
 import TeacherDashboardPage from "./pages/TeacherDashboardPage.jsx";
 import StudentDashboardPage from "./pages/StudentDashboardPage.jsx";
@@ -9,22 +9,119 @@ import LessonPage from "./pages/LessonPage.jsx";
 import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
 import AccountPage from "./pages/AccountPage.jsx";
 import Layout from "./components/Layout.jsx";
+import { useSession } from "./hooks/useSession.js";
+
+function roleToHome(role) {
+  if (role === "teacher") return "/dashboard";
+  if (role === "student") return "/student";
+  if (role === "admin") return "/admin";
+  return null;
+}
+
+function LandingRoute() {
+  const { session, ready } = useSession();
+  if (!ready) return null;
+  const role = session?.user?.role ?? null;
+  const destination = roleToHome(role);
+  if (destination) {
+    return <Navigate to={destination} replace />;
+  }
+  return <LoginPage />;
+}
+
+function RequireAuth({ children, roles }) {
+  const { session, ready } = useSession();
+  const location = useLocation();
+
+  if (!ready) {
+    return null;
+  }
+
+  const role = session?.user?.role ?? null;
+
+  if (!role) {
+    return <Navigate to="/" replace state={{ from: location.pathname }} />;
+  }
+
+  if (Array.isArray(roles) && roles.length > 0 && !roles.includes(role)) {
+    const fallback = roleToHome(role) ?? "/";
+    return <Navigate to={fallback} replace />;
+  }
+
+  return children;
+}
 
 function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/dashboard" element={<TeacherDashboardPage />} />
+        <Route path="/" element={<LandingRoute />} />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth roles={["teacher"]}>
+              <TeacherDashboardPage />
+            </RequireAuth>
+          }
+        />
         <Route path="/teacher" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/student" element={<StudentDashboardPage />} />
-        <Route path="/admin" element={<AdminDashboardPage />} />
+        <Route
+          path="/student"
+          element={
+            <RequireAuth roles={["student"]}>
+              <StudentDashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <RequireAuth roles={["admin"]}>
+              <AdminDashboardPage />
+            </RequireAuth>
+          }
+        />
         <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
-        <Route path="/account" element={<AccountPage />} />
-        <Route path="/curriculum" element={<CurriculumMapPage />} />
-        <Route path="/curriculum/ib" element={<IBCurriculumPage />} />
-        <Route path="/topic/:id" element={<TopicPage />} />
-        <Route path="/lesson/:lessonId" element={<LessonPage />} />
+        <Route
+          path="/account"
+          element={
+            <RequireAuth>
+              <AccountPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/curriculum"
+          element={
+            <RequireAuth>
+              <CurriculumMapPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/curriculum/ib"
+          element={
+            <RequireAuth>
+              <IBCurriculumPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/topic/:id"
+          element={
+            <RequireAuth>
+              <TopicPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/lesson/:lessonId"
+          element={
+            <RequireAuth>
+              <LessonPage />
+            </RequireAuth>
+          }
+        />
       </Routes>
     </Layout>
   );

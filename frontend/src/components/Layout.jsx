@@ -103,7 +103,7 @@ function Layout({ children }) {
     <div className="layout-root">
       <header className="layout-header">
         <div className="layout-header__content">
-          <Link to="/curriculum" className="layout-brand" aria-label="Computer Science Department home">
+          <Link to={isAuthenticated ? "/curriculum" : "/"} className="layout-brand" aria-label="Computer Science Department home">
             <img src={logo} alt="School crest" className="layout-brand__mark" />
             <div className="layout-brand__text">
               <span className="layout-brand__title">Computer Science Department</span>
@@ -111,21 +111,23 @@ function Layout({ children }) {
             </div>
           </Link>
 
-          <nav className="layout-nav" aria-label="Primary navigation">
-            {navigationLinks.map((link) => {
-              const isActive = link.match ? link.match(location.pathname) : location.pathname === link.to;
-              return (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className={`layout-nav__link ${isActive ? "is-active" : ""}`}
-                  aria-current={isActive ? "page" : undefined}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
+          {isAuthenticated && (
+            <nav className="layout-nav" aria-label="Primary navigation">
+              {navigationLinks.map((link) => {
+                const isActive = link.match ? link.match(location.pathname) : location.pathname === link.to;
+                return (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    className={`layout-nav__link ${isActive ? "is-active" : ""}`}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
 
           <div className="layout-actions">
             {ready && !isAuthenticated && (
