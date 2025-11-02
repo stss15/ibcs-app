@@ -22,6 +22,23 @@ npm install --silent
 npm run build
 echo ""
 
+# Step 2b: Publish static bundle to root for GitHub Pages
+echo "🗂️  Step 2b: Publishing static bundle..."
+cd "$ROOT"
+rm -rf assets
+rm -f index.html 404.html app-config.json
+if [ -d "$FRONTEND/dist/assets" ]; then
+  cp -R "$FRONTEND/dist/assets" ./assets
+fi
+if [ -f "$FRONTEND/dist/index.html" ]; then
+  cp "$FRONTEND/dist/index.html" ./index.html
+  cp "$FRONTEND/dist/index.html" ./404.html
+fi
+if [ -f "$FRONTEND/dist/app-config.json" ]; then
+  cp "$FRONTEND/dist/app-config.json" ./app-config.json
+fi
+echo ""
+
 # Step 3: Deploy Worker
 echo "☁️  Step 3: Deploying Cloudflare Worker..."
 cd "$WORKER"
