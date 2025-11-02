@@ -1,84 +1,281 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import TopicGrid from "../components/TopicGrid.jsx";
+import { useSession } from "../hooks/useSession.js";
+import {
+  useCurriculumManifest,
+  getTrackLabel,
+  resetCurriculumManifestCache,
+} from "../hooks/useCurriculumManifest.js";
+import { IB_UNIT_METADATA, SUBTOPIC_DESCRIPTIONS } from "../lib/ibMetadata.js";
 import "./IBCurriculumPage.css";
 
-const IB_UNITS = [
-  {
-    title: "A1 · System fundamentals",
-    summary: "Planning, evaluating, and installing new systems.",
-    topics: ["A1.1", "A1.2", "A1.3", "A1.4"],
-  },
-  {
-    title: "A2 · Computer organisation",
-    summary: "Hardware, machine instructions, and the CPU architecture.",
-    topics: ["A2.1", "A2.2", "A2.3", "A2.4"],
-  },
-  {
-    title: "A3 · Networks",
-    summary: "Communication networks, topologies, and data transmission.",
-    topics: ["A3.1", "A3.2", "A3.3", "A3.4"],
-  },
-  {
-    title: "A4 · Computational thinking",
-    summary: "Abstraction, algorithms, and problem-solving patterns.",
-    topics: ["A4.1", "A4.2", "A4.3", "A4.4"],
-  },
-  {
-    title: "B1 · Resource management",
-    summary: "Measuring and optimising resources across systems.",
-    topics: ["B1.1"],
-  },
-  {
-    title: "B2 · Resource management HL extensions",
-    summary: "Higher level deep dive into virtualisation and distributed systems.",
-    topics: ["B2.1", "B2.2", "B2.3", "B2.4", "B2.5"],
-  },
-  {
-    title: "B3 · Control",
-    summary: "Embedded systems and control theory for HL candidates.",
-    topics: ["B3.1", "B3.2"],
-  },
-  {
-    title: "B4 · Web science",
-    summary: "Exploring modern web architecture within the HL option.",
-    topics: ["B4.1"],
-  },
-];
+function getTrackOptions(manifest) {
+  if (!manifest?.tracks) return [];
+  return Object.entries(manifest.tracks)
+    .filter(([track]) => track.startsWith("ib"))
+    .map(([track, value]) => ({
+      id: track,
+      label: value.label ?? track,
+      defaultLessons: value.defaultLessons ?? [],
+    }));
+}
+
+function resolveInitialTrack(sessionTrack, trackOptions) {
+  const normalized = typeof sessionTrack === "string" ? sessionTrack.toLowerCase() : "";
+  if (normalized && trackOptions.some((option) => option.id === normalized)) {
+    return normalized;
+  }
+  return trackOptions[0]?.id ?? "ib-sl";
+}
+
+function computeLessonStatus({
+  lesson,
+  lessonIndex,
+  unit,
+  subtopic,
+  track,
+}) {
+  const unitAvailable = Array.isArray(unit.availableFor)
+    ? unit.availableFor.includes(track)
+    : true;
+  const subtopicAvailable = Array.isArray(subtopic.availableFor)
+    ? subtopic.availableFor.includes(track)
+    : true;
+
+  const hlOnly = Boolean(lesson.hlOnly);
+  const trackSupportsHL = track === "ib-hl";
+  const accessible = unitAvailable && subtopicAvailable && (!hlOnly || trackSupportsHL);
+
+  if (!accessible) {
+    return hlOnly ? "hl-only" : "locked";
+  }
+
+  return lessonIndex === 0 ? "unlocked" : "locked";
+}
 
 function IBCurriculumPage() {
-  return (
-    <div className="ib-grid">
-      <section className="ib-card">
-        <div>
-          <h1>IB Computer Science map</h1>
-          <p className="muted">
-            Core topic A (Systems) is paired with higher-level extensions from topic B. Each badge links
-            to the detailed topic entry so you can attach resources, readings, or InstantDB data when it
-            becomes available.
-          </p>
-        </div>
-        <Link to="/curriculum" className="button-outline">
-          ⟵ Back to curriculum overview
-        </Link>
-      </section>
+  const { session } = useSession();
+  const { manifest, status, error } = useCurriculumManifest();
+  const [selectedUnitId, setSelectedUnitId] = useState(null);
+  const [selectedTrack, setSelectedTrack] = useState(() =>
+    resolveInitialTrack(session?.user?.curriculumTrack, [
+      { id: "ib-sl" },
+      { id: "ib-hl" },
+    ]),
+  );
 
-      {IB_UNITS.map((unit) => (
-        <section className="ib-card" key={unit.title}>
-          <header className="ib-card__header">
-            <div>
-              <h2>{unit.title}</h2>
-              <p className="muted">{unit.summary}</p>
+  useEffect(() => {
+    if (!manifest || selectedUnitId) return;
+    const defaultUnit = manifest.units?.find((unit) => unit.id === "A1") ?? manifest.units?.[0];
+    if (defaultUnit) {
+      setSelectedUnitId(defaultUnit.id);
+    }
+  }, [manifest, selectedUnitId]);
+
+  useEffect(() => {
+    if (!manifest) return;
+    const options = getTrackOptions(manifest);
+    const resolved = resolveInitialTrack(session?.user?.curriculumTrack, options);
+    setSelectedTrack(resolved);
+  }, [manifest, session?.user?.curriculumTrack]);
+
+  const trackOptions = useMemo(() => getTrackOptions(manifest), [manifest]);
+
+  const selectedUnit = useMemo(() => {
+    if (!manifest || !selectedUnitId) return null;
+    return manifest.units?.find((unit) => unit.id === selectedUnitId) ?? null;
+  }, [manifest, selectedUnitId]);
+
+  if (status === "loading") {
+    return (
+      <section className="ib-loading card">
+        <p className="muted">Loading IB curriculum…</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="ib-loading card">
+        <h2>Unable to load curriculum</h2>
+        <p className="muted">{error.message ?? "Please try again later."}</p>
+        <button
+          type="button"
+          onClick={() => {
+            resetCurriculumManifestCache();
+            window.location.reload();
+          }}
+          className="pill pill--action"
+        >
+          Try again
+        </button>
+      </section>
+    );
+  }
+
+  if (!manifest) {
+    return null;
+  }
+
+  const currentTrackLabel = getTrackLabel(manifest, selectedTrack);
+  const unitMeta = selectedUnit ? IB_UNIT_METADATA[selectedUnit.id] ?? {} : {};
+
+  return (
+    <div className="ib-layout">
+      <aside className="ib-sidebar">
+        <div className="ib-sidebar__intro">
+          <h1>IB Computer Science</h1>
+          <p className="muted">
+            Explore the structured map for Standard and Higher level learners. Select a unit to view its
+            chapters and lesson pages.
+          </p>
+          <Link to="/curriculum" className="ib-sidebar__back">
+            ⟵ Back to curriculum overview
+          </Link>
+        </div>
+
+        {trackOptions.length > 1 && (
+          <div className="ib-sidebar__tracks">
+            <span className="ib-sidebar__tracks-label">Viewing as</span>
+            <div className="ib-track-toggle" role="radiogroup" aria-label="Choose IB track">
+              {trackOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedTrack === option.id}
+                  className={`ib-track-toggle__button ${selectedTrack === option.id ? "is-active" : ""}`}
+                  onClick={() => setSelectedTrack(option.id)}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
-            <span className="badge">Unlocked</span>
-          </header>
-          <TopicGrid
-            topics={unit.topics.map((code) => ({
-              code,
-              status: "unlocked",
-            }))}
-          />
-        </section>
-      ))}
+          </div>
+        )}
+
+        <nav className="ib-sidebar__nav" aria-label="IB units">
+          {manifest.units?.map((unit) => {
+            const metadata = IB_UNIT_METADATA[unit.id] ?? {};
+            const isActive = unit.id === selectedUnitId;
+            const isTrackAvailable = !unit.availableFor || unit.availableFor.includes(selectedTrack);
+
+            return (
+              <button
+                key={unit.id}
+                type="button"
+                className={`ib-sidebar__unit ${isActive ? "is-active" : ""}`}
+                onClick={() => setSelectedUnitId(unit.id)}
+                aria-current={isActive ? "true" : "false"}
+              >
+                <span className="ib-sidebar__unit-code">{unit.id}</span>
+                <span className="ib-sidebar__unit-title">{metadata.summary ?? unit.title}</span>
+                {!isTrackAvailable && <span className="ib-badge ib-badge--muted">HL only</span>}
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <section className="ib-content" aria-live="polite">
+        {selectedUnit ? (
+          <>
+            <header className="ib-content__header">
+              <div>
+                <span className="ib-content__theme">{unitMeta.theme ?? "IB Computer Science"}</span>
+                <h2>
+                  {selectedUnit.id} · {unitMeta.summary ?? selectedUnit.title}
+                </h2>
+                {unitMeta.guidingQuestion && (
+                  <p className="ib-content__guiding">{unitMeta.guidingQuestion}</p>
+                )}
+              </div>
+              <div className="ib-content__meta">
+                {unitMeta.hours?.sl && <span className="ib-badge">{unitMeta.hours.sl}</span>}
+                {unitMeta.hours?.hl && <span className="ib-badge">{unitMeta.hours.hl}</span>}
+                <span className="ib-badge ib-badge--outline">Track: {currentTrackLabel}</span>
+              </div>
+            </header>
+
+            <div className="ib-chapters">
+              {selectedUnit.subtopics?.map((subtopic) => {
+                const description = SUBTOPIC_DESCRIPTIONS[subtopic.id] ?? subtopic.title;
+                const trackAllowsChapter = !subtopic.availableFor || subtopic.availableFor.includes(selectedTrack);
+                const isUnitAvailable = !selectedUnit.availableFor || selectedUnit.availableFor.includes(selectedTrack);
+                const isChapterAvailable = trackAllowsChapter && isUnitAvailable;
+
+                return (
+                  <article className="ib-chapter" key={subtopic.id}>
+                    <header className="ib-chapter__header">
+                      <div>
+                        <h3>
+                          {subtopic.id} · {description}
+                        </h3>
+                        {subtopic.availableFor && !subtopic.availableFor.includes("ib-sl") && (
+                          <span className="ib-chapter__tag">HL focus</span>
+                        )}
+                        <p className="muted">
+                          {subtopic.title}
+                        </p>
+                      </div>
+                      <div className="ib-chapter__actions">
+                        <Link
+                          to={isChapterAvailable ? `/topic/${encodeURIComponent(subtopic.id)}` : "#"}
+                          className={`ib-chapter__link ${isChapterAvailable ? "" : "is-disabled"}`}
+                          onClick={(event) => {
+                            if (!isChapterAvailable) {
+                              event.preventDefault();
+                            }
+                          }}
+                        >
+                          View chapter
+                        </Link>
+                        {!isChapterAvailable && (
+                          <span className="ib-badge ib-badge--muted">Locked</span>
+                        )}
+                        {isChapterAvailable && (
+                          <span className="ib-badge ib-badge--outline">First page unlocked</span>
+                        )}
+                      </div>
+                    </header>
+
+                    <ul className="ib-lessons" role="list">
+                      {subtopic.lessons?.map((lesson, index) => {
+                        const status = computeLessonStatus({
+                          lesson,
+                          lessonIndex: index,
+                          unit: selectedUnit,
+                          subtopic,
+                          track: selectedTrack,
+                        });
+
+                        const unlocked = status === "unlocked";
+                        const hlOnly = status === "hl-only";
+
+                        return (
+                          <li key={lesson.id} className={`ib-lesson ib-lesson--${status}`}>
+                            <span className="ib-lesson__code">{lesson.id}</span>
+                            <span className="ib-lesson__title">{lesson.title}</span>
+                            <span className="ib-lesson__status">
+                              {unlocked && <span className="ib-status-pill is-unlocked">Unlocked</span>}
+                              {hlOnly && <span className="ib-status-pill is-hl">HL only</span>}
+                              {!unlocked && !hlOnly && <span className="ib-status-pill">Locked</span>}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </article>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <div className="ib-placeholder">
+            <p className="muted">Select a unit to explore its chapters.</p>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

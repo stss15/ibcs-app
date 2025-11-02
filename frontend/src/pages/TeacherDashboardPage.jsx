@@ -11,7 +11,6 @@ import {
   unlockStudentStage,
 } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
-import { useCurriculumManifest, getTrackLabel } from "../hooks/useCurriculumManifest.js";
 import "./TeacherDashboardPage.css";
 
 const STAGE_PRESETS = [

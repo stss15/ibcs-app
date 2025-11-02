@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useSession } from "../hooks/useSession.js";
+import { useCurriculumManifest, getTrackLabel } from "../hooks/useCurriculumManifest.js";
 import "./LessonPage.css";
 
 // Mock function - will be replaced with actual API call
@@ -15,42 +16,13 @@ async function fetchLessonContent(lessonId) {
   };
 }
 
-// Mock function - will be replaced with actual API call  
-async function fetchSubtopicLessons(subtopic) {
-  // This will eventually fetch from the curriculum manifest
-  // For now, return a mock structure
-  const parts = subtopic.split('.');
-  if (parts.length === 2) {
-    // Return lessons for this subtopic
-    const lessonCounts = {
-      'A1.1': 9, 'A1.2': 5, 'A1.3': 7, 'A1.4': 1,
-      'A2.1': 5, 'A2.2': 4, 'A2.3': 4, 'A2.4': 4,
-      'A3.1': 1, 'A3.2': 7, 'A3.3': 6, 'A3.4': 4,
-      'A4.1': 2, 'A4.2': 3, 'A4.3': 10, 'A4.4': 2,
-      'B1.1': 4,
-      'B2.1': 4, 'B2.2': 4, 'B2.3': 4, 'B2.4': 5, 'B2.5': 1,
-      'B3.1': 5, 'B3.2': 5,
-      'B4.1': 6,
-    };
-    
-    const count = lessonCounts[subtopic] || 0;
-    return Array.from({ length: count }, (_, i) => ({
-      id: `${subtopic}.${i + 1}`,
-      title: `${subtopic}.${i + 1}`,
-      isUnlocked: i === 0, // First lesson is always unlocked
-      isCompleted: false,
-    }));
-  }
-  return [];
-}
-
 function LessonPage() {
   const { lessonId } = useParams();
   const { session } = useSession();
   const navigate = useNavigate();
+  const { manifest, status: manifestStatus, error: manifestError } = useCurriculumManifest();
   
   const [lesson, setLesson] = useState(null);
-  const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAssessment, setShowAssessment] = useState(false);
   const [assessmentComplete, setAssessmentComplete] = useState(false);
@@ -61,6 +33,81 @@ function LessonPage() {
     const parts = lessonId.split('.');
     return parts.length >= 2 ? `${parts[0]}.${parts[1]}` : null;
   }, [lessonId]);
+
+  const { unit: unitData, subtopic: subtopicData } = useMemo(() => {
+    if (!manifest || !subtopic) {
+      return { unit: null, subtopic: null };
+    }
+
+    for (const unit of manifest.units ?? []) {
+      for (const candidate of unit.subtopics ?? []) {
+        if (candidate.id === subtopic) {
+          return {
+            unit,
+            subtopic: {
+              ...candidate,
+              unitAvailableFor: unit.availableFor ?? null,
+            },
+          };
+        }
+      }
+    }
+
+    return { unit: null, subtopic: null };
+  }, [manifest, subtopic]);
+
+  const userProgramme = useMemo(() => {
+    const track = session?.user?.curriculumTrack;
+    if (typeof track === "string" && track.toLowerCase().startsWith("ib")) {
+      return track;
+    }
+    return "ib-sl";
+  }, [session?.user?.curriculumTrack]);
+
+  const trackLabel = useMemo(() => getTrackLabel(manifest, userProgramme), [manifest, userProgramme]);
+
+  const chapterAccessible = useMemo(() => {
+    if (!subtopicData) return false;
+    const unitAccess = !subtopicData.unitAvailableFor || subtopicData.unitAvailableFor.includes(userProgramme);
+    const subtopicAccess = !subtopicData.availableFor || subtopicData.availableFor.includes(userProgramme);
+    return unitAccess && subtopicAccess;
+  }, [subtopicData, userProgramme]);
+
+  const lessons = useMemo(() => {
+    if (!subtopicData) return [];
+    const rawLessons = subtopicData.lessons ?? [];
+
+    return rawLessons.map((item, index) => {
+      if (!chapterAccessible) {
+        return {
+          ...item,
+          status: "hl-only",
+          isUnlocked: false,
+          isHLOnly: true,
+          isCompleted: false,
+        };
+      }
+
+      if (item.hlOnly && userProgramme !== "ib-hl") {
+        return {
+          ...item,
+          status: "hl-only",
+          isUnlocked: false,
+          isHLOnly: true,
+          isCompleted: false,
+        };
+      }
+
+      const isUnlocked = index === 0;
+      return {
+        ...item,
+        status: isUnlocked ? "unlocked" : "locked",
+        isUnlocked,
+        isHLOnly: Boolean(item.hlOnly),
+        isCompleted: false,
+      };
+    });
+  }, [subtopicData, chapterAccessible, userProgramme]);
   
   const currentIndex = useMemo(() => {
     return lessons.findIndex((l) => l.id === lessonId);
@@ -79,28 +126,39 @@ function LessonPage() {
     }
     return null;
   }, [lessons, currentIndex]);
+
+  const isLoading = loading || manifestStatus === "loading";
+  const lessonInManifest = currentIndex !== -1;
+  const currentLessonMeta = lessons[currentIndex] ?? null;
   
   useEffect(() => {
-    if (!lessonId || !subtopic) return;
-    
+    if (!lessonId) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setLesson(null);
+
     const loadLesson = async () => {
-      setLoading(true);
       try {
-        const [lessonData, subtopicLessons] = await Promise.all([
-          fetchLessonContent(lessonId),
-          fetchSubtopicLessons(subtopic),
-        ]);
-        setLesson(lessonData);
-        setLessons(subtopicLessons);
+        const lessonData = await fetchLessonContent(lessonId);
+        if (!cancelled) {
+          setLesson(lessonData);
+        }
       } catch (error) {
         console.error("Failed to load lesson:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
-    
+
     loadLesson();
-  }, [lessonId, subtopic]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lessonId]);
   
   const handleCompleteAssessment = () => {
     setAssessmentComplete(true);
@@ -108,15 +166,19 @@ function LessonPage() {
     // TODO: Call API to mark lesson as complete and unlock next lesson
   };
   
-  const handleNavigateToLesson = (lesson) => {
-    if (!lesson.isUnlocked && !assessmentComplete) {
-      alert("Complete the current lesson to unlock this one!");
+  const handleNavigateToLesson = (lessonItem) => {
+    if (lessonItem.status === "hl-only") {
+      alert("This lesson is only available to Higher Level students.");
       return;
     }
-    navigate(`/lesson/${lesson.id}`);
+    if (lessonItem.status !== "unlocked" && !assessmentComplete) {
+      alert("Complete the unlocked lesson and formative assessment to continue.");
+      return;
+    }
+    navigate(`/lesson/${lessonItem.id}`);
   };
   
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="lesson-page">
         <div className="lesson-container">
@@ -125,13 +187,48 @@ function LessonPage() {
       </div>
     );
   }
+
+  if (manifestError) {
+    return (
+      <div className="lesson-page">
+        <div className="lesson-container">
+          <h2>Unable to load curriculum</h2>
+          <p className="muted">{manifestError.message ?? "Please try again later."}</p>
+          <Link to="/curriculum">← Back to Curriculum Map</Link>
+        </div>
+      </div>
+    );
+  }
   
+  if (!lessonInManifest || !subtopicData) {
+    return (
+      <div className="lesson-page">
+        <div className="lesson-container">
+          <p className="muted">Lesson not found in the IB Computer Science map.</p>
+          <Link to="/curriculum">← Back to Curriculum Map</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!chapterAccessible) {
+    return (
+      <div className="lesson-page">
+        <div className="lesson-container">
+          <h2>This lesson is part of the Higher Level pathway</h2>
+          <p className="muted">Ask your teacher to unlock it if you are studying the HL course.</p>
+          <Link to={`/topic/${subtopic}`}>← Back to {subtopic}</Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!lesson) {
     return (
       <div className="lesson-page">
         <div className="lesson-container">
-          <p className="muted">Lesson not found.</p>
-          <Link to="/curriculum">← Back to Curriculum Map</Link>
+          <p className="muted">Lesson content unavailable right now.</p>
+          <Link to={`/topic/${subtopic}`}>← Back to {subtopic}</Link>
         </div>
       </div>
     );
@@ -153,13 +250,19 @@ function LessonPage() {
         <aside className="lesson-sidebar">
           <div className="lesson-sidebar__header">
             <h3>{subtopic}</h3>
-            <p className="muted">Lessons in this chapter</p>
+            <p className="muted">
+              Part of {unitData?.id ?? subtopic?.split('.')[0]} · {unitData?.title ?? "IB Computer Science"}
+            </p>
+            <p className="muted small">Viewing as {trackLabel}</p>
+            {!chapterAccessible && (
+              <span className="lesson-sidebar__alert">Locked for SL · Higher Level pathway</span>
+            )}
           </div>
           
           <nav className="lesson-nav">
             {lessons.map((l) => {
               const isCurrent = l.id === lessonId;
-              const isLocked = !l.isUnlocked && !assessmentComplete;
+              const isLocked = (l.status !== "unlocked" && !assessmentComplete) || l.status === "hl-only";
               
               return (
                 <button
@@ -203,6 +306,8 @@ function LessonPage() {
             <h1>{lesson.title}</h1>
             <div className="lesson-header__meta">
               <span className="badge badge--primary">{subtopic}</span>
+              <span className="badge badge--muted">{trackLabel}</span>
+              {currentLessonMeta?.isHLOnly && <span className="badge badge--hl">HL focus</span>}
               {lesson.isCompleted && <span className="badge badge--success">Completed</span>}
             </div>
           </header>
@@ -321,7 +426,7 @@ function LessonPage() {
         <div className="lesson-progress__track">
           {lessons.map((l, index) => {
             const isCurrent = l.id === lessonId;
-            const isLocked = !l.isUnlocked && !assessmentComplete;
+            const isLocked = (l.status !== "unlocked" && !assessmentComplete) || l.status === "hl-only";
             
             return (
               <button
