@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { findOneByField } from "../lib/instant.js";
-import { hashPassword } from "../lib/hash.js";
+import { login as loginRequest } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import "./LoginPage.css";
 
@@ -29,18 +28,13 @@ function LoginPage() {
     setStatus({ status: "loading", message: `Signing in as ${roleLabel}…` });
 
     try {
-      const collection = role === "teacher" ? "teachers" : "students";
-      const user = await findOneByField(collection, "username", username);
-      if (!user) {
-        throw new Error("Invalid credentials");
+      const response = await loginRequest({ role, username, password });
+      if (!response?.token || !response?.user) {
+        throw new Error("Unexpected login response");
       }
-      const hashedInput = await hashPassword(password);
-      if (user.password !== hashedInput) {
-        throw new Error("Invalid credentials");
-      }
-      setSession({ role, username, classId: user.classId || null });
+      setSession({ token: response.token, user: response.user });
       setStatus({ status: "success", message: "Signed in." });
-      navigate(role === "teacher" ? "/dashboard" : "/student", { replace: true });
+      navigate(response.user.role === "teacher" ? "/dashboard" : "/student", { replace: true });
     } catch (error) {
       setStatus({ status: "error", message: error.message || "Login failed" });
     }

@@ -88,7 +88,7 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "1. Update frontend config at:"
     echo "   frontend/public/app-config.json"
-    echo "   with your InstantDB App ID and Admin Token"
+    echo "   set API_BASE to your Worker URL"
     echo ""
     echo "2. Seed initial teacher account using:"
     echo "   curl -X POST https://YOUR-WORKER-URL.workers.dev/setup/seed \\"

@@ -3,6 +3,50 @@ import bcrypt from "bcryptjs";
 const INSTANT_BASE = "https://api.instantdb.com/v1/app";
 const BCRYPT_ROUNDS = 8;
 
+function sanitizeTeacher(doc) {
+  if (!doc) return null;
+  return {
+    id: String(doc.id ?? doc._id ?? doc.username ?? ""),
+    username: doc.username,
+    displayName: doc.displayName ?? doc.username ?? null,
+    createdAt: doc.createdAt ?? null,
+  };
+}
+
+function sanitizeStudent(doc) {
+  if (!doc) return null;
+  return {
+    id: String(doc.id ?? doc._id ?? doc.username ?? ""),
+    name: doc.name ?? doc.studentName ?? doc.username ?? "",
+    username: doc.username ?? null,
+    classId: doc.classId ?? null,
+    teacherUsername: doc.teacherUsername ?? null,
+    createdAt: doc.createdAt ?? null,
+  };
+}
+
+function sanitizeClass(doc) {
+  if (!doc) return null;
+  return {
+    id: String(doc.id ?? doc._id ?? doc.classId ?? ""),
+    className: doc.className ?? doc.name ?? "",
+    description: doc.description ?? null,
+    teacherUsername: doc.teacherUsername ?? null,
+    createdAt: doc.createdAt ?? null,
+  };
+}
+
+function sanitizeUserForSession(doc, role) {
+  const base = role === "teacher" ? sanitizeTeacher(doc) : sanitizeStudent(doc);
+  if (!base) return null;
+  return {
+    username: base.username ?? base.name,
+    role,
+    displayName: base.displayName ?? base.name ?? base.username ?? null,
+    classId: base.classId ?? null,
+  };
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -28,7 +72,10 @@ export default {
         return requireTeacher(request, env, handleCreateStudent);
       }
       if (path === "/setup/seed" && request.method === "POST") {
-        return withCORS(handleSeed(request, env), request, env);
+        return withCORS(await handleSeed(request, env), request, env);
+      }
+      if (path === "/student/dashboard" && request.method === "GET") {
+        return requireStudent(request, env, handleStudentDashboard);
       }
 
       return withCORS(json({ error: "Not found" }, 404), request, env);
@@ -58,7 +105,8 @@ async function handleLogin(request, env) {
   if (!ok) return json({ error: "Invalid credentials" }, 401);
 
   const token = await signJwt({ sub: String(user.id ?? user._id ?? username), username, role }, env.TOKEN_SECRET);
-  return json({ token });
+  const userData = sanitizeUserForSession(user, role);
+  return json({ token, user: userData });
 }
 
 async function handleVerify(request, env) {
@@ -67,7 +115,13 @@ async function handleVerify(request, env) {
   if (!token) return json({ valid:false, error:"Token missing" }, 400);
   try {
     const payload = await verifyJwt(token, env.TOKEN_SECRET);
-    return json({ valid:true, role: payload.role, username: payload.username });
+    const collection = payload.role === "teacher" ? "teachers" : "students";
+    const doc = await findOneByField(env, collection, "username", payload.username);
+    const user = sanitizeUserForSession(doc, payload.role) ?? {
+      username: payload.username,
+      role: payload.role,
+    };
+    return json({ valid:true, user });
   } catch {
     return json({ valid:false }, 401);
   }
@@ -75,10 +129,13 @@ async function handleVerify(request, env) {
 
 async function handleTeacherDashboard(request, env, session) {
   const classes = await listCollection(env, "classes");
-  const myClasses = classes.filter(c => c.teacherUsername === session.username);
-  const classIds = new Set(myClasses.map(c => String(c.id ?? c.classId ?? "")));
-  const students = (await listCollection(env, "students")).filter(s => classIds.has(String(s.classId ?? "")));
-  return withCORS(json({ classes: myClasses, students }), request, env);
+  const myClasses = classes.filter(c => c.teacherUsername === session.username).map(sanitizeClass);
+  const classIds = new Set(myClasses.map(c => String(c.id ?? "")));
+  const studentDocs = await listCollection(env, "students");
+  const myStudents = studentDocs
+    .filter(s => classIds.has(String(s.classId ?? "")))
+    .map(sanitizeStudent);
+  return withCORS(json({ classes: myClasses, students: myStudents }), request, env);
 }
 
 async function handleCreateClass(request, env, session) {
@@ -93,7 +150,7 @@ async function handleCreateClass(request, env, session) {
     teacherUsername: session.username,
     createdAt: new Date().toISOString(),
   });
-  return withCORS(json(created, 201), request, env);
+  return withCORS(json(sanitizeClass(created), 201), request, env);
 }
 
 async function handleCreateStudent(request, env, session) {
@@ -121,29 +178,48 @@ async function handleCreateStudent(request, env, session) {
     teacherUsername: session.username,
     createdAt: new Date().toISOString(),
   });
-  return withCORS(json(created, 201), request, env);
+  const student = sanitizeStudent(created);
+  return withCORS(json(student, 201), request, env);
 }
 
 async function handleSeed(request, env) {
-  if (!env.SEED_KEY) return json({ error:"Seed key not configured" }, 403);
-  const key = request.headers.get("x-seed-key");
-  if (!key || key !== env.SEED_KEY) return json({ error:"Forbidden" }, 403);
+  try {
+    if (!env.SEED_KEY) return json({ error:"Seed key not configured" }, 403);
+    const key = request.headers.get("x-seed-key");
+    if (!key || key !== env.SEED_KEY) return json({ error:"Forbidden" }, 403);
 
-  const body = await readJson(request);
-  if (!body?.teacher?.username || !body?.teacher?.password) {
-    return json({ error:"teacher.username and teacher.password required" }, 400);
+    const body = await readJson(request);
+    if (!body?.teacher?.username || !body?.teacher?.password) {
+      return json({ error:"teacher.username and teacher.password required" }, 400);
+    }
+    const exists = await findOneByField(env, "teachers", "username", body.teacher.username);
+    if (exists?.id || exists?._id) return json({ ok:true, seeded:false, reason:"teacher exists" });
+
+    const hash = await bcrypt.hash(String(body.teacher.password), BCRYPT_ROUNDS);
+    const created = await createDocument(env, "teachers", {
+      username: String(body.teacher.username),
+      password: hash,
+      displayName: String(body.teacher.displayName || body.teacher.username),
+      createdAt: new Date().toISOString(),
+    });
+    return json({ ok:true, seeded:true, teacher: sanitizeTeacher(created) }, 201);
+  } catch (error) {
+    console.error("handleSeed error:", error);
+    return json({ error: error.message || "Seed failed" }, 500);
   }
-  const exists = await findOneByField(env, "teachers", "username", body.teacher.username);
-  if (exists?.id || exists?._id) return json({ ok:true, seeded:false, reason:"teacher exists" });
+}
 
-  const hash = await bcrypt.hash(String(body.teacher.password), BCRYPT_ROUNDS);
-  const created = await createDocument(env, "teachers", {
-    username: String(body.teacher.username),
-    password: hash,
-    displayName: String(body.teacher.displayName || body.teacher.username),
-    createdAt: new Date().toISOString(),
-  });
-  return json({ ok:true, seeded:true, teacher: flatten(created) }, 201);
+async function handleStudentDashboard(request, env, session) {
+  const studentDoc = await findOneByField(env, "students", "username", session.username);
+  if (!studentDoc) {
+    return withCORS(json({ error: "Student record not found" }, 404), request, env);
+  }
+  const classDoc = studentDoc.classId ? await getDocument(env, "classes", studentDoc.classId) : null;
+  return withCORS(
+    json({ student: sanitizeStudent(studentDoc), class: sanitizeClass(classDoc) }),
+    request,
+    env,
+  );
 }
 
 /* ------------------------------ middleware ----------------------------- */
@@ -160,11 +236,29 @@ async function requireTeacher(request, env, handler) {
   }
 }
 
+async function requireStudent(request, env, handler) {
+  const auth = request.headers.get("authorization") || "";
+  if (!auth.startsWith("Bearer ")) return withCORS(json({ error:"Missing authorization" }, 401), request, env);
+  try {
+    const session = await verifyJwt(auth.slice(7), env.TOKEN_SECRET);
+    if (session.role !== "student") return withCORS(json({ error:"Student role required" }, 403), request, env);
+    return handler(request, env, session);
+  } catch {
+    return withCORS(json({ error:"Invalid or expired token" }, 401), request, env);
+  }
+}
+
 /* ----------------------------- InstantDB ops --------------------------- */
 
 async function listCollection(env, collection) {
-  const resp = await instant(env, `/collection/${collection}`, { method: "GET" });
-  return normalise(resp);
+  try {
+    const resp = await instant(env, `/collection/${collection}`, { method: "GET" });
+    return normalise(resp);
+  } catch (error) {
+    // If collection doesn't exist, return empty array
+    if (error.status === 404) return [];
+    throw error;
+  }
 }
 async function getDocument(env, collection, id) {
   try {
@@ -180,7 +274,35 @@ async function createDocument(env, collection, data) {
     method: "POST",
     body: JSON.stringify(data),
   });
-  return flatten(resp.document ?? resp);
+  
+  // If InstantDB returns empty response but 200 OK, the document was created
+  // We need to fetch it back using a unique field to find it
+  if (!resp || (typeof resp === 'object' && Object.keys(resp).length === 0)) {
+    // Try to find the document we just created using a unique field
+    // Use username if it exists, otherwise wait a moment and try to find by createdAt
+    const uniqueField = data.username ? 'username' : null;
+    const uniqueValue = data.username || null;
+    
+    if (uniqueField && uniqueValue) {
+      // Small delay to ensure document is available
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const found = await findOneByField(env, collection, uniqueField, uniqueValue);
+      if (found) {
+        return flatten(found);
+      }
+    }
+    
+    // If we can't find it, return the data we sent as a fallback
+    // Add a temporary ID
+    return flatten({ ...data, id: `temp-${Date.now()}` });
+  }
+  
+  // InstantDB might return { document: {...} } or just the document directly
+  const doc = resp.document ?? resp;
+  if (!doc || (typeof doc === 'object' && Object.keys(doc).length === 0)) {
+    throw new Error(`Invalid response from InstantDB: ${JSON.stringify(resp)}`);
+  }
+  return flatten(doc);
 }
 async function findOneByField(env, collection, field, value) {
   const docs = await listCollection(env, collection);
@@ -193,15 +315,35 @@ async function instant(env, path, init) {
     ...(init.body ? { "content-type": "application/json" } : {}),
     ...(init.headers || {}),
   };
+  
   const resp = await fetch(url, { ...init, headers });
+  const contentType = resp.headers.get("content-type") || "";
+  
   if (!resp.ok) {
     const message = await safeText(resp);
     const error = new Error(message || `InstantDB request failed (${resp.status})`);
     error.status = resp.status;
     throw error;
   }
+  // 204 No Content or empty body
   if (resp.status === 204) return null;
-  return resp.json();
+  const text = await resp.text();
+  
+  if (!text || text.trim() === '') {
+    // Empty body with 200 OK means success but no response data
+    // Return empty object to indicate success but no data
+    if (resp.status === 200 || resp.status === 201) {
+      return {}; // Return empty object instead of null
+    }
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(text);
+    console.log(`Parsed JSON keys: ${Object.keys(parsed).join(', ')}`);
+    return parsed;
+  } catch (e) {
+    throw new Error(`Invalid JSON response from InstantDB: ${text.substring(0, 100)}`);
+  }
 }
 async function safeText(response) { try { return await response.text(); } catch { return ""; } }
 function flatten(doc) {

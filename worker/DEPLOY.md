@@ -51,8 +51,7 @@ You'll get a URL like: `https://ibcs-auth.YOUR-NAME.workers.dev`
 Edit `/Users/StevenStewart/ibcs-app/frontend/public/app-config.json`:
 ```json
 {
-  "APP_ID": "your-instantdb-app-id",
-  "INSTANT_ADMIN_TOKEN": "your-instantdb-admin-token"
+  "API_BASE": "https://ibcs-auth.YOUR-NAME.workers.dev"
 }
 ```
 

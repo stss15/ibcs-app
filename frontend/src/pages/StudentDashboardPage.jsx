@@ -1,19 +1,23 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { findOneByField, list } from "../lib/instant.js";
+import { getStudentDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import "./StudentDashboardPage.css";
 
 function StudentDashboardPage() {
-  const { session, clear } = useSession();
+  const { session, clear, ready } = useSession();
   const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [classInfo, setClassInfo] = useState(null);
   const [status, setStatus] = useState(null);
 
-  const studentUsername = session?.role === "student" ? session.username : null;
+  const studentUsername = session?.user?.role === "student" ? session.user.username : null;
+  const token = session?.token || null;
 
   useEffect(() => {
+    if (!ready) {
+      return;
+    }
     if (!studentUsername) {
       navigate("/", { replace: true });
       return;
@@ -24,18 +28,13 @@ function StudentDashboardPage() {
 
     (async () => {
       try {
-        const studentDoc = await findOneByField("students", "username", studentUsername);
-        if (!studentDoc) {
-          throw new Error("Student record not found");
+        if (!token) {
+          throw new Error("Session expired");
         }
+        const payload = await getStudentDashboard(token);
         if (!active) return;
-        setStudent(studentDoc);
-        const classes = await list("classes");
-        if (!active) return;
-        const match = classes.find(
-          (clazz) => String(clazz.id ?? clazz.classId ?? "") === String(studentDoc.classId ?? "")
-        );
-        setClassInfo(match || null);
+        setStudent(payload?.student || null);
+        setClassInfo(payload?.class || null);
         setStatus(null);
       } catch (error) {
         if (!active) return;
@@ -46,7 +45,17 @@ function StudentDashboardPage() {
     return () => {
       active = false;
     };
-  }, [studentUsername, navigate]);
+  }, [studentUsername, navigate, token, ready]);
+
+  if (!ready) {
+    return (
+      <div className="student-grid">
+        <section className="card">
+          <p className="muted">Checking session…</p>
+        </section>
+      </div>
+    );
+  }
 
   if (!studentUsername) {
     return null;

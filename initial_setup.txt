@@ -1,17 +1,20 @@
 IBCS APP — INITIAL SETUP (FLAT STACK POC)
 
 Goal
-Serve a React single-page app from GitHub Pages that talks directly to InstantDB (no middle tier) for teacher login, class creation, and student enrollment.
+Serve a React single-page app from GitHub Pages with a Cloudflare Worker handling all authentication and InstantDB access (teachers, classes, students).
 
 Prerequisites
 - GitHub Pages enabled for the repo (`stss15/ibcs-app`)
 - Node.js 18+ with npm
-- InstantDB app ID and admin token (dev-only)
+- InstantDB App ID + Admin Token (used for Worker secrets)
+- Cloudflare account with Workers access
 
 1. Project layout
 ```
 frontend/               # React + Vite SPA
-public/app-config.json  # APP_ID + admin token (dev only)
+  src/lib/api.js       # Worker API client
+  src/lib/config.js    # Loads app-config.json (worker URL)
+public/app-config.json # API_BASE (Cloudflare Worker URL)
 src/                    # Legacy static pages & styles (landing)
 ```
 
@@ -20,14 +23,14 @@ src/                    # Legacy static pages & styles (landing)
 npm install
 ```
 
-3. Configure runtime (dev only)
+3. Configure runtime
 `public/app-config.json`
 ```json
 {
-  "APP_ID": "fa61cd0c-d77e-44e5-919d-90a90ead7039",
-  "INSTANT_ADMIN_TOKEN": "c88b98ee-4a55-4d83-ae15-57fdc04ed886"
+  "API_BASE": "https://ibcs-auth.<your-subdomain>.workers.dev"
 }
 ```
+Copy to `frontend/dist/app-config.json` for GitHub Pages deployments.
 
 4. Run locally
 ```bash
@@ -35,19 +38,21 @@ npm run dev --prefix frontend
 ```
 Vite serves at `http://localhost:5173/ibcs-app/` (base already set).
 
-5. Build
+5. Build (local bundle)
 ```bash
 npm run build --prefix frontend
 ```
 Publish `frontend/dist` to the branch used by GitHub Pages.
 
-6. InstantDB collections (schemaless)
+6. Cloudflare Worker
+- Secrets: `INSTANT_APP_ID`, `INSTANT_ADMIN_TOKEN`, `TOKEN_SECRET`, `SEED_KEY`
+- Deploy: `cd worker && npx wrangler deploy`
+- Seed teacher: `node worker/seed-teacher.js`
+
+7. InstantDB collections (schemaless)
 - teachers: `{ username, password, createdAt }
 - classes: `{ className, description?, teacherUsername, createdAt, id }
 - students: `{ name, username?, password, classId, teacherUsername, createdAt }
-
-7. Demo bootstrap
-The SPA seeds the demo teacher on first load if `teachers` lacks `username === "MrStewart"`.
 
 8. Verification
 1. Open https://stss15.github.io/ibcs-app/
@@ -59,5 +64,5 @@ The SPA seeds the demo teacher on first load if `teachers` lacks `username === "
 
 9. Cleanup after demo
 - Rotate the InstantDB admin token
-- Move to a server-side token minting flow
-- Replace SHA-256 hashes with server-side bcrypt/argon2 in production
+- Rotate the Cloudflare Worker `TOKEN_SECRET`
+- Harden Worker rules (rate limits, logging, permissions)

@@ -5,18 +5,21 @@ import "./TopicPage.css";
 
 function TopicPage() {
   const { id } = useParams();
-  const { session } = useSession();
+  const { session, ready } = useSession();
   const navigate = useNavigate();
   const [message, setMessage] = useState("Loading topic details…");
 
   useEffect(() => {
+    if (!ready) {
+      return;
+    }
     if (!session) {
       setMessage("Authenticate to view topic content.");
       navigate("/", { replace: true });
     } else {
       setMessage("Topic content coming soon. Stay tuned!");
     }
-  }, [session, navigate]);
+  }, [session, navigate, ready]);
 
   return (
     <section className="card topic-page">

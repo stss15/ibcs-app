@@ -82,6 +82,9 @@ curl -X POST https://YOUR-WORKER-URL.workers.dev/setup/seed \
 - `POST /teacher/classes` - Create a new class
 - `POST /teacher/students` - Create a new student
 
+### Student Endpoints (require authentication)
+- `GET /student/dashboard` - Get the logged-in student's class summary
+
 ### Setup
 - `POST /setup/seed` - Seed initial teacher (requires seed key)
 

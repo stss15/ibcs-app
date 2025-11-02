@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import "./Layout.css";
 
-function Layout({ children, notice }) {
+function Layout({ children }) {
   return (
     <div className="layout-root">
       <header className="layout-header">
@@ -15,12 +15,11 @@ function Layout({ children, notice }) {
           <Link to="/student">Student view</Link>
         </nav>
       </header>
-      {notice && <div className="layout-banner">{notice}</div>}
       <main className="layout-main">{children}</main>
       <footer className="layout-footer">
         <small>
-          Static SPA on GitHub Pages · Direct InstantDB integration (POC). Rotate the admin token
-          after the demo.
+          Static SPA served via GitHub Pages · Auth + data flows now run through the Cloudflare Worker
+          backed by InstantDB.
         </small>
       </footer>
     </div>

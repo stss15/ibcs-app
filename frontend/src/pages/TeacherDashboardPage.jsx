@@ -1,25 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { create, list } from "../lib/instant.js";
-import { hashPassword } from "../lib/hash.js";
+import { createClass, createStudent, getTeacherDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import "./TeacherDashboardPage.css";
 
 function TeacherDashboardPage() {
-  const { session, clear } = useSession();
+  const { session, clear, ready } = useSession();
   const navigate = useNavigate();
   const [status, setStatus] = useState(null);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const teacherUsername = session?.role === "teacher" ? session.username : null;
+  const teacherUsername = session?.user?.role === "teacher" ? session.user.username : null;
+  const token = session?.token || null;
 
   useEffect(() => {
+    if (!ready) return;
     if (!teacherUsername) {
       navigate("/", { replace: true });
     }
-  }, [teacherUsername, navigate]);
+  }, [ready, teacherUsername, navigate]);
 
   const groupedStudents = useMemo(() => {
     const map = new Map();
@@ -33,27 +34,20 @@ function TeacherDashboardPage() {
   }, [students]);
 
   const loadDashboard = useCallback(async () => {
-    if (!teacherUsername) return;
+    if (!teacherUsername || !token) return;
     setLoading(true);
     setStatus({ tone: "info", message: "Loading dashboard…" });
     try {
-      const [classDocs, studentDocs] = await Promise.all([list("classes"), list("students")]);
-      const teacherClasses = classDocs.filter((clazz) => clazz.teacherUsername === teacherUsername);
-      const classIds = new Set(
-        teacherClasses.map((clazz) => String(clazz.id ?? clazz.classId ?? ""))
-      );
-      const teacherStudents = studentDocs.filter((student) =>
-        classIds.has(String(student.classId ?? ""))
-      );
-      setClasses(teacherClasses);
-      setStudents(teacherStudents);
+      const payload = await getTeacherDashboard(token);
+      setClasses(payload?.classes || []);
+      setStudents(payload?.students || []);
       setStatus(null);
     } catch (error) {
       setStatus({ tone: "error", message: error.message || "Failed to load dashboard." });
     } finally {
       setLoading(false);
     }
-  }, [teacherUsername]);
+  }, [teacherUsername, token]);
 
   useEffect(() => {
     loadDashboard();
@@ -66,7 +60,7 @@ function TeacherDashboardPage() {
 
   async function handleCreateClass(event) {
     event.preventDefault();
-    if (!teacherUsername) return;
+    if (!teacherUsername || !token) return;
     const form = event.currentTarget;
     const className = form.className.value.trim();
     const description = form.description.value.trim();
@@ -76,12 +70,7 @@ function TeacherDashboardPage() {
     }
     setStatus({ tone: "info", message: "Creating class…" });
     try {
-      await create("classes", {
-        className,
-        description: description || undefined,
-        teacherUsername,
-        createdAt: new Date().toISOString(),
-      });
+      await createClass(token, { className, description: description || undefined });
       form.reset();
       setStatus({ tone: "success", message: "Class created." });
       await loadDashboard();
@@ -92,7 +81,7 @@ function TeacherDashboardPage() {
 
   async function handleAddStudent(event) {
     event.preventDefault();
-    if (!teacherUsername) return;
+    if (!teacherUsername || !token) return;
     const form = event.currentTarget;
     const classId = form.classId.value;
     const studentName = form.studentName.value.trim();
@@ -104,14 +93,11 @@ function TeacherDashboardPage() {
     }
     setStatus({ tone: "info", message: "Adding student…" });
     try {
-      const passwordHash = await hashPassword(password);
-      await create("students", {
-        name: studentName,
-        username: username || undefined,
-        password: passwordHash,
+      await createStudent(token, {
         classId,
-        teacherUsername,
-        createdAt: new Date().toISOString(),
+        studentName,
+        username: username || undefined,
+        password,
       });
       form.reset();
       setStatus({ tone: "success", message: "Student added." });
@@ -119,6 +105,16 @@ function TeacherDashboardPage() {
     } catch (error) {
       setStatus({ tone: "error", message: error.message || "Failed to add student." });
     }
+  }
+
+  if (!ready) {
+    return (
+      <div className="dashboard-grid">
+        <section className="card">
+          <p className="muted">Checking session…</p>
+        </section>
+      </div>
+    );
   }
 
   if (!teacherUsername) {
