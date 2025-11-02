@@ -17,21 +17,21 @@ function readSession() {
   return null;
 }
 
+function writeSession(value) {
+  try {
+    if (value) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+    } else {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch (error) {
+    console.warn("Failed to persist session", error);
+  }
+}
+
 export function useSession() {
   const [session, setSessionState] = useState(() => readSession());
   const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (session) {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-      } else {
-        window.localStorage.removeItem(STORAGE_KEY);
-      }
-    } catch (error) {
-      console.warn("Failed to persist session", error);
-    }
-  }, [session]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +47,7 @@ export function useSession() {
         if (data?.valid && data.user) {
           setSessionState((prev) => {
             if (!prev) return prev;
-            return {
+            const nextSession = {
               token: prev.token,
               user: {
                 username: data.user.username ?? prev.user?.username,
@@ -56,13 +56,19 @@ export function useSession() {
                 displayName: data.user.displayName ?? prev.user?.displayName ?? null,
               },
             };
+            writeSession(nextSession);
+            return nextSession;
           });
         } else {
+          writeSession(null);
           setSessionState(null);
         }
       } catch (error) {
         console.warn("Session verification failed", error);
-        if (!cancelled) setSessionState(null);
+        if (!cancelled) {
+          writeSession(null);
+          setSessionState(null);
+        }
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -75,10 +81,14 @@ export function useSession() {
   }, [session?.token]);
 
   const setSession = useCallback((value) => {
+    writeSession(value);
     setSessionState(value);
   }, []);
 
-  const clear = useCallback(() => setSessionState(null), []);
+  const clear = useCallback(() => {
+    writeSession(null);
+    setSessionState(null);
+  }, []);
 
   return { session, setSession, clear, ready };
 }
