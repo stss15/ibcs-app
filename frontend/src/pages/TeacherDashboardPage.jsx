@@ -478,9 +478,15 @@ function TeacherDashboardPage() {
       });
 
       setBulkStatus({ tone: "info", message: "Uploading students…" });
+      const sanitizedStudents = prepared.map((student) => {
+        const copy = { ...student };
+        delete copy.passwordPlain;
+        return copy;
+      });
+
       const created = await bulkCreateStudents(token, {
         classId: studentModal.classItem.id,
-        students: prepared.map(({ passwordPlain, ...rest }) => rest),
+        students: sanitizedStudents,
       });
 
       const passwordMap = {};
@@ -864,4 +870,3 @@ function TeacherDashboardPage() {
 }
 
 export default TeacherDashboardPage;
-

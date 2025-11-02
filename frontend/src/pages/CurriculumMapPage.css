@@ -14,18 +14,18 @@
 
 .curriculum-panel {
   background: var(--cs-white);
-  border-radius: 20px;
-  border: 1px solid rgba(12, 41, 124, 0.08);
-  box-shadow: 0 24px 46px rgba(12, 41, 124, 0.12);
-  padding: clamp(1.6rem, 3.5vw, 2.3rem);
+  border-radius: 18px;
+  border: 1px solid rgba(12, 41, 124, 0.06);
+  box-shadow: 0 18px 32px rgba(12, 41, 124, 0.1);
+  padding: clamp(1.45rem, 3.2vw, 2.1rem);
   display: grid;
-  gap: 1.2rem;
+  gap: 1.1rem;
 }
 
 .curriculum-panel--highlight {
-  background: linear-gradient(130deg, rgba(12, 41, 124, 0.08) 0%, rgba(178, 133, 65, 0.08) 100%);
-  border-color: rgba(12, 41, 124, 0.16);
-  box-shadow: 0 26px 52px rgba(12, 41, 124, 0.18);
+  background: linear-gradient(130deg, rgba(12, 41, 124, 0.06) 0%, rgba(178, 133, 65, 0.08) 100%);
+  border-color: rgba(12, 41, 124, 0.14);
+  box-shadow: 0 20px 36px rgba(12, 41, 124, 0.16);
 }
 
 .curriculum-panel__header {

@@ -7,11 +7,11 @@
 .ib-sidebar {
   background: var(--cs-white);
   border-radius: 20px;
-  border: 1px solid rgba(12, 41, 124, 0.08);
-  box-shadow: 0 20px 45px rgba(12, 41, 124, 0.12);
-  padding: clamp(1.75rem, 3vw, 2.5rem);
+  border: 1px solid rgba(12, 41, 124, 0.06);
+  box-shadow: 0 18px 36px rgba(12, 41, 124, 0.12);
+  padding: clamp(1.6rem, 3vw, 2.4rem);
   display: grid;
-  gap: 2rem;
+  gap: 1.8rem;
   position: sticky;
   top: clamp(1rem, 4vw, 2rem);
   align-self: start;
@@ -35,44 +35,6 @@
   margin-top: 1.25rem;
   color: var(--cs-blue);
   font-weight: 600;
-}
-
-.ib-sidebar__tracks {
-  display: grid;
-  gap: 0.6rem;
-}
-
-.ib-sidebar__tracks-label {
-  font-size: 0.85rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--cs-muted);
-}
-
-.ib-track-toggle {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.5rem;
-  background: rgba(12, 41, 124, 0.05);
-  padding: 0.35rem;
-  border-radius: 999px;
-}
-
-.ib-track-toggle__button {
-  border: none;
-  background: transparent;
-  padding: 0.6rem 1rem;
-  border-radius: 999px;
-  font-weight: 600;
-  color: var(--cs-muted);
-  transition: background 0.2s ease, color 0.2s ease;
-  cursor: pointer;
-}
-
-.ib-track-toggle__button.is-active {
-  background: var(--cs-blue);
-  color: var(--cs-white);
-  box-shadow: 0 12px 24px rgba(12, 41, 124, 0.25);
 }
 
 .ib-sidebar__nav {
@@ -102,7 +64,7 @@
 }
 
 .ib-sidebar__unit.is-active {
-  border-color: rgba(12, 41, 124, 0.18);
+  border-color: rgba(12, 41, 124, 0.16);
   background: rgba(12, 41, 124, 0.12);
   transform: translateX(4px);
 }
@@ -118,12 +80,12 @@
 
 .ib-content {
   background: var(--cs-white);
-  border-radius: 24px;
-  border: 1px solid rgba(12, 41, 124, 0.1);
-  box-shadow: 0 24px 54px rgba(12, 41, 124, 0.12);
-  padding: clamp(1.75rem, 4vw, 3rem);
+  border-radius: 22px;
+  border: 1px solid rgba(12, 41, 124, 0.08);
+  box-shadow: 0 22px 46px rgba(12, 41, 124, 0.12);
+  padding: clamp(1.6rem, 4vw, 2.8rem);
   display: grid;
-  gap: clamp(1.75rem, 3vw, 2.5rem);
+  gap: clamp(1.6rem, 3vw, 2.3rem);
 }
 
 .ib-content__header {
@@ -315,12 +277,12 @@
 }
 
 .ib-loading {
-  padding: 3rem;
+  padding: 2.5rem;
   border-radius: 20px;
   background: var(--cs-white);
-  border: 1px solid rgba(12, 41, 124, 0.12);
+  border: 1px solid rgba(12, 41, 124, 0.1);
   text-align: center;
-  box-shadow: 0 24px 48px rgba(12, 41, 124, 0.15);
+  box-shadow: 0 20px 38px rgba(12, 41, 124, 0.12);
 }
 
 @media (min-width: 1024px) {
@@ -363,4 +325,3 @@
     font-size: 0.95rem;
   }
 }
-

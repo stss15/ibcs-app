@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { verify } from "../lib/api.js";
 
 const STORAGE_KEY = "ibcs.session";
+const SessionContext = createContext(null);
 
 function readSession() {
   try {
@@ -29,7 +30,7 @@ function writeSession(value) {
   }
 }
 
-export function useSession() {
+export function SessionProvider({ children }) {
   const [session, setSessionState] = useState(() => readSession());
   const [ready, setReady] = useState(false);
 
@@ -83,21 +84,42 @@ export function useSession() {
     };
   }, [mergeUsers, session?.token]);
 
-  const setSession = useCallback((value) => {
-    if (value && value.user) {
-      value = {
-        token: value.token,
-        user: { ...value.user },
-      };
-    }
-    writeSession(value);
-    setSessionState(value);
-  }, []);
+  const setSession = useCallback(
+    (value) => {
+      if (value && value.user) {
+        value = {
+          token: value.token,
+          user: { ...value.user },
+        };
+      }
+      writeSession(value);
+      setSessionState(value);
+    },
+    [setSessionState],
+  );
 
   const clear = useCallback(() => {
     writeSession(null);
     setSessionState(null);
-  }, []);
+  }, [setSessionState]);
 
-  return { session, setSession, clear, ready };
+  const contextValue = useMemo(
+    () => ({
+      session,
+      setSession,
+      clear,
+      ready,
+    }),
+    [session, setSession, clear, ready],
+  );
+
+  return createElement(SessionContext.Provider, { value: contextValue }, children);
+}
+
+export function useSession() {
+  const context = useContext(SessionContext);
+  if (!context) {
+    throw new Error("useSession must be used within a SessionProvider");
+  }
+  return context;
 }

@@ -28,15 +28,8 @@ function resolveInitialTrack(sessionTrack, trackOptions) {
   return trackOptions[0]?.id ?? "ib-sl";
 }
 
-function computeLessonStatus({
-  lesson,
-  lessonIndex,
-  unit,
-  subtopic,
-  track,
-  isTeacher,
-}) {
-  if (isTeacher) {
+function computeLessonStatus({ lesson, lessonIndex, unit, subtopic, track, canViewAll }) {
+  if (canViewAll) {
     return "unlocked";
   }
   const unitAvailable = Array.isArray(unit.availableFor)
@@ -63,22 +56,68 @@ function IBCurriculumPage() {
   const { manifest, status, error } = useCurriculumManifest();
   const role = session?.user?.role ?? null;
   const isTeacher = role === "teacher";
-  const canToggleTrack = role === "teacher" || role === "admin";
+  const canViewAll = role === "teacher" || role === "admin";
+  const staffBadgeLabel = isTeacher ? "Teacher view" : "Staff view";
   const [selectedUnitId, setSelectedUnitId] = useState(null);
-  const [selectedTrack, setSelectedTrack] = useState(() =>
-    resolveInitialTrack(isTeacher ? "ib-hl" : session?.user?.curriculumTrack, [
-      { id: "ib-sl" },
-      { id: "ib-hl" },
-    ]),
-  );
+  const trackOptions = useMemo(() => getTrackOptions(manifest), [manifest]);
+
+  const selectedTrack = useMemo(() => {
+    if (!trackOptions.length) {
+      return canViewAll
+        ? "ib-hl"
+        : resolveInitialTrack(session?.user?.curriculumTrack, [
+            { id: "ib-sl" },
+            { id: "ib-hl" },
+          ]);
+    }
+    if (canViewAll) {
+      return trackOptions.find((option) => option.id === "ib-hl")?.id ?? trackOptions[0].id;
+    }
+    return resolveInitialTrack(session?.user?.curriculumTrack, trackOptions);
+  }, [trackOptions, canViewAll, session?.user?.curriculumTrack]);
 
   useEffect(() => {
-    if (!manifest || selectedUnitId) return;
-    const defaultUnit = manifest.units?.find((unit) => unit.id === "A1") ?? manifest.units?.[0];
-    if (defaultUnit) {
-      setSelectedUnitId(defaultUnit.id);
+    if (!manifest) return;
+
+    const units = manifest.units ?? [];
+
+    const findFirstAccessibleUnit = () => {
+      if (canViewAll || !selectedTrack) {
+        return units.find((unit) => unit.id === "A1") ?? units[0];
+      }
+      return (
+        units.find((unit) => {
+          if (unit.id === "A1") {
+            return !unit.availableFor || unit.availableFor.includes(selectedTrack);
+          }
+          return false;
+        }) ??
+        units.find((unit) => !unit.availableFor || unit.availableFor.includes(selectedTrack)) ??
+        units[0]
+      );
+    };
+
+    if (!selectedUnitId) {
+      const defaultUnit = findFirstAccessibleUnit();
+      if (defaultUnit) {
+        setSelectedUnitId(defaultUnit.id);
+      }
+      return;
     }
-  }, [manifest, selectedUnitId]);
+
+    if (!canViewAll && selectedTrack) {
+      const activeUnit = units.find((unit) => unit.id === selectedUnitId);
+      const accessible = activeUnit
+        ? !activeUnit.availableFor || activeUnit.availableFor.includes(selectedTrack)
+        : false;
+      if (!accessible) {
+        const fallback = findFirstAccessibleUnit();
+        if (fallback) {
+          setSelectedUnitId(fallback.id);
+        }
+      }
+    }
+  }, [manifest, selectedUnitId, selectedTrack, canViewAll]);
 
   useEffect(() => {
     if (!manifest) return;
@@ -87,15 +126,6 @@ function IBCurriculumPage() {
       setSelectedUnitId(focusUnit);
     }
   }, [location.state, manifest]);
-
-  useEffect(() => {
-    if (!manifest) return;
-    const options = getTrackOptions(manifest);
-    const resolved = resolveInitialTrack(isTeacher ? "ib-hl" : session?.user?.curriculumTrack, options);
-    setSelectedTrack(resolved);
-  }, [manifest, session?.user?.curriculumTrack, isTeacher]);
-
-  const trackOptions = useMemo(() => getTrackOptions(manifest), [manifest]);
 
   const selectedUnit = useMemo(() => {
     if (!manifest || !selectedUnitId) return null;
@@ -133,9 +163,12 @@ function IBCurriculumPage() {
     return null;
   }
 
-  const currentTrackLabel = isTeacher
-    ? `${getTrackLabel(manifest, selectedTrack)} · Teacher view`
-    : getTrackLabel(manifest, selectedTrack);
+  const baseTrackLabel = getTrackLabel(manifest, selectedTrack);
+  const trackBadgeText = canViewAll
+    ? `${staffBadgeLabel} · All content`
+    : baseTrackLabel
+    ? `${role === "student" ? "Your track" : "Viewing"}: ${baseTrackLabel}`
+    : null;
   const unitMeta = selectedUnit ? IB_UNIT_METADATA[selectedUnit.id] ?? {} : {};
 
   return (
@@ -152,31 +185,11 @@ function IBCurriculumPage() {
           </Link>
         </div>
 
-        {canToggleTrack && trackOptions.length > 1 && (
-          <div className="ib-sidebar__tracks">
-            <span className="ib-sidebar__tracks-label">Viewing as</span>
-            <div className="ib-track-toggle" role="radiogroup" aria-label="Choose IB track">
-              {trackOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selectedTrack === option.id}
-                  className={`ib-track-toggle__button ${selectedTrack === option.id ? "is-active" : ""}`}
-                  onClick={() => setSelectedTrack(option.id)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <nav className="ib-sidebar__nav" aria-label="IB units">
           {manifest.units?.map((unit) => {
             const metadata = IB_UNIT_METADATA[unit.id] ?? {};
             const isActive = unit.id === selectedUnitId;
-            const isTrackAvailable = isTeacher || !unit.availableFor || unit.availableFor.includes(selectedTrack);
+            const isTrackAvailable = canViewAll || !unit.availableFor || unit.availableFor.includes(selectedTrack);
 
             return (
               <button
@@ -211,7 +224,7 @@ function IBCurriculumPage() {
               <div className="ib-content__meta">
                 {unitMeta.hours?.sl && <span className="ib-badge">{unitMeta.hours.sl}</span>}
                 {unitMeta.hours?.hl && <span className="ib-badge">{unitMeta.hours.hl}</span>}
-                <span className="ib-badge ib-badge--outline">Track: {currentTrackLabel}</span>
+                {trackBadgeText && <span className="ib-badge ib-badge--outline">{trackBadgeText}</span>}
               </div>
             </header>
 
@@ -238,21 +251,21 @@ function IBCurriculumPage() {
                       </div>
                       <div className="ib-chapter__actions">
                         <Link
-                          to={isTeacher || isChapterAvailable ? `/topic/${encodeURIComponent(subtopic.id)}` : "#"}
-                          className={`ib-chapter__link ${isTeacher || isChapterAvailable ? "" : "is-disabled"}`}
+                          to={canViewAll || isChapterAvailable ? `/topic/${encodeURIComponent(subtopic.id)}` : "#"}
+                          className={`ib-chapter__link ${canViewAll || isChapterAvailable ? "" : "is-disabled"}`}
                           onClick={(event) => {
-                            if (!isTeacher && !isChapterAvailable) {
+                            if (!canViewAll && !isChapterAvailable) {
                               event.preventDefault();
                             }
                           }}
                         >
                           View chapter
                         </Link>
-                        {!isTeacher && !isChapterAvailable && (
+                        {!canViewAll && !isChapterAvailable && (
                           <span className="ib-badge ib-badge--muted">Locked</span>
                         )}
-                        {isTeacher && <span className="ib-badge ib-badge--outline">Teacher view</span>}
-                        {!isTeacher && isChapterAvailable && (
+                        {canViewAll && <span className="ib-badge ib-badge--outline">{staffBadgeLabel}</span>}
+                        {!canViewAll && isChapterAvailable && (
                           <span className="ib-badge ib-badge--outline">First page unlocked</span>
                         )}
                       </div>
@@ -266,7 +279,7 @@ function IBCurriculumPage() {
                           unit: selectedUnit,
                           subtopic,
                           track: selectedTrack,
-                          isTeacher,
+                          canViewAll,
                         });
 
                         const unlocked = status === "unlocked";
@@ -278,9 +291,9 @@ function IBCurriculumPage() {
                             <span className="ib-lesson__title">{lesson.title}</span>
                             <span className="ib-lesson__status">
                               {unlocked && <span className="ib-status-pill is-unlocked">Unlocked</span>}
-                              {isTeacher && <span className="ib-status-pill is-teacher">Teacher view</span>}
-                              {!isTeacher && hlOnly && <span className="ib-status-pill is-hl">HL only</span>}
-                              {!isTeacher && !unlocked && !hlOnly && <span className="ib-status-pill">Locked</span>}
+                              {canViewAll && <span className="ib-status-pill is-teacher">{staffBadgeLabel}</span>}
+                              {!canViewAll && hlOnly && <span className="ib-status-pill is-hl">HL only</span>}
+                              {!canViewAll && !unlocked && !hlOnly && <span className="ib-status-pill">Locked</span>}
                             </span>
                           </li>
                         );
@@ -302,4 +315,3 @@ function IBCurriculumPage() {
 }
 
 export default IBCurriculumPage;
-

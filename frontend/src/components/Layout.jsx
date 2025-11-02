@@ -30,6 +30,44 @@ function Layout({ children }) {
     return null;
   }, [role]);
 
+  const navigationLinks = useMemo(() => {
+    const links = [
+      {
+        to: "/curriculum",
+        label: "Curriculum overview",
+        match: (pathname) => pathname === "/curriculum",
+      },
+      {
+        to: "/curriculum/ib",
+        label: "IB curriculum map",
+        match: (pathname) =>
+          pathname.startsWith("/curriculum/ib") || pathname.startsWith("/topic") || pathname.startsWith("/lesson"),
+      },
+    ];
+
+    if (role === "teacher") {
+      links.push({
+        to: "/dashboard",
+        label: "Teacher dashboard",
+        match: (pathname) => pathname.startsWith("/dashboard"),
+      });
+    } else if (role === "student") {
+      links.push({
+        to: "/student",
+        label: "Student space",
+        match: (pathname) => pathname.startsWith("/student"),
+      });
+    } else if (role === "admin") {
+      links.push({
+        to: "/admin",
+        label: "Admin panel",
+        match: (pathname) => pathname.startsWith("/admin"),
+      });
+    }
+
+    return links;
+  }, [role]);
+
   const handleSignOut = useCallback(() => {
     clear();
     setMenuOpen(false);
@@ -72,6 +110,22 @@ function Layout({ children }) {
               <small className="layout-brand__subtitle">St Georges British International Schools Group Germany</small>
             </div>
           </Link>
+
+          <nav className="layout-nav" aria-label="Primary navigation">
+            {navigationLinks.map((link) => {
+              const isActive = link.match ? link.match(location.pathname) : location.pathname === link.to;
+              return (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={`layout-nav__link ${isActive ? "is-active" : ""}`}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
 
           <div className="layout-actions">
             {ready && !isAuthenticated && (
