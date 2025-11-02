@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login as loginRequest } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
+import logo from "../assets/logo.svg";
 import "./LoginPage.css";
 
 const initialState = { status: "idle", message: "" };
@@ -41,33 +42,43 @@ function LoginPage() {
   };
 
   return (
-    <div className="login-grid">
-      <section className="card">
-        <h2>Welcome back</h2>
-        <p>Select your role, then enter your credentials.</p>
-        <div className="role-toggle">
-          <button
-            type="button"
-            className={role === "teacher" ? "active" : ""}
-            onClick={() => {
-              setRole("teacher");
-              setStatus(initialState);
-            }}
-          >
-            Teacher
-          </button>
-          <button
-            type="button"
-            className={role === "student" ? "active" : ""}
-            onClick={() => {
-              setRole("student");
-              setStatus(initialState);
-            }}
-          >
-            Student
-          </button>
+    <div className="login-container">
+      <section className="login-card">
+        <header className="login-card__header">
+          <img src={logo} alt="School crest" className="login-card__logo" />
+          <div>
+            <h1>Computer Science Department</h1>
+            <p className="muted">Sign in to access the teaching dashboards and curriculum map.</p>
+          </div>
+        </header>
+
+        <div className="login-role">
+          <span>Sign in as</span>
+          <div className="login-role__toggle" role="group" aria-label="Choose account role">
+            <button
+              type="button"
+              className={role === "teacher" ? "active" : ""}
+              onClick={() => {
+                setRole("teacher");
+                setStatus(initialState);
+              }}
+            >
+              Teacher
+            </button>
+            <button
+              type="button"
+              className={role === "student" ? "active" : ""}
+              onClick={() => {
+                setRole("student");
+                setStatus(initialState);
+              }}
+            >
+              Student
+            </button>
+          </div>
         </div>
-        <form onSubmit={handleSubmit}>
+
+        <form onSubmit={handleSubmit} className="login-form">
           <label>
             <span>Username</span>
             <input name="username" required autoComplete="username" />
@@ -76,18 +87,18 @@ function LoginPage() {
             <span>Password</span>
             <input name="password" type="password" required autoComplete="current-password" />
           </label>
-          <button type="submit" disabled={status.status === "loading"}>
+          <button type="submit" className="login-submit" disabled={status.status === "loading"}>
             {status.status === "loading" ? "Working…" : `Log in as ${roleLabel}`}
           </button>
           {status.message && <p className={`status status--${status.status}`}>{status.message}</p>}
         </form>
-      </section>
-      <section className="card">
-        <h2>Dev note</h2>
-        <p>
-          This proof-of-concept talks directly to InstantDB using a temporary admin token. Rotate the
-          token after the demo and move sensitive operations server-side.
-        </p>
+
+        <footer className="login-footnote">
+          <p className="muted">
+            Staff and students share the same sign-in screen—select your role above so we can route you
+            to the right dashboard.
+          </p>
+        </footer>
       </section>
     </div>
   );

@@ -1,48 +1,108 @@
-.login-grid {
-  display: grid;
-  gap: 2rem;
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: clamp(420px, 70vh, 720px);
 }
 
-.card {
-  background: white;
-  border-radius: 1rem;
-  padding: clamp(1.5rem, 3vw, 2rem);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+.login-card {
+  width: min(640px, 100%);
+  background: var(--cs-white);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(12, 41, 124, 0.14);
+  padding: clamp(1.75rem, 4vw, 2.75rem);
   display: grid;
-  gap: 1.25rem;
+  gap: 1.75rem;
+  border: 1px solid rgba(12, 41, 124, 0.08);
 }
 
-form {
-  display: grid;
-  gap: 1rem;
+.login-card__header {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  background: rgba(12, 41, 124, 0.04);
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  border: 1px solid rgba(12, 41, 124, 0.12);
 }
 
-label {
-  display: grid;
-  gap: 0.4rem;
+.login-card__logo {
+  width: clamp(72px, 9vw, 92px);
+  flex-shrink: 0;
 }
 
-input {
-  border: 1px solid rgba(15, 23, 42, 0.2);
-  border-radius: 0.7rem;
-  padding: 0.65rem 0.8rem;
+.login-card__header h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  color: var(--cs-blue);
+}
+
+.login-role {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.login-role__toggle {
+  display: inline-flex;
+  border: 1px solid rgba(12, 41, 124, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(12, 41, 124, 0.04);
+}
+
+.login-role__toggle button {
+  border: none;
+  background: transparent;
+  padding: 0.55rem 1.65rem;
+  font-weight: 600;
+  color: var(--cs-blue);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.login-role__toggle button:first-child {
+  border-right: 1px solid rgba(12, 41, 124, 0.2);
+}
+
+.login-role__toggle button.active {
+  background: var(--cs-blue);
+  color: var(--cs-white);
+}
+
+.login-form {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.login-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.login-form input {
+  border: 1px solid rgba(12, 41, 124, 0.2);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.85rem;
   font-size: 1rem;
-  background: #f8fafc;
+  background: rgba(12, 41, 124, 0.04);
 }
 
-button {
+.login-submit {
   border: none;
   border-radius: 999px;
-  padding: 0.7rem 1.4rem;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
+  padding: 0.75rem 1.7rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  background: linear-gradient(135deg, var(--cs-gold), #d2a35a);
+  color: var(--cs-black);
+  transition: transform 0.17s ease, box-shadow 0.17s ease;
 }
 
-button:disabled {
-  opacity: 0.65;
+.login-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(178, 133, 65, 0.25);
+}
+
+.login-submit:disabled {
+  opacity: 0.6;
   cursor: progress;
 }
 
@@ -52,49 +112,34 @@ button:disabled {
 }
 
 .status--error {
-  color: #dc2626;
+  color: #c0392b;
 }
 
 .status--success {
-  color: #15803d;
+  color: #0f7a39;
 }
 
-
-.role-toggle {
-  display: inline-flex;
-  border: 1px solid rgba(15, 23, 42, 0.2);
-  border-radius: 999px;
-  overflow: hidden;
+.status--loading {
+  color: var(--cs-blue);
 }
 
-.role-toggle > button {
-  border-radius: 0;
-  background: transparent;
-  color: inherit;
-  padding: 0.5rem 1.4rem;
-  border: none;
-  box-shadow: none;
+.login-footnote {
+  border-top: 1px solid rgba(12, 41, 124, 0.12);
+  padding-top: 1rem;
 }
 
-.role-toggle > button.active {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
-}
-
-.role-toggle > button:first-child {
-  border-right: 1px solid rgba(15, 23, 42, 0.2);
-}
-
-.role-toggle > button:not(.active):hover {
-  background: rgba(37, 99, 235, 0.08);
-}
-
-@media (min-width: 768px) {
-  .login-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 640px) {
+  .login-card__header {
+    flex-direction: column;
+    text-align: center;
   }
 
-  .login-grid > :last-child {
-    grid-column: 1 / -1;
+  .login-role__toggle {
+    width: 100%;
+  }
+
+  .login-role__toggle button {
+    flex: 1;
+    text-align: center;
   }
 }

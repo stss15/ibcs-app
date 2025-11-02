@@ -4,12 +4,25 @@
 }
 
 .card {
-  background: white;
-  border-radius: 1rem;
-  padding: clamp(1.5rem, 3vw, 2.25rem);
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+  background: var(--cs-white);
+  border-radius: 18px;
+  padding: clamp(1.6rem, 3.5vw, 2.4rem);
+  box-shadow: 0 18px 44px rgba(12, 41, 124, 0.12);
+  border: 1px solid rgba(12, 41, 124, 0.12);
   display: grid;
   gap: 1.25rem;
+}
+
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .status {
@@ -17,15 +30,15 @@
 }
 
 .status--error {
-  color: #dc2626;
+  color: #c0392b;
 }
 
 .status--success {
-  color: #15803d;
+  color: #0f7a39;
 }
 
 .muted {
-  color: rgba(15, 23, 42, 0.65);
+  color: var(--cs-muted);
 }
 
 .unlocks-grid {
@@ -34,10 +47,10 @@
 }
 
 .unlock-card {
-  border-radius: 0.9rem;
+  border-radius: 1rem;
   padding: 1rem 1.2rem;
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(12, 41, 124, 0.06);
+  border: 1px solid rgba(12, 41, 124, 0.18);
   display: grid;
   gap: 0.25rem;
 }
@@ -46,7 +59,7 @@
   max-height: 320px;
   overflow: auto;
   padding: 0.9rem;
-  background: rgba(15, 23, 42, 0.07);
+  background: rgba(12, 41, 124, 0.07);
   border-radius: 0.75rem;
   font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getStudentDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import "./StudentDashboardPage.css";
@@ -64,11 +64,26 @@ function StudentDashboardPage() {
   return (
     <div className="student-grid">
       <section className="card">
-        <h2>Welcome, {studentUsername}</h2>
-        <p>Your teacher has set up a guided journey. Check with them for the next tasks.</p>
-        <button className="secondary" onClick={() => { clear(); navigate("/", { replace: true }); }}>
-          Sign out
-        </button>
+        <header className="card-header">
+          <div>
+            <h2>Welcome, {studentUsername}</h2>
+            <p>Your teacher has set up a guided journey. Check with them for the next tasks.</p>
+          </div>
+          <div className="card-actions">
+            <Link to="/curriculum" className="button-outline">
+              Curriculum map
+            </Link>
+            <button
+              className="button-outline button-outline--danger"
+              onClick={() => {
+                clear();
+                navigate("/", { replace: true });
+              }}
+            >
+              Sign out
+            </button>
+          </div>
+        </header>
         {status && <p className={`status status--${status.tone}`}>{status.message}</p>}
       </section>
 

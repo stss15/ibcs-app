@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createClass, createStudent, getTeacherDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import "./TeacherDashboardPage.css";
@@ -129,9 +129,14 @@ function TeacherDashboardPage() {
             <h2>Teacher dashboard</h2>
             <p>Manage classes, enroll students, and review progress.</p>
           </div>
-          <button className="secondary" onClick={handleSignOut} type="button">
-            Sign out
-          </button>
+          <div className="card-actions">
+            <Link to="/curriculum" className="button-outline">
+              Curriculum map
+            </Link>
+            <button className="button-outline button-outline--danger" onClick={handleSignOut} type="button">
+              Sign out
+            </button>
+          </div>
         </header>
         {status && <p className={`status status--${status.tone}`}>{status.message}</p>}
         {loading && <p className="muted">Loading…</p>}
@@ -147,7 +152,9 @@ function TeacherDashboardPage() {
                 <span>Description</span>
                 <input name="description" placeholder="Optional" />
               </label>
-              <button type="submit">Create</button>
+              <button type="submit" className="dashboard-submit">
+                Create
+              </button>
             </form>
           </article>
 
@@ -177,7 +184,9 @@ function TeacherDashboardPage() {
                 <span>Password</span>
                 <input name="password" type="password" required placeholder="Temporary password" />
               </label>
-              <button type="submit">Add student</button>
+              <button type="submit" className="dashboard-submit">
+                Add student
+              </button>
             </form>
           </article>
         </div>

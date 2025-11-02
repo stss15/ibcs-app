@@ -4,10 +4,11 @@
 }
 
 .card {
-  background: white;
-  border-radius: 1rem;
-  padding: clamp(1.5rem, 3vw, 2.25rem);
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+  background: var(--cs-white);
+  border-radius: 18px;
+  padding: clamp(1.6rem, 3.5vw, 2.4rem);
+  box-shadow: 0 22px 48px rgba(12, 41, 124, 0.14);
+  border: 1px solid rgba(12, 41, 124, 0.12);
   display: grid;
   gap: 1.25rem;
 }
@@ -29,11 +30,10 @@
   gap: 1rem;
 }
 
-.card-header button.secondary {
-  align-self: flex-start;
-  background: transparent;
-  border: 1px solid rgba(15, 23, 42, 0.2);
-  color: inherit;
+.card-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .card-columns {
@@ -42,10 +42,10 @@
 }
 
 .card-columns article {
-  border: 1px solid rgba(37, 99, 235, 0.18);
-  border-radius: 0.85rem;
-  padding: 1.25rem;
-  background: rgba(37, 99, 235, 0.05);
+  border: 1px solid rgba(12, 41, 124, 0.14);
+  border-radius: 1rem;
+  padding: 1.4rem;
+  background: rgba(12, 41, 124, 0.04);
   display: grid;
   gap: 1rem;
 }
@@ -62,10 +62,10 @@ label {
 
 input,
 select {
-  border: 1px solid rgba(15, 23, 42, 0.2);
-  border-radius: 0.65rem;
-  padding: 0.6rem 0.75rem;
-  background: #f8fafc;
+  border: 1px solid rgba(12, 41, 124, 0.18);
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(12, 41, 124, 0.04);
 }
 
 .status {
@@ -74,15 +74,15 @@ select {
 }
 
 .status--error {
-  color: #dc2626;
+  color: #c0392b;
 }
 
 .status--success {
-  color: #15803d;
+  color: #0f7a39;
 }
 
 .status--info {
-  color: #2563eb;
+  color: var(--cs-blue);
 }
 
 .list {
@@ -97,24 +97,39 @@ select {
   display: grid;
   gap: 0.4rem;
   padding: 0.8rem 1rem;
-  border-radius: 0.75rem;
-  background: rgba(15, 23, 42, 0.05);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 0.85rem;
+  background: rgba(12, 41, 124, 0.04);
+  border: 1px solid rgba(12, 41, 124, 0.1);
 }
 
 .badge {
   justify-self: flex-start;
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
-  background: rgba(37, 99, 235, 0.15);
-  color: #1d4ed8;
+  background: rgba(12, 41, 124, 0.12);
+  color: var(--cs-blue);
   font-weight: 600;
   font-size: 0.75rem;
 }
 
 .muted {
-  color: rgba(15, 23, 42, 0.65);
+  color: var(--cs-muted);
   font-size: 0.9rem;
+}
+
+.dashboard-submit {
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1.4rem;
+  background: linear-gradient(135deg, var(--cs-blue), #2647a8);
+  color: #f4f6ff;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(12, 41, 124, 0.2);
 }
 
 @media (min-width: 900px) {

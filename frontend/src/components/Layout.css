@@ -2,48 +2,82 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--cs-surface);
 }
 
 .layout-header {
-  background: linear-gradient(135deg, #1e3a8a, #312e81);
-  color: #f8fafc;
-  padding: 2rem clamp(1rem, 3vw, 3rem);
+  background: var(--cs-white);
+  border-bottom: 4px solid var(--cs-blue);
+  padding: 1.5rem clamp(1rem, 4vw, 3rem);
+}
+
+.layout-header__content {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.layout-header nav {
-  display: flex;
+.layout-brand {
+  display: inline-flex;
+  align-items: center;
   gap: 1rem;
-  flex-wrap: wrap;
+  color: inherit;
 }
 
-.layout-header a {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 0.5rem 1.1rem;
+.layout-brand__mark {
+  width: clamp(64px, 10vw, 80px);
+  height: auto;
+}
+
+.layout-brand__title {
+  display: block;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-weight: 700;
+  color: var(--cs-black);
+}
+
+.layout-brand__subtitle {
+  color: var(--cs-muted);
+}
+
+.layout-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.layout-nav a {
   border-radius: 999px;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid rgba(12, 41, 124, 0.18);
+  color: var(--cs-blue);
   font-weight: 600;
+  background: rgba(12, 41, 124, 0.06);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.layout-nav a:hover,
+.layout-nav a:focus-visible {
+  background: var(--cs-blue);
+  color: var(--cs-white);
 }
 
 .layout-main {
   flex: 1;
-  padding: clamp(1rem, 3vw, 3rem);
-  display: grid;
-  gap: 2rem;
-}
-
-.layout-banner {
-  background: #fef3c7;
-  color: #92400e;
-  text-align: center;
-  padding: 0.75rem 1rem;
-  font-weight: 600;
+  padding: clamp(1.5rem, 4vw, 3rem);
 }
 
 .layout-footer {
-  background: #0f172a;
-  color: #cbd5f5;
+  background: var(--cs-blue);
+  color: rgba(255, 255, 255, 0.86);
   text-align: center;
   padding: 1rem;
+}
+
+@media (min-width: 900px) {
+  .layout-header__content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
 }

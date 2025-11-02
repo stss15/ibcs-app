@@ -1,8 +1,13 @@
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #eef2ff;
-  color: #0f172a;
-  line-height: 1.5;
+  color-scheme: light;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.6;
+  --cs-white: #ffffff;
+  --cs-black: #050d31;
+  --cs-blue: #0c297c;
+  --cs-gold: #b28541;
+  --cs-muted: #4c597c;
+  --cs-surface: #f5f6fb;
 }
 
 *,
@@ -14,6 +19,8 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: var(--cs-white);
+  color: var(--cs-black);
 }
 
 a {
@@ -23,12 +30,33 @@ a {
 
 button {
   font: inherit;
+  cursor: pointer;
 }
 
-button.secondary {
-  background: transparent;
-  color: #1d4ed8;
-  border: 1px solid currentColor;
+.button-outline {
   border-radius: 999px;
-  padding: 0.6rem 1.2rem;
+  padding: 0.55rem 1.3rem;
+  border: 1px solid var(--cs-blue);
+  background: transparent;
+  color: var(--cs-blue);
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.button-outline:hover {
+  background: rgba(12, 41, 124, 0.08);
+}
+
+.button-outline--danger {
+  border-color: rgba(192, 57, 43, 0.4);
+  color: #c0392b;
+}
+
+.button-outline--danger:hover {
+  background: rgba(192, 57, 43, 0.12);
+  color: #8e2f23;
+}
+
+.muted {
+  color: var(--cs-muted);
 }
