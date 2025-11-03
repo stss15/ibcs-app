@@ -1,6 +1,21 @@
 IBCS APP — OPERATIONS CHANGE LOG
 ================================
 
+2025-11-03  Major UI/UX modernization & design system
+---------------------------------
+- Implemented comprehensive UI/UX overhaul targeting students aged 11-18 with modern, gamified learning experience.
+- Created global design system with CSS variables, animations, transitions, and utility classes in `styles/global.css`.
+- Enhanced all tables with sticky headers, zebra striping, hover effects, and gradient headers.
+- Redesigned keyword definition cards with modern gradients, hover animations, and left border reveals.
+- Added celebratory animations to quizzes (checkmarks, X marks, emoji celebrations, pulse/wiggle effects).
+- Upgraded all activity components with gradient backgrounds, smooth transitions, and success animations.
+- Enhanced XP & gamification system with animated sparkles, shimmer effects, gold gradients, and level badges.
+- Modernized Student Dashboard with animated progress rings, gradient metrics, and enhanced hover effects.
+- Improved Year 7 Map with visual learning pathways, state-based animations (bounce, wiggle), and completion celebrations.
+- Created 8 reusable components in `EnhancedComponents.jsx`: KeywordCard, Callout, EnhancedTable, ProgressIndicator, AchievementBadge, XPNotification, StreakIndicator, SkeletonLoader.
+- Added comprehensive documentation: `ui-ux-design-system.md`, `UI-UX-IMPROVEMENTS-SUMMARY.md`, `QUICK-START-GUIDE.md`.
+- All changes maintain school brand colors, are fully responsive, WCAG AA compliant, and backward-compatible.
+
 2025-11-05  Python-first curriculum & dashboards
 ---------------------------------
 - Reworked B2.1 curriculum content and supporting docs to use Python exclusively; removed legacy Java guidance.

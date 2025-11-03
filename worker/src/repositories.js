@@ -710,6 +710,97 @@ export async function setStudentProgress(
   };
 }
 
+export async function getStudentGamification(db, studentId) {
+  const result = await db.query({
+    studentGamification: {
+      $: {
+        where: { studentId },
+        limit: 1,
+      },
+    },
+  });
+
+  const doc = result?.studentGamification?.[0];
+  if (!doc) {
+    return {
+      studentId,
+      xp: 0,
+      level: 1,
+      streak: 0,
+      totalCorrect: 0,
+      totalAttempts: 0,
+      lastUpdated: null,
+    };
+  }
+
+  return {
+    studentId: doc.studentId ?? studentId,
+    xp: typeof doc.xp === 'number' ? doc.xp : 0,
+    level: typeof doc.level === 'number' ? doc.level : 1,
+    streak: typeof doc.streak === 'number' ? doc.streak : 0,
+    totalCorrect: typeof doc.totalCorrect === 'number' ? doc.totalCorrect : 0,
+    totalAttempts: typeof doc.totalAttempts === 'number' ? doc.totalAttempts : 0,
+    lastUpdated: doc.lastUpdated ?? null,
+  };
+}
+
+export async function syncStudentGamification(db, studentId, gamificationData) {
+  const lastUpdated = new Date().toISOString();
+  const xp = typeof gamificationData.xp === 'number' ? gamificationData.xp : 0;
+  const level = typeof gamificationData.level === 'number' ? gamificationData.level : 1;
+  const streak = typeof gamificationData.streak === 'number' ? gamificationData.streak : 0;
+  const totalCorrect = typeof gamificationData.totalCorrect === 'number' ? gamificationData.totalCorrect : 0;
+  const totalAttempts = typeof gamificationData.totalAttempts === 'number' ? gamificationData.totalAttempts : 0;
+
+  // Check if record exists
+  const existing = await db.query({
+    studentGamification: {
+      $: {
+        where: { studentId },
+        limit: 1,
+      },
+    },
+  });
+
+  if (existing?.studentGamification?.[0]) {
+    // Update existing record
+    await db.transact([
+      tx.studentGamification[existing.studentGamification[0].id].update({
+        xp,
+        level,
+        streak,
+        totalCorrect,
+        totalAttempts,
+        lastUpdated,
+      }),
+    ]);
+  } else {
+    // Create new record
+    const recordId = id();
+    await db.transact([
+      tx.studentGamification[recordId].update({
+        studentId,
+        xp,
+        level,
+        streak,
+        totalCorrect,
+        totalAttempts,
+        lastUpdated,
+      }),
+    ]);
+  }
+
+  return {
+    studentId,
+    xp,
+    level,
+    streak,
+    totalCorrect,
+    totalAttempts,
+    lastUpdated,
+  };
+}
+
 /* ------------------------------------------------------------------ *
  * Aggregations
  * ------------------------------------------------------------------ */
@@ -789,10 +880,10 @@ export async function getTeacherDashboardData(db, { teacherId, username }) {
 
 async function buildStudentDashboardPayload(db, student) {
   if (!student || student.status === 'archived') {
-    return { student: null, class: null, unlocks: [], progress: [] };
+    return { student: null, class: null, unlocks: [], progress: [], gamification: null };
   }
 
-  const [classResult, unlocksResult, progressResult] = await Promise.all([
+  const [classResult, unlocksResult, progressResult, gamificationData] = await Promise.all([
     db.query({
       classes: {
         $: {
@@ -815,6 +906,7 @@ async function buildStudentDashboardPayload(db, student) {
         },
       },
     }),
+    getStudentGamification(db, student.id),
   ]);
 
   const classDoc = sanitizeClass(classResult?.classes?.[0]);
@@ -840,6 +932,7 @@ async function buildStudentDashboardPayload(db, student) {
     unlocks,
     progress,
     classPacing,
+    gamification: gamificationData,
   };
 }
 

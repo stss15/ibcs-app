@@ -156,6 +156,21 @@ export async function getStudentDashboard(token) {
   });
 }
 
+export async function getStudentGamification(token) {
+  return request("/student/gamification", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function syncStudentGamification(token, gamificationData) {
+  return request("/student/gamification", {
+    method: "POST",
+    token,
+    body: gamificationData,
+  });
+}
+
 export async function getAdminDashboard(token) {
   return request("/admin/dashboard", {
     method: "GET",

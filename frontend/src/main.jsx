@@ -11,7 +11,13 @@ const basename = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 function SessionAwareGamification({ children }) {
   const { session } = useSession();
   const profileKey = session?.user?.username?.toLowerCase() || "anonymous";
-  return <GamificationProvider profileKey={profileKey}>{children}</GamificationProvider>;
+  const isStudent = session?.user?.role === "student";
+  const syncToken = session?.token || null;
+  return (
+    <GamificationProvider profileKey={profileKey} syncToken={syncToken} isStudent={isStudent}>
+      {children}
+    </GamificationProvider>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(

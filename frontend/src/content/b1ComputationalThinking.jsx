@@ -1,92 +1,93 @@
 import { Fragment } from "react";
+import {
+  KeywordCard,
+  Callout,
+  EnhancedTable,
+} from "../components/segments/EnhancedComponents";
 import flowchartBasics from "../assets/flowchart-basics.svg";
 
 const keyVocabulary = [
   {
     term: "Computational Thinking",
     definition:
-      "A set of structured problem-solving techniques (abstraction, decomposition, pattern recognition, and algorithmic design) used to express solutions that can be executed computationally.",
+      "A problem-solving approach that involves abstraction, decomposition, pattern recognition, and algorithmic design to create solutions that can be executed by a computer.",
+    icon: "🧠",
   },
   {
     term: "Problem Specification",
     definition:
-      "A formal description of a problem that includes the problem statement, stakeholders, constraints, objectives, inputs, outputs, and evaluation criteria.",
-  },
-  {
-    term: "Stakeholder",
-    definition: "Anyone affected by or influencing the solution (e.g. client, user, developer).",
-  },
-  {
-    term: "Constraint / Limitation",
-    definition: "A restriction such as time, cost, hardware, legislation, or compatibility.",
-  },
-  {
-    term: "Objective",
-    definition: "Broad, high-level desired outcome.",
-  },
-  {
-    term: "Goal",
-    definition: "Measurable, specific target linked to an objective.",
-  },
-  {
-    term: "Input / Output Specification",
-    definition: "Definitions of the type, format, and characteristics of data entering and leaving the system.",
-  },
-  {
-    term: "Evaluation Criteria",
-    definition: "Benchmarks for judging solution success (effectiveness, efficiency, usability, maintainability).",
+      "A detailed document outlining a problem, including the problem statement, constraints, objectives, goals, input/output requirements, and evaluation criteria.",
+    icon: "📝",
   },
   {
     term: "Abstraction",
-    definition: "Focusing on essential details while ignoring irrelevant ones to simplify a system.",
+    definition:
+      "The process of filtering out unnecessary details to focus on the essential elements of a problem or system.",
+    icon: "🌬️",
   },
   {
     term: "Decomposition",
-    definition: "Breaking a large or complex problem into smaller sub-problems.",
+    definition:
+      "Breaking down a complex problem into smaller, more manageable sub-problems that are easier to solve.",
+    icon: "🧩",
   },
   {
     term: "Pattern Recognition",
-    definition: "Identifying similarities or recurring structures to generalise or reuse solutions.",
+    definition:
+      "Identifying recurring similarities, trends, or regularities within problems or data. Recognizing patterns allows you to reuse solutions and make predictions.",
+    icon: "🎨",
   },
   {
     term: "Algorithmic Design",
-    definition: "Creating a logical, step-by-step plan to solve a problem.",
+    definition:
+      "Creating a clear, step-by-step set of instructions to solve a problem. The algorithm is the roadmap that a computer (or a person) follows to reach the solution.",
+    icon: "⚙️",
   },
   {
     term: "Flowchart",
-    definition: "A diagram using standardised symbols (ISO 5807) to represent logical steps and decisions in a process.",
+    definition:
+      "A diagram that visually represents a process, workflow, or algorithm using standardized symbols (ISO 5807).",
+    icon: "📊",
   },
   {
-    term: "Trace Table",
-    definition: "A table showing variable values at each algorithmic step to verify correctness.",
+    term: "Constraint",
+    definition:
+      "A restriction or boundary that impacts the solution, such as time, budget, technology, or regulations.",
+    icon: "🔒",
   },
-];
-
-const keyVocabularyList = keyVocabulary.map(({ term, definition }) => ({
-  title: term,
-  body: definition,
-}));
-
-const flowchartSymbols = [
-  { symbol: "⭘", name: "Start / End", function: "Begin or end of process" },
-  { symbol: "⬒", name: "Input / Output", function: "Data entry or display" },
-  { symbol: "▭", name: "Process / Operation", function: "Transformation of data" },
-  { symbol: "◇", name: "Decision", function: "True/False branch" },
-  { symbol: "→", name: "Flowline", function: "Direction of logic" },
-  { symbol: "⊙", name: "Connector", function: "Join separate parts of a diagram" },
+  {
+    term: "Stakeholder",
+    definition:
+      "An individual or group affected by or having an interest in a project or its outcome.",
+    icon: "👥",
+  },
 ];
 
 const overviewAim = (
   <Fragment>
     <p>
-      Develop the ability to think logically, analyse problems, identify patterns, simplify complexity, and design
-      clear, step-by-step computational solutions.
+      This unit will equip you with a powerful mental toolkit for solving
+      problems like a computer scientist. You will learn to break down complex
+      challenges, identify patterns, focus on what truly matters, and design
+      clear, logical solutions.
     </p>
     <ul>
-      <li>Construct precise problem specifications.</li>
-      <li>Apply abstraction, algorithmic design, decomposition, and pattern recognition.</li>
-      <li>Trace and evaluate flowcharts for algorithms.</li>
-      <li>Relate computational thinking (CT) to real-world applications.</li>
+      <li>
+        <strong>Construct</strong> a formal problem specification to guide a
+        project.
+      </li>
+      <li>
+        <strong>Describe and apply</strong> the four cornerstones of
+        computational thinking.
+      </li>
+      <li>
+        <strong>Explain</strong> how these concepts are used across different
+        areas of computer science.
+      </li>
+      <li>
+        <strong>Trace and interpret</strong> flowcharts that represent
+        algorithms.
+      </li>
     </ul>
   </Fragment>
 );
@@ -98,126 +99,199 @@ export const b1Unit = {
     sl: "SL · 5 hours",
     hl: "HL · 5 hours",
   },
-  guidingQuestion: "How can we apply a computational solution to a real-world problem?",
+  guidingQuestion:
+    "How can we apply a computational solution to a real-world problem?",
   overview: {
     aim: overviewAim,
     vocabulary: keyVocabulary,
   },
   stages: [
     {
-      id: "B1-overview",
+      id: "B1-orientation",
       title: "Unit Orientation",
       duration: "15 min",
       description:
-        "Get familiar with the unit aims, key vocabulary, and how progress will be tracked. This stage introduces the learning contract for the B1 pathway.",
+        "Get familiar with the unit's guiding question, learning objectives, and key vocabulary.",
       segments: [
         {
           type: "content",
-          id: "overview-aim",
-          heading: "Aim of the Unit",
+          id: "orientation-aim",
+          heading: "Unit Aims and Objectives",
           body: overviewAim,
         },
         {
-          type: "list",
-          id: "overview-vocab",
+          type: "content",
+          id: "orientation-vocab",
           heading: "Key Vocabulary",
-          items: keyVocabularyList,
-        },
-        {
-          type: "micro-quiz",
-          id: "overview-check",
-          heading: "Vocabulary Pulse Check",
-          questions: [
-            {
-              id: "overview-q1",
-              type: "mcq",
-              prompt: "Which of the following best describes a constraint?",
-              options: [
-                { id: "opt-a", label: "A measurable milestone used to judge success." },
-                { id: "opt-b", label: "Any factor limiting the solution, such as budget or hardware." },
-                { id: "opt-c", label: "A list of users who benefit from the system." },
-              ],
-              answer: "opt-b",
-              rationale: "Constraints define the boundaries you must respect while designing the solution.",
-            },
-            {
-              id: "overview-q2",
-              type: "true-false",
-              prompt: "A goal is broader than an objective.",
-              answer: false,
-              rationale: "An objective is broad; a goal is a specific measurable milestone supporting the objective.",
-            },
-          ],
+          body: (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {keyVocabulary.map((item) => (
+                <KeywordCard
+                  key={item.term}
+                  term={item.term}
+                  definition={item.definition}
+                  icon={item.icon}
+                />
+              ))}
+            </div>
+          ),
         },
       ],
     },
     {
       id: "B1.1.1",
       title: "Constructing a Problem Specification",
-      duration: "45 min",
+      duration: "60 min",
       description:
-        "Learn how to articulate a complete specification that anchors design, testing, and evaluation activities.",
+        "Learn to define problems with clarity and precision by constructing a formal problem specification.",
       segments: [
         {
           type: "content",
-          id: "spec-why",
-          heading: "Why a Specification Matters",
+          id: "spec-intro",
+          heading: "The Blueprint for Success",
           body: (
             <Fragment>
               <p>
-                A clear specification ensures the right problem is solved efficiently and measurably. It anchors design,
-                evaluation, and communication between stakeholders.
+                Before writing a single line of code, a computer scientist must
+                deeply understand the problem. A Problem Specification is the
+                formal document that ensures everyone involved—clients,
+                developers, and users—shares the same understanding. It acts as
+                a blueprint and a contract, defining what success looks like.
               </p>
-              <p>Explore each component before attempting the matching activity.</p>
+              <Callout type="info" title="Core Components">
+                A thorough problem specification consists of six key parts: the
+                problem statement, constraints, objectives and goals, input
+                specifications, output specifications, and evaluation
+                criteria.
+              </Callout>
             </Fragment>
           ),
         },
         {
-          type: "list",
-          id: "spec-components",
-          heading: "Core Components",
+          type: "accordion",
+          id: "spec-components-deep-dive",
+          heading: "Deep Dive into Specification Components",
           items: [
             {
-              title: "Problem Statement",
+              title: "1. The Problem Statement",
               body: (
                 <Fragment>
-                  <strong>Poor example:</strong> “Our customer service is inefficient.” (too vague)
-                  <br />
-                  <strong>Better example:</strong> “Customers wait an average of 25 minutes before an agent answers,
-                  increasing abandoned calls by 15 % in the last quarter.”
+                  <p>
+                    This is a concise, clear definition of the problem. It
+                    focuses on the 'what' and the 'why'.
+                  </p>
+                  <Callout type="error" title="Poor Example">
+                    “Our customer service processes are inefficient.” (This is
+                    too broad and vague. What does "inefficient" mean?)
+                  </Callout>
+                  <Callout type="success" title="Strong Example">
+                    “Customers wait an average of 25 minutes on hold before
+                    reaching a representative, leading to a 15% increase in
+                    abandoned calls over the past quarter.” (This is focused,
+                    measurable, and highlights the negative impact.)
+                  </Callout>
                 </Fragment>
               ),
             },
             {
-              title: "Constraints / Limitations",
+              title: "2. Constraints and Limitations",
               body: (
                 <Fragment>
-                  <strong>Poor example:</strong> “We don’t have many resources.”
-                  <br />
-                  <strong>Better example:</strong> “Budget limited to €10&nbsp;000 with a two-month deadline.”
+                  <p>
+                    These are restrictions or boundaries that impact the
+                    solution. They can be technical, financial, or even legal.
+                  </p>
+                  <Callout type="error" title="Poor Example">
+                    “We don't have many resources.” (Vague. Does this refer to
+                    money, people, or time?)
+                  </Callout>
+                  <Callout type="success" title="Strong Example">
+                    “The project budget is limited to $10,000 and the solution
+                    must be deployed within three months.” (Specific,
+                    measurable, and provides clear boundaries.)
+                  </Callout>
                 </Fragment>
               ),
             },
             {
-              title: "Objectives & Goals",
+              title: "3. Objectives and Goals",
               body: (
                 <Fragment>
-                  <strong>Objective:</strong> “Enhance customer experience.”
-                  <br />
-                  <strong>Goal:</strong> “Reduce average hold time by 20&nbsp;% within three months.”
+                  <p>
+                    Objectives are the broad, high-level desired outcomes.
+                    Goals are the specific, measurable, time-constrained
+                    milestones to achieve those objectives.
+                  </p>
+                  <p>
+                    <strong>Objective:</strong> "Increase customer satisfaction
+                    with service interactions."
+                  </p>
+                  <p>
+                    <strong>Specific Goals:</strong>
+                  </p>
+                  <ul>
+                    <li>
+                      Achieve an average customer satisfaction rating of 4 out
+                      of 5 stars on post-service surveys over the next six
+                      months.
+                    </li>
+                    <li>
+                      Reduce the number of 'highly dissatisfied' customer
+                      ratings by 30% within the next quarter.
+                    </li>
+                  </ul>
                 </Fragment>
               ),
             },
             {
-              title: "Input & Output Specifications",
-              body: "Define the format, type, and quality of incoming and outgoing data. Example inputs include text, 1–5 ratings, timestamps; outputs include dashboard visuals and alerts.",
-            },
-            {
-              title: "Evaluation Criteria",
+              title: "4. Input and Output Specifications",
               body: (
                 <Fragment>
-                  Consider effectiveness, efficiency, accuracy, usability, and maintainability. These criteria determine
-                  whether the solution genuinely solves the stated problem.
+                  <p>
+                    These define the format, type, and expected characteristics
+                    of any data entering or leaving the system. This ensures
+                    compatibility and proper processing.
+                  </p>
+                  <p>
+                    <strong>Input Example (Chatbot):</strong> Text-based input
+                    via a chat interface; voice-to-text input. Should handle
+                    diverse phrasing for the same intent.
+                  </p>
+                  <p>
+                    <strong>Output Example (Chatbot):</strong> Direct text
+                    responses; links to knowledge base articles; escalation to a
+                    live agent with a chat transcript.
+                  </p>
+                </Fragment>
+              ),
+            },
+            {
+              title: "5. Evaluation Criteria",
+              body: (
+                <Fragment>
+                  <p>
+                    These are the benchmarks used to measure the success of the
+                    solution. They should be directly linked to the objectives
+                    and goals.
+                  </p>
+                  <p>
+                    Consider factors like:
+                  </p>
+                  <ul>
+                    <li>
+                      <strong>Effectiveness:</strong> Does it solve the
+                      problem? (e.g., task completion rate of 90% for a
+                      chatbot).
+                    </li>
+                    <li>
+                      <strong>Efficiency:</strong> Does it save time or
+                      resources? (e.g., faster issue resolution time).
+                    </li>
+                    <li>
+                      <strong>Usability:</strong> Is it easy for people to use?
+                      (e.g., intuitive interface requiring minimal training).
+                    </li>
+                  </ul>
                 </Fragment>
               ),
             },
@@ -225,288 +299,259 @@ export const b1Unit = {
         },
         {
           type: "activity",
-          id: "spec-matching",
-          activityType: "matching",
-          heading: "Match Components to Examples",
-          instructions: "Match each specification component to a fresh scenario example.",
-          pairs: [
+          id: "spec-classification",
+          activityType: "classification",
+          heading: "Classify the Specification Components",
+          instructions:
+            "Drag each example into the correct component category.",
+          categories: [
+            { id: "cat-problem", title: "Problem Statement" },
+            { id: "cat-constraint", title: "Constraint" },
+            { id: "cat-goal", title: "Specific Goal" },
+            { id: "cat-eval", title: "Evaluation Criterion" },
+          ],
+          tokens: [
             {
-              term: "Constraint",
-              example: "Analytics dashboard must launch within four weeks and use existing cloud licences.",
+              id: "tok-1",
+              label:
+                "The new mobile app must be available on both iOS and Android.",
+              answer: "cat-constraint",
             },
             {
-              term: "Goal",
-              example: "Achieve 95 % of grocery orders dispatched within 12 hours.",
+              id: "tok-2",
+              label:
+                "Increase daily active users by 25% in the next quarter.",
+              answer: "cat-goal",
             },
             {
-              term: "Input specification",
-              example: "IoT thermometers streaming temperature data every five minutes in CSV format.",
+              id: "tok-3",
+              label:
+                "Our current inventory system leads to a 5% error rate in stock levels, causing shipping delays.",
+              answer: "cat-problem",
             },
             {
-              term: "Evaluation criterion",
-              example: "System uptime of at least 99 % with audit trail for stock adjustments.",
+              id: "tok-4",
+              label:
+                "The system must process 99.9% of transactions accurately under peak load.",
+              answer: "cat-eval",
             },
           ],
-        },
-        {
-          type: "table",
-          id: "spec-example",
-          heading: "Worked Example – Customer Service Chatbot",
-          columns: ["Component", "Details"],
-          rows: [
-            ["Problem statement", "Customers abandon 15 % of chats because agents are unavailable."],
-            ["Constraint", "Budget €10 000; must integrate with existing CRM."],
-            ["Objective", "Reduce agent load while improving satisfaction."],
-            ["Goal", "Achieve 90 % task-completion rate via chatbot within 6 months."],
-            ["Input", "Text or voice queries with multilingual support."],
-            ["Output", "Text responses, knowledge-base links, escalation transcript."],
-            ["Evaluation criteria", "Accuracy, satisfaction ≥ 4/5, 24/7 availability."],
-          ],
-        },
-        {
-          type: "micro-quiz",
-          id: "spec-quiz",
-          heading: "Mini Checkpoint",
-          questions: [
-            {
-              id: "spec-q1",
-              type: "true-false",
-              prompt: "Every problem specification must record constraints explicitly.",
-              answer: true,
-              rationale: "Constraints shape the feasible solution space and must be stated up front.",
-            },
-            {
-              id: "spec-q2",
-              type: "multi-select",
-              prompt: "Select all details that describe constraints for an e-scooter rental platform refresh.",
-              options: [
-                { id: "spec-q2-a", label: "Launch in three cities before tourist season begins." },
-                { id: "spec-q2-b", label: "Increase daily rentals by 30 % during summer." },
-                { id: "spec-q2-c", label: "Budget capped at €50 000 for hardware upgrades." },
-                { id: "spec-q2-d", label: "Provide itinerary suggestions for riders." },
-              ],
-              answers: ["spec-q2-a", "spec-q2-c"],
-              rationale:
-                "Constraints define boundaries such as timelines and budgets. Growth targets or feature ideas are not constraints.",
-            },
-            {
-              id: "spec-q3",
-              type: "mcq",
-              prompt: "Which question checks whether your evaluation criteria are measurable?",
-              options: [
-                { id: "spec-q3-a", label: "Who is responsible for building the dashboard?" },
-                { id: "spec-q3-b", label: "What accuracy or response time will prove the chatbot is effective?" },
-                { id: "spec-q3-c", label: "How will customer journeys be storyboarded?" },
-              ],
-              answer: "spec-q3-b",
-              rationale: "Evaluation criteria require defined success metrics such as accuracy or response time.",
-            },
-          ],
-        },
-        {
-          type: "reflection",
-          id: "spec-reflection",
-          heading: "Reflection",
-          prompt: "Draft success criteria for your IA or project idea. Which constraints will challenge you most?",
         },
       ],
     },
     {
       id: "B1.1.2",
-      title: "Fundamental Computational Thinking Concepts",
+      title: "Fundamental Concepts of CT",
       duration: "60 min",
       description:
-        "Explore decomposition, pattern recognition, abstraction, and algorithmic design through guiding questions and applied tasks.",
+        "Master the four core techniques of computational thinking: decomposition, pattern recognition, abstraction, and algorithmic design.",
       segments: [
         {
           type: "content",
-          id: "ct-intro",
-          heading: "Why CT Matters",
+          id: "ct-intro-main",
+          heading: "The Four Pillars of Computational Thinking",
           body: (
-            <Fragment>
-              <p>
-                Computational thinking is a transferable framework for problem solving in any discipline—breaking down,
-                simplifying, identifying patterns, and formalising logical steps.
-              </p>
-            </Fragment>
+            <p>
+              Computational thinking provides a structured way to approach complex
+              problems. By mastering these four concepts, you can develop robust
+              and efficient solutions.
+            </p>
           ),
         },
         {
           type: "accordion",
-          id: "ct-decomposition",
-          heading: "Decomposition",
+          id: "ct-concepts-deep-dive",
+          heading: "Exploring the Concepts",
           items: [
             {
-              title: "Guiding Questions",
-              body: (
-                <ul>
-                  <li>Can I divide this into natural phases or sequences?</li>
-                  <li>Which parts are independent or repeat?</li>
-                  <li>How could I sketch this visually or explain it simply?</li>
-                </ul>
-              ),
-            },
-            {
-              title: "Example",
+              title: "Decomposition 🧩",
               body: (
                 <Fragment>
                   <p>
-                    A smartphone can be decomposed into battery, processor, camera, operating system, and sensors—each
-                    managed and tested separately.
+                    Breaking down a large, complex problem into smaller, more
+                    manageable sub-problems. This makes the problem easier to
+                    understand and solve.
                   </p>
+                  <Callout type="tip" title="Example: Designing an NPC">
+                    Instead of tackling "realistic AI behavior" all at once, you
+                    decompose it into:
+                    <ul>
+                      <li>
+                        <strong>Sensing:</strong> How does it see or hear the
+                        player?
+                      </li>
+                      <li>
+                        <strong>Decision-making:</strong> How does it choose an
+                        action (flee, attack)?
+                      </li>
+                      <li>
+                        <strong>Pathfinding:</strong> How does it navigate the
+                        world?
+                      </li>
+                    </ul>
+                  </Callout>
                 </Fragment>
               ),
             },
-          ],
-        },
-        {
-          type: "accordion",
-          id: "ct-patterns",
-          heading: "Pattern Recognition",
-          items: [
             {
-              title: "Questions",
-              body: (
-                <ul>
-                  <li>What repeats or changes predictably?</li>
-                  <li>Which relationships are consistent and reusable?</li>
-                </ul>
-              ),
-            },
-            {
-              title: "Example",
+              title: "Pattern Recognition 🎨",
               body: (
                 <Fragment>
                   <p>
-                    Handwriting recognition models identify loops, vertical strokes, and pixel clusters—patterns that
-                    make classifying letters possible.
+                    Identifying recurring similarities, trends, or regularities
+                    within problems or data. Recognizing patterns allows you to
+                    reuse solutions and make predictions.
                   </p>
+                  <Callout type="tip" title="Example: Handwritten Digits">
+                    To recognize a handwritten '8', a machine learning model
+                    doesn't memorize every possible '8'. It learns the
+                    underlying pattern: two connected loops. This allows it to
+                    recognize any '8', even ones it has never seen before.
+                  </Callout>
                 </Fragment>
               ),
             },
-          ],
-        },
-        {
-          type: "accordion",
-          id: "ct-abstraction",
-          heading: "Abstraction",
-          items: [
             {
-              title: "Guiding Questions",
-              body: (
-                <ul>
-                  <li>What details truly affect the outcome?</li>
-                  <li>Which components are essential to function?</li>
-                  <li>Can I replace specifics with variables?</li>
-                </ul>
-              ),
-            },
-            {
-              title: "Worked Example – Car Race",
+              title: "Abstraction 🌬️",
               body: (
                 <Fragment>
-                  <p>Focus on engine power, driver skill, track type, and weather. Car colour is irrelevant!</p>
+                  <p>
+                    Filtering out unnecessary details to focus on the essential
+                    elements. Abstraction simplifies complexity by creating a
+                    model of the problem that is easier to work with.
+                  </p>
+                  <Callout type="tip" title="Example: Predicting a Race Winner">
+                    What factors are essential? Engine horsepower, driver
+                    experience, weather. What's irrelevant? The car's color,
+                    the driver's favorite snack. Abstraction means you build
+                    your predictive model using only the essential factors.
+                  </Callout>
                 </Fragment>
               ),
             },
-          ],
-        },
-        {
-          type: "accordion",
-          id: "ct-algorithm",
-          heading: "Algorithmic Design",
-          items: [
             {
-              title: "Key Questions",
+              title: "Algorithmic Design ⚙️",
               body: (
-                <ul>
-                  <li>What are the inputs and outputs?</li>
-                  <li>Where are decisions or loops?</li>
-                  <li>Can steps be simplified or modularised?</li>
-                </ul>
-              ),
-            },
-            {
-              title: "Example",
-              body: (
-                <pre>
-{`1. Get current number
-2. Add 2
-3. Output result`}
-                </pre>
+                <Fragment>
+                  <p>
+                    Developing a step-by-step, unambiguous set of instructions
+                    to solve a problem. The algorithm is the roadmap that a
+                    computer (or a person) follows to reach the solution.
+                  </p>
+                  <Callout type="tip" title="Example: Number Sequence">
+                    To find the next number in the sequence 2, 4, 6, 8... the
+                    algorithm is simple:
+                    <ol>
+                      <li>Get the current number.</li>
+                      <li>Add 2 to the current number.</li>
+                      <li>Output the result.</li>
+                    </ol>
+                  </Callout>
+                </Fragment>
               ),
             },
           ],
         },
         {
           type: "activity",
-          id: "ct-matrix",
-          activityType: "ordering",
-          heading: "Order the CT Moves",
-          instructions: "Arrange the steps to solve a maze using computational thinking.",
+          id: "ct-matching-scenarios",
+          activityType: "matching",
+          heading: "Match Concepts to Scenarios",
+          instructions:
+            "Match each computational thinking concept to the scenario that best illustrates it.",
+          pairs: [
+            {
+              term: "Decomposition",
+              example:
+                "Planning a large software project by breaking it into modules: user authentication, data processing, and user interface.",
+            },
+            {
+              term: "Pattern Recognition",
+              example:
+                "Analyzing sales data and noticing that a certain product sells best on weekends, then creating a general rule for weekend promotions.",
+            },
+            {
+              term: "Abstraction",
+              example:
+                "Creating a subway map that shows the order of stations and connections, but ignores the exact geographical distances and street layouts.",
+            },
+            {
+              term: "Algorithmic Design",
+              example:
+                "Writing a detailed recipe for baking a cake, with precise measurements and steps that must be followed in order.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "B1.1.3",
+      title: "Applying CT in Computer Science",
+      duration: "45 min",
+      description:
+        "See how the core CT concepts are applied in real-world computer science domains.",
+      segments: [
+        {
+          type: "content",
+          id: "ct-app-intro",
+          heading: "Computational Thinking in Action",
+          body: (
+            <p>
+              Computational thinking isn't just a theoretical framework; it's the
+              practical foundation for many fields within computer science. Let's
+              explore how the four concepts are applied in different areas.
+            </p>
+          ),
+        },
+        {
+          type: "list",
+          id: "ct-app-examples",
+          heading: "Domain Examples",
           items: [
-            "Break the maze into sections (decomposition).",
-            "Record successful routes to reuse (pattern recognition).",
-            "Ignore wall texture, focus on openings (abstraction).",
-            "Describe the step-by-step solution (algorithmic design).",
+            {
+              title: "Software Development",
+              body: "A large Customer Relationship Management (CRM) system is decomposed into modules (lead tracking, customer management). Developers recognize common bug patterns to speed up debugging. They use Object-Oriented Programming to abstract complex operations into reusable objects.",
+            },
+            {
+              title: "Data Analysis",
+              body: "An analyst decomposes the process of analyzing sales data into tasks like data cleaning and normalization. They use pattern recognition to spot seasonal trends. Abstraction is used to focus on Key Performance Indicators (KPIs) like monthly sales growth.",
+            },
+            {
+              title: "Machine Learning",
+              body: "A project is decomposed into data collection, model training, and deployment. Pattern recognition is key to identifying features in image data (e.g., using convolutional neural networks). Data is abstracted into feature sets and labels for the model.",
+            },
+            {
+              title: "Network Security",
+              body: "Security challenges are decomposed into categories like physical and application security. Pattern recognition identifies typical attack patterns (like DDoS or phishing). Abstraction is used to create generic security models and protocols (like SSL/TLS).",
+            },
           ],
         },
         {
           type: "activity",
-          id: "ct-classify",
-          activityType: "classification",
-          heading: "Match Scenarios to CT Concepts",
-          instructions: "Drag each scenario to the computational thinking concept it best represents.",
-          categories: [
-            { id: "decomposition", title: "Decomposition", description: "Break a complex task into manageable parts." },
-            { id: "patterns", title: "Pattern recognition", description: "Spot repeated structures or behaviours." },
-            { id: "abstraction", title: "Abstraction", description: "Filter noise to focus on essentials." },
-            { id: "algorithm", title: "Algorithmic design", description: "Plan the exact steps to follow." },
-          ],
-          tokens: [
-            { id: "ct-token-1", label: "Group past exam questions by topic before revising.", answer: "patterns" },
-            { id: "ct-token-2", label: "Describe login validation as inputs, decisions, and outputs.", answer: "abstraction" },
-            { id: "ct-token-3", label: "Sketch the cafeteria ordering process as stations.", answer: "decomposition" },
-            { id: "ct-token-4", label: "Write pseudocode for a playlist shuffle routine.", answer: "algorithm" },
-          ],
-        },
-        {
-          type: "micro-quiz",
-          id: "ct-quiz",
-          heading: "Concept Checkpoint",
-          questions: [
+          id: "ct-app-spot-error",
+          activityType: "spot-error",
+          heading: "Which Statement is Incorrect?",
+          instructions:
+            "Read the statements about applying CT and identify the one that is logically flawed.",
+          items: [
             {
-              id: "ct-q1",
-              type: "mcq",
-              prompt: "Which CT concept helps you ignore distractions when modelling a system?",
-              options: [
-                { id: "ct-q1-a", label: "Pattern recognition" },
-                { id: "ct-q1-b", label: "Abstraction" },
-                { id: "ct-q1-c", label: "Algorithmic design" },
-              ],
-              answer: "ct-q1-b",
-              rationale: "Abstraction focuses on essential details and filters unnecessary noise.",
+              id: "err-1",
+              text: "In database design, abstraction helps represent real-world entities as tables while ignoring irrelevant details.",
+              isError: false,
             },
             {
-              id: "ct-q2",
-              type: "mcq",
-              prompt: "A developer sketches a flowchart before coding. Which CT concept is most evident?",
-              options: [
-                { id: "ct-q2-a", label: "Algorithmic design" },
-                { id: "ct-q2-b", label: "Decomposition" },
-                { id: "ct-q2-c", label: "Pattern recognition" },
-              ],
-              answer: "ct-q2-a",
-              rationale: "Flowcharts capture the logical sequence of steps—core to algorithmic design.",
+              id: "err-2",
+              text: "When developing software, decomposition is only useful for single developers, not for teams.",
+              isError: true,
+              explanation:
+                "Decomposition is especially powerful for teams, as it allows different team members to work on separate modules concurrently.",
+            },
+            {
+              id: "err-3",
+              text: "A data analyst uses pattern recognition to predict future demand based on historical sales data.",
+              isError: false,
             },
           ],
-        },
-        {
-          type: "reflection",
-          id: "ct-reflection",
-          heading: "Apply CT to Your Context",
-          prompt:
-            "Think of a current coursework problem. Which CT concept do you instinctively use first, and which do you overlook? Record an action you will take to balance them.",
         },
       ],
     },
@@ -515,296 +560,172 @@ export const b1Unit = {
       title: "Tracing Flowcharts and Algorithms",
       duration: "45 min",
       description:
-        "Use ISO 5807 symbols to communicate logic. Practise tracing flowcharts and verifying behaviour with trace tables.",
+        "Learn to read, interpret, and trace visual representations of algorithms using standardized flowchart symbols.",
       segments: [
         {
           type: "content",
-          id: "flow-why",
-          heading: "Why Flowcharts Matter",
+          id: "flow-intro",
+          heading: "Visualizing Logic",
           body: (
             <Fragment>
-              <p>Flowcharts clarify algorithm logic, guide communication, and support debugging and testing.</p>
+              <p>
+                Flowcharts are diagrams that use standardized symbols (defined by
+                ISO 5807) to visually depict processes, decisions, and the flow
+                of control in an algorithm. They are an essential tool for
+                designing, documenting, and debugging logic before and after
+                coding.
+              </p>
             </Fragment>
           ),
-        },
-        {
-          type: "table",
-          id: "flow-symbols",
-          heading: "Core Symbols",
-          columns: ["Symbol", "Name", "Function"],
-          rows: flowchartSymbols.map((symbol) => [symbol.symbol, symbol.name, symbol.function]),
-        },
-        {
-          type: "activity",
-          id: "flow-labels",
-          activityType: "diagram-label",
-          heading: "Label the Flowchart",
-          instructions: "Drag each label onto the numbered hotspot to identify the correct ISO symbol.",
-          image: {
-            src: flowchartBasics,
-            alt: "Simplified flowchart with three numbered callouts.",
-          },
-          tokens: [
-            { id: "label-start", label: "Terminator (Start/End)" },
-            { id: "label-process", label: "Process" },
-            { id: "label-decision", label: "Decision" },
-          ],
-          targets: [
-            { id: "spot-start", x: 18.5, y: 9, answer: "label-start" },
-            { id: "spot-process", x: 56, y: 67, answer: "label-process" },
-            { id: "spot-decision", x: 81, y: 15, answer: "label-decision" },
-          ],
         },
         {
           type: "content",
-          id: "flow-examples",
-          heading: "Worked Examples",
+          id: "flow-symbols-table",
+          heading: "Standard Flowchart Symbols (ISO 5807)",
           body: (
-            <Fragment>
-              <p>
-                <strong>Guess-the-number game:</strong> Randomly pick 1–10, ask for a guess, compare, repeat until
-                correct, output “You win”. Linear search checks elements sequentially until the target is found.
-              </p>
-              <p>
-                <strong>Trace table snippet:</strong> Keep a column per variable and record the value at each step to
-                verify correctness.
-              </p>
-            </Fragment>
+            <EnhancedTable
+              columns={["Symbol", "Name", "Definition and Notes"]}
+              rows={[
+                [
+                  "Oval",
+                  "Terminator (Start/End)",
+                  "Indicates the beginning and ending of a program or sub-process.",
+                ],
+                [
+                  "Parallelogram",
+                  "Input / Output",
+                  "Represents a process of inputting data (e.g., from a user) or outputting data (e.g., to a screen).",
+                ],
+                [
+                  "Rectangle",
+                  "Process / Operation",
+                  "Represents a set of operations that changes the value, form, or location of data.",
+                ],
+                [
+                  "Diamond",
+                  "Decision",
+                  "Indicates a point where a decision must be made. The question inside should have only two possible answers (e.g., Yes/No or True/False), leading to different paths.",
+                ],
+                [
+                  "Arrow",
+                  "Flowline",
+                  "Shows the order of operations by connecting the other symbols.",
+                ],
+              ]}
+            />
           ),
         },
         {
           type: "activity",
-          id: "flow-sort",
-          activityType: "matching",
-          heading: "Symbol Match",
-          instructions: "Match each ISO symbol to its description.",
-          pairs: flowchartSymbols.map((symbol) => ({
-            term: symbol.symbol,
-            example: `${symbol.name} — ${symbol.function}`,
-          })),
-        },
-        {
-          type: "activity",
-          id: "flow-gap",
+          id: "flow-gap-fill",
           activityType: "gap-fill",
-          heading: "Trace Table Sentence Builder",
-          instructions: "Drag each phrase into the sentence to explain what a trace table records.",
+          heading: "Build a Flowchart Explanation",
+          instructions:
+            "Drag the words into the correct blanks to complete the sentence.",
           interaction: "drag",
-          text:
-            "A trace table captures the [[flow-state]] of variables, the [[flow-condition]] being evaluated, and the [[flow-output]] produced at each step.",
+          text: "In a flowchart, a [[diamond]] symbol is used for a decision, a [[rectangle]] is used for a process, and a [[parallelogram]] is used for input or output.",
           tokens: [
-            { id: "token-state", label: "current state" },
-            { id: "token-condition", label: "condition result" },
-            { id: "token-output", label: "output or action" },
+            { id: "tok-diamond", label: "diamond" },
+            { id: "tok-para", label: "parallelogram" },
+            { id: "tok-rect", label: "rectangle" },
           ],
           blanks: [
-            { id: "flow-state", answer: "token-state" },
-            { id: "flow-condition", answer: "token-condition" },
-            { id: "flow-output", answer: "token-output" },
+            { id: "diamond", answer: "tok-diamond" },
+            { id: "rectangle", answer: "tok-rect" },
+            { id: "parallelogram", answer: "tok-para" },
           ],
-        },
-        {
-          type: "micro-quiz",
-          id: "flow-quiz",
-          heading: "Mini Checkpoint",
-          questions: [
-            {
-              id: "flow-q1",
-              type: "true-false",
-              prompt: "Trace tables are only useful for finding syntax errors.",
-              answer: false,
-              rationale: "Trace tables reveal logic errors by tracking variable states across steps.",
-            },
-            {
-              id: "flow-q2",
-              type: "mcq",
-              prompt: "A warehouse flowchart checks \"Inventory below threshold?\" before reordering. Which symbol surrounds this question?",
-              options: [
-                { id: "flow-q2-a", label: "▭ Process" },
-                { id: "flow-q2-b", label: "◇ Decision" },
-                { id: "flow-q2-c", label: "⬒ Input/Output" },
-              ],
-              answer: "flow-q2-b",
-              rationale: "The diamond (◇) symbol represents branching logic.",
-            },
-            {
-              id: "flow-q3",
-              type: "multi-select",
-              prompt: "Select all trace-table observations that prove a while loop stops when a match is found.",
-              options: [
-                { id: "flow-q3-a", label: "The loop flag switches from true to false once the item matches." },
-                { id: "flow-q3-b", label: "The index variable keeps incrementing even after the match." },
-                { id: "flow-q3-c", label: "The output column shows \"Found\" immediately after the condition succeeds." },
-                { id: "flow-q3-d", label: "The accumulator resets to zero each iteration." },
-              ],
-              answers: ["flow-q3-a", "flow-q3-c"],
-              rationale:
-                "A change in the loop control flag and a new output confirm the loop exits once the match occurs. Continuing increments or reset accumulators would indicate it keeps iterating.",
-            },
-            {
-              id: "flow-q4",
-              type: "mcq",
-              prompt:
-                "During a system audit you spot a connector ⊙ leading into a decision with no matching outbound connector. What risk does this introduce?",
-              options: [
-                { id: "flow-q4-a", label: "It can create an infinite branch that never rejoins the main flow." },
-                { id: "flow-q4-b", label: "It forces the process to restart from the terminator symbol." },
-                { id: "flow-q4-c", label: "It converts the decision into a process block." },
-              ],
-              answer: "flow-q4-a",
-              rationale: "Connectors must pair to maintain flow continuity; a missing pair can cause dangling branches.",
-            },
-          ],
-        },
-        {
-          type: "reflection",
-          id: "flow-reflection",
-          heading: "Practical Exercise",
-          prompt:
-            "Sketch a flowchart of your morning routine using ISO symbols. Ask a peer to interpret it and note ambiguities. Record your refinements here.",
-        },
-      ],
-    },
-    {
-      id: "B1-project",
-      title: "Consolidation Project",
-      duration: "60 min",
-      description:
-        "Synthesize specification writing, CT concepts, and flowcharting by designing a solution for a café sales tracker.",
-      segments: [
-        {
-          type: "content",
-          id: "project-brief",
-          heading: "Design Brief",
-          body: (
-            <ol>
-              <li>Write a problem specification for tracking weekly café sales.</li>
-              <li>Identify where each computational thinking concept will be applied.</li>
-              <li>Draw a flowchart and trace it with sample data.</li>
-              <li>Suggest evaluation criteria for success.</li>
-            </ol>
-          ),
-        },
-        {
-          type: "activity",
-          id: "project-planner",
-          activityType: "planner",
-          heading: "Project Planner",
-          instructions:
-            "Complete each panel to plan your solution. You can export notes once complete. All fields must have content before continuing.",
-          panels: [
-            { id: "project-problem", label: "Problem statement & stakeholders" },
-            { id: "project-constraints", label: "Constraints & goals" },
-            { id: "project-ct", label: "CT concepts you will apply" },
-            { id: "project-eval", label: "Evaluation criteria" },
-          ],
-        },
-        {
-          type: "reflection",
-          id: "project-reflection",
-          heading: "Ready to Build",
-          prompt:
-            "What is your biggest risk in this project? Which artefact (specification, flowchart, trace table) will you prototype first?",
-        },
-      ],
-    },
-    {
-      id: "B1-summary",
-      title: "Summary & Linking Questions",
-      duration: "20 min",
-      description: "Review checklist and prepare to sit the assessment.",
-      segments: [
-        {
-          type: "content",
-          id: "summary-checklist",
-          heading: "Summary Checklist",
-          body: (
-            <ul>
-              <li>Define and justify elements of a problem specification.</li>
-              <li>Describe and apply the four computational thinking concepts.</li>
-              <li>Explain CT’s use in software, data, AI, and security.</li>
-              <li>Construct and trace flowcharts with ISO symbols.</li>
-              <li>Evaluate solutions against effectiveness, efficiency, and ethics.</li>
-            </ul>
-          ),
         },
         {
           type: "content",
-          id: "summary-links",
-          heading: "Linking Questions",
+          id: "flow-tracing",
+          heading: "Trace Tables: Testing the Logic",
           body: (
-            <ul>
-              <li>How is pattern recognition used to identify different types of network traffic? (A2)</li>
-              <li>How do CT concepts influence algorithm design? (B2)</li>
-            </ul>
+            <Fragment>
+              <p>
+                How do you know if your algorithm is correct? You trace it. A
+                trace table is a technique used to test an algorithm by tracking
+                the values of variables at each step. This helps you identify
+                logic errors.
+              </p>
+              <Callout type="tip" title="Worked Example">
+                Consider an algorithm where A starts at 10 and B starts at
+                100. In a loop, B decreases by 10 and A increases by 10 until A
+                is greater than or equal to B.
+              </Callout>
+              <EnhancedTable
+                columns={["Iteration", "A", "B", "Condition (A >= B)"]}
+                rows={[
+                  ["Start", "10", "100", "False"],
+                  ["1", "20", "90", "False"],
+                  ["2", "30", "80", "False"],
+                  ["3", "40", "70", "False"],
+                  ["4", "50", "60", "False"],
+                  ["5", "60", "50", "True -> Program Ends"],
+                ]}
+              />
+            </Fragment>
           ),
-        },
-        {
-          type: "micro-quiz",
-          id: "summary-quiz",
-          heading: "Exit Ticket",
-          questions: [
-            {
-              id: "summary-q1",
-              type: "mcq",
-              prompt: "Which artefact best demonstrates maintainability in your solution?",
-              options: [
-                { id: "summary-q1-a", label: "A specification with clear version history." },
-                { id: "summary-q1-b", label: "A flowchart without decision nodes." },
-                { id: "summary-q1-c", label: "A trace table that only shows final outputs." },
-              ],
-              answer: "summary-q1-a",
-              rationale: "Maintainability depends on documentation that supports change over time.",
-            },
-          ],
         },
       ],
     },
   ],
   assessment: {
     duration: "45 min",
-    totalMarks: 25,
+    totalMarks: 31,
     questions: [
       {
-        id: "assessment-q1",
-        prompt: "Define computational thinking and explain its four core concepts.",
-        marks: 3,
-      },
-      {
-        id: "assessment-q2",
-        prompt: "Explain why a clear problem specification is essential before coding, using an example.",
-        marks: 4,
-      },
-      {
-        id: "assessment-q3",
+        id: "as-q1",
         prompt:
-          "Outline and justify one constraint, one objective, and one evaluation criterion for a mobile banking app.",
+          "Describe what a problem statement is and why it is critical in the problem specification process.",
+        marks: 2,
+      },
+      {
+        id: "as-q2",
+        prompt:
+          "Explain the difference between a poor and a strong problem statement, giving an example of each.",
         marks: 4,
       },
       {
-        id: "assessment-q4",
-        prompt: "Describe how decomposition and pattern recognition work together in machine learning model development.",
-        marks: 6,
-      },
-      {
-        id: "assessment-q5a",
-        prompt: "Identify the input, process, and output for an algorithm that converts hours and minutes to seconds.",
+        id: "as-q3",
+        prompt:
+          "Define the role of constraints in a problem specification and provide an example of a well-defined constraint.",
         marks: 3,
       },
       {
-        id: "assessment-q5b",
-        prompt: "Draw or describe a flowchart to find the largest of three numbers.",
+        id: "as-q4",
+        prompt:
+          "Compare high-level objectives and specific goals in the context of computational problem-solving.",
         marks: 3,
       },
       {
-        id: "assessment-q5c",
-        prompt: "Explain two benefits of trace tables when testing algorithms.",
+        id: "as-q5",
+        prompt:
+          "Describe the process of decomposition in computational thinking and explain how it can be applied to a real-life problem.",
+        marks: 4,
+      },
+      {
+        id: "as-q6",
+        prompt:
+          "Explain the importance of pattern recognition in computational thinking, using a relevant example.",
         marks: 2,
       },
       {
-        id: "assessment-q5d",
-        prompt: "Discuss one ethical risk of using computational thinking in AI decision-making.",
+        id: "as-q7",
+        prompt:
+          "Describe how abstraction simplifies problem-solving in computational thinking.",
         marks: 2,
+      },
+      {
+        id: "as-q8",
+        prompt:
+          "Describe the process of algorithmic design, including the steps typically followed.",
+        marks: 4,
+      },
+      {
+        id: "as-q9",
+        prompt:
+          "Explain how the four fundamental concepts of computational thinking work together to solve problems in computer science.",
+        marks: 4,
       },
     ],
   },

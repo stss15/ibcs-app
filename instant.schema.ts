@@ -94,6 +94,15 @@ const _schema = i.graph(
       updatedAt: i.string(),
       updatedBy: i.string().optional(),
     }),
+    studentGamification: i.entity({
+      studentId: i.string().unique().indexed(),
+      xp: i.number(),
+      level: i.number(),
+      streak: i.number(),
+      totalCorrect: i.number(),
+      totalAttempts: i.number(),
+      lastUpdated: i.string(),
+    }),
   },
   {}
 );

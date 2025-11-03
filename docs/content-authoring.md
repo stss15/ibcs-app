@@ -23,6 +23,41 @@ Use this guide when creating or updating IB units inside `frontend/src/content/`
 
 Add new segment types by adding a component under `components/segments/` and extending the switch in `GamifiedModulePage.jsx`.
 
+### Enhanced Components
+For richer visual presentation, use the modern components from `components/segments/EnhancedComponents.jsx`:
+- **KeywordCard**: Modern definition cards with icons, hover effects, and gradients
+- **Callout**: Info boxes (info, tip, warning, success, error) with icons
+- **EnhancedTable**: Professional tables with sticky headers, zebra striping, and hover effects
+- **ProgressIndicator**: Animated progress bars with shimmer effects
+- **AchievementBadge**: Display achievements with locked/unlocked states
+- **XPNotification**: Toast notifications for XP gains
+- **StreakIndicator**: Show streak counts with animated flames
+- **SkeletonLoader**: Loading state placeholders
+
+**Example usage in content:**
+```jsx
+import { KeywordCard, Callout } from '../components/segments/EnhancedComponents';
+
+{
+  type: 'content',
+  heading: 'Key Concepts',
+  body: (
+    <>
+      <KeywordCard 
+        term="Algorithm" 
+        definition="A step-by-step procedure for solving a problem"
+        icon="🔄"
+      />
+      <Callout type="tip" title="Remember">
+        Always test your algorithms with edge cases!
+      </Callout>
+    </>
+  )
+}
+```
+
+See `docs/ui-ux-design-system.md` for complete component documentation.
+
 **New activity types**
 
 - `classification` – Drag labels into named categories. Provide `categories[{ id, title, description? }]` and `tokens[{ id, label, answer }]`.

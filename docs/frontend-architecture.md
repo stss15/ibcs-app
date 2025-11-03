@@ -24,13 +24,17 @@ frontend/src/
 - Segments are rendered via `components/segments/**`, each matching a `type` in the unit schema (`content`, `list`, `table`, `accordion`, `micro-quiz`, `activity`, `python-playground`, `reflection`, `demo`).
 - Activities live in `components/segments/activities/` with types: `matching`, `ordering`, `drag-drop`, `gap-fill`, `image-hotspot`, `planner`, `classification`, `diagram-label`, `code-completion`, `spot-error`. Use the utilities in `frontend/src/utils/array.js` where needed.
 - Gamification state (XP, streaks, sprites) is provided by `context/GamificationContext.jsx` and persisted to `localStorage`.
+- **Enhanced Components** (`components/segments/EnhancedComponents.jsx`) provide modern, reusable UI elements: `KeywordCard`, `Callout`, `EnhancedTable`, `ProgressIndicator`, `AchievementBadge`, `XPNotification`, `StreakIndicator`, `SkeletonLoader`. These components feature modern animations, gradients, and hover effects aligned with the design system.
 
 ## CSS Conventions
 - Global tokens and resets reside in `styles/global.css`.
+- **Design System**: A comprehensive set of CSS variables for colors, spacing, shadows, transitions, and animations. Use `var(--cs-blue)`, `var(--space-lg)`, `var(--radius-xl)`, `var(--shadow-md)`, `var(--transition-base)` instead of hard-coded values.
+- **Animations**: 11 reusable keyframe animations (`fadeIn`, `bounce`, `pulse`, `wiggle`, `shimmer`, etc.) with utility classes (`.animate-fade-in`, `.hover-lift`, `.animate-bounce`).
 - Component-scoped styles for gamified screens are in `components/GamifiedModulePage.css` and `components/segments/**/*.css`.
 - Use BEM-flavoured class names (`gamified-`, `activity-`, `b2-`) to avoid collisions.
 - Prefer CSS custom properties defined in `:root` for colours, spacing, and typography if adding new tokens.
 - When introducing unit-specific visual tweaks, keep them within the page CSS (`pages/B1ModulePage.css`, etc.) and reuse shared variables.
+- **Full design system documentation**: See `docs/ui-ux-design-system.md` for complete reference and `QUICK-START-GUIDE.md` for quick usage examples.
 
 ## JavaScript Patterns
 - Keep stateful logic inside hooks or context providers; segment components should remain stateless where possible.

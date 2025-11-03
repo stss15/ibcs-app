@@ -23,6 +23,8 @@ import {
   listStudentsByClass,
   getClassPacing,
   setClassPacing,
+  getStudentGamification,
+  syncStudentGamification,
 } from './src/repositories.js';
 import { json, readJson, withCors } from './src/http.js';
 import { createToken, verifyToken } from './src/jwt.js';
@@ -150,6 +152,14 @@ export default {
 
       if (pathname === '/student/dashboard' && request.method === 'GET') {
         return requireRole(request, env, 'student', handleStudentDashboard);
+      }
+
+      if (pathname === '/student/gamification' && request.method === 'GET') {
+        return requireRole(request, env, 'student', handleGetStudentGamification);
+      }
+
+      if (pathname === '/student/gamification' && request.method === 'POST') {
+        return requireRole(request, env, 'student', handleSyncStudentGamification);
       }
 
       if (pathname === '/setup/seed' && request.method === 'POST') {
@@ -958,7 +968,33 @@ async function handleStudentDashboard(_request, env, session) {
     unlocks: data.unlocks,
     progress: data.progress,
     classPacing: data.classPacing ?? null,
+    gamification: data.gamification ?? null,
   });
+}
+
+async function handleGetStudentGamification(_request, env, session) {
+  const db = getDb(env);
+  const student = await findStudentByUsername(db, session.username);
+
+  if (!student) {
+    return json({ error: 'Student record not found' }, 404);
+  }
+
+  const gamification = await getStudentGamification(db, student.id);
+  return json(gamification);
+}
+
+async function handleSyncStudentGamification(request, env, session) {
+  const db = getDb(env);
+  const student = await findStudentByUsername(db, session.username);
+
+  if (!student) {
+    return json({ error: 'Student record not found' }, 404);
+  }
+
+  const payload = await readJson(request);
+  const gamification = await syncStudentGamification(db, student.id, payload);
+  return json(gamification);
 }
 
 async function handleSeed(request, env) {

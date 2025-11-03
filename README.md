@@ -34,3 +34,17 @@ instant.schema.ts  # Database schema
 ```bash
 cd frontend && npm run dev
 ```
+
+## Recent Updates
+
+**November 2025 - Major UI/UX Modernization**
+- Comprehensive design system with modern animations and interactions
+- Enhanced tables, keyword cards, quizzes, and activities
+- Gamified learning experience with XP animations and celebrations
+- 8 new reusable components for rich content authoring
+- Fully responsive and WCAG AA compliant
+
+📖 **Documentation:**
+- [Quick Start Guide](./QUICK-START-GUIDE.md) - Get started in 5 minutes
+- [Full Implementation Summary](./UI-UX-IMPROVEMENTS-SUMMARY.md) - Complete overview
+- [Design System Docs](./docs/ui-ux-design-system.md) - Comprehensive reference

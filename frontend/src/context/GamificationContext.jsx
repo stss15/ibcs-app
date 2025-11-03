@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from "react";
+import { syncStudentGamification } from "../lib/api.js";
 
 const LEGACY_STORAGE_KEY = "ibcs.gamification";
+const SYNC_DEBOUNCE_MS = 2000; // Sync to backend after 2 seconds of no changes
 
 function sanitizeProfile(value) {
   if (!value) return "anonymous";
@@ -85,8 +87,9 @@ function reducer(state, action) {
   }
 }
 
-export function GamificationProvider({ children, initialState, profileKey = "anonymous" }) {
+export function GamificationProvider({ children, initialState, profileKey = "anonymous", syncToken = null, isStudent = false }) {
   const normalizedProfile = sanitizeProfile(profileKey);
+  const syncTimeoutRef = useRef(null);
 
   const [state, dispatch] = useReducer(reducer, DEFAULT_STATE, (defaultState) => {
     if (initialState) {
@@ -113,6 +116,39 @@ export function GamificationProvider({ children, initialState, profileKey = "ano
     }
     profileRef.current = normalizedProfile;
   }, [normalizedProfile]);
+
+  // Sync to backend for students
+  useEffect(() => {
+    if (!isStudent || !syncToken || profileKey === "anonymous" || profileKey === "guest") {
+      return;
+    }
+
+    // Clear any pending sync
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    // Debounce sync to avoid too many API calls
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        await syncStudentGamification(syncToken, {
+          xp: state.xp ?? 0,
+          level: state.level ?? 1,
+          streak: state.streak ?? 0,
+          totalCorrect: state.totalCorrect ?? 0,
+          totalAttempts: state.totalAttempts ?? 0,
+        });
+      } catch (error) {
+        console.warn("Failed to sync gamification to backend", error);
+      }
+    }, SYNC_DEBOUNCE_MS);
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [state.xp, state.level, state.streak, state.totalCorrect, state.totalAttempts, syncToken, isStudent, profileKey]);
 
   useEffect(() => {
     const targetKey = storageKey(normalizedProfile);

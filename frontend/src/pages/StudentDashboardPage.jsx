@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getStudentDashboard } from "../lib/api.js";
+import { getStudentDashboard, getStudentGamification } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import { useCurriculumManifest } from "../hooks/useCurriculumManifest.js";
 import { getYear7LessonById } from "../../../shared/year7Curriculum.js";
@@ -584,7 +584,7 @@ function StudentDashboardPage() {
   const navigate = useNavigate();
   const token = session?.token ?? null;
   const studentSession = session?.user?.role === "student" ? session.user : null;
-  const { state: gamificationState } = useGamification();
+  const { state: gamificationState, updateFromRemote } = useGamification();
 
   const [payload, setPayload] = useState(null);
   const [status, setStatus] = useState(null);
@@ -606,9 +606,39 @@ function StudentDashboardPage() {
     (async () => {
       try {
         if (!token) throw new Error("Session expired");
-        const response = await getStudentDashboard(token);
+        const [dashboardResponse, gamificationResponse] = await Promise.all([
+          getStudentDashboard(token),
+          getStudentGamification(token).catch(() => null), // Don't fail if gamification doesn't exist yet
+        ]);
         if (!active) return;
-        setPayload(response);
+        setPayload(dashboardResponse);
+        
+        // Merge backend gamification data if available (from dedicated endpoint or dashboard)
+        const backendGamification = gamificationResponse || dashboardResponse?.gamification;
+        if (backendGamification) {
+          const backendData = {
+            xp: backendGamification.xp ?? 0,
+            level: backendGamification.level ?? 1,
+            streak: backendGamification.streak ?? 0,
+            totalCorrect: backendGamification.totalCorrect ?? 0,
+            totalAttempts: backendGamification.totalAttempts ?? 0,
+            lastUpdated: backendGamification.lastUpdated ? new Date(backendGamification.lastUpdated).getTime() : null,
+          };
+          
+          // Check current local state
+          const currentLocalXp = gamificationState.xp ?? 0;
+          const currentLocalLastUpdated = gamificationState.lastUpdated ?? 0;
+          const backendLastUpdated = backendData.lastUpdated ?? 0;
+          
+          // Prefer backend data if it's newer or if local data is missing/zero
+          if (backendLastUpdated > currentLocalLastUpdated || currentLocalXp === 0) {
+            updateFromRemote(backendData);
+          } else if (currentLocalXp > 0 && backendData.xp < currentLocalXp) {
+            // Local data is newer/higher, keep it (it will sync back to backend automatically)
+            // This handles the case where user earned XP but hasn't synced yet
+          }
+        }
+        
         setStatus(null);
       } catch (error) {
         if (!active) return;
@@ -619,6 +649,7 @@ function StudentDashboardPage() {
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, studentSession, token, navigate]);
 
   const progressOwner = studentSession?.username?.toLowerCase() || "guest";

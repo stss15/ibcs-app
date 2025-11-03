@@ -215,6 +215,10 @@ export default function GamifiedModulePage({ unit }) {
 
   const [activeStageIndex, setActiveStageIndex] = useState(0);
   const [resultModal, setResultModal] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const [levelUpModal, setLevelUpModal] = useState(null);
+  const previousLevelRef = useRef(null);
 
   const activeStage = unit.stages[activeStageIndex];
 
@@ -238,6 +242,27 @@ export default function GamifiedModulePage({ unit }) {
   const xpToNext = level * 150;
   const currentLevelFloor = (level - 1) * 150;
   const levelProgress = Math.min(1, (overallXp - currentLevelFloor) / Math.max(1, xpToNext - currentLevelFloor));
+
+  // Initialize previous level on mount
+  useEffect(() => {
+    if (previousLevelRef.current === null) {
+      previousLevelRef.current = level;
+    }
+  }, [level]);
+
+  // Detect level up
+  useEffect(() => {
+    if (previousLevelRef.current !== null && level > previousLevelRef.current) {
+      setLevelUpModal({
+        oldLevel: previousLevelRef.current,
+        newLevel: level,
+        xp: overallXp,
+      });
+      previousLevelRef.current = level;
+    } else if (previousLevelRef.current === null) {
+      previousLevelRef.current = level;
+    }
+  }, [level, overallXp]);
 
   const handleSegmentAdvance = (stageId, nextIndex, completed) => {
     dispatch({ type: "segment-progress", payload: { stageId, nextIndex, completed } });
@@ -326,56 +351,87 @@ export default function GamifiedModulePage({ unit }) {
   );
 
   return (
-    <div className="gamified-page">
-      <header className="gamified-header">
-        <div>
-          <span className="gamified-eyebrow">IB Computer Science · {unit.id}</span>
-          <h1>{unit.title}</h1>
-          <p>{unit.guidingQuestion}</p>
-          <div className="gamified-meta">
-            <span>{unit.hours?.sl}</span>
-            <span>{unit.hours?.hl}</span>
+    <div className={`gamified-page ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${headerCollapsed ? "header-collapsed" : ""}`}>
+      <header className={`gamified-header ${headerCollapsed ? "is-collapsed" : ""}`}>
+        <div className="gamified-header__main">
+          <div>
+            <span className="gamified-eyebrow">IB Computer Science · {unit.id}</span>
+            <h1>{unit.title}</h1>
+            {!headerCollapsed && (
+              <>
+                <p>{unit.guidingQuestion}</p>
+                <div className="gamified-meta">
+                  <span>{unit.hours?.sl}</span>
+                  <span>{unit.hours?.hl}</span>
+                </div>
+              </>
+            )}
           </div>
-        </div>
-        <div className="gamified-xp-card">
-          <div className="gamified-xp-card__top">
-            <span className="gamified-level-badge">Lv {level}</span>
-            <div className="gamified-xp-values">
-              <strong>{overallXp} XP</strong>
-              <span>Next level at {xpToNext} XP</span>
+          <div className={`gamified-xp-card ${headerCollapsed ? "is-compact" : ""}`}>
+            <button
+              type="button"
+              className="gamified-header-toggle"
+              onClick={() => setHeaderCollapsed(!headerCollapsed)}
+              aria-label={headerCollapsed ? "Expand header" : "Collapse header"}
+            >
+              {headerCollapsed ? "▼" : "▲"}
+            </button>
+            <div className="gamified-xp-card__top">
+              <span className={`gamified-level-badge ${levelUpModal ? "level-up" : ""}`}>Lv {level}</span>
+              {!headerCollapsed && (
+                <div className="gamified-xp-values">
+                  <strong>{overallXp} XP</strong>
+                  <span>Next level at {xpToNext} XP</span>
+                </div>
+              )}
             </div>
+            {!headerCollapsed && (
+              <>
+                <div className="gamified-xp-bar">
+                  <div style={{ width: `${levelProgress * 100}%` }} />
+                </div>
+                <span className="gamified-progress-summary">{overallCompletion}% unit completion</span>
+              </>
+            )}
           </div>
-          <div className="gamified-xp-bar">
-            <div style={{ width: `${levelProgress * 100}%` }} />
-          </div>
-          <span className="gamified-progress-summary">{overallCompletion}% unit completion</span>
         </div>
       </header>
 
       <main className="gamified-main">
-        <nav className="gamified-stages" aria-label="Stage navigation">
-          <ul>
-            {unit.stages.map((stage, index) => {
-              const state = progress.stages?.[stage.id];
-              const unlocked = isTeacher || index === 0 || progress.stages?.[unit.stages[index - 1].id]?.completed;
-              const isActive = index === activeStageIndex;
-              return (
-                <li key={stage.id}>
-                  <button
-                    type="button"
-                    className={`gamified-stage-link${isActive ? " is-active" : ""}${state?.completed ? " is-complete" : ""}${
-                      !unlocked ? " is-locked" : ""
-                    }`}
-                    disabled={!unlocked}
-                    onClick={() => unlocked && setActiveStageIndex(index)}
-                  >
-                    <span className="gamified-stage-title">{stage.title}</span>
-                    <span className="gamified-stage-duration">{stage.duration}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+        <nav className={`gamified-stages ${sidebarCollapsed ? "is-collapsed" : ""}`} aria-label="Stage navigation">
+          <button
+            type="button"
+            className="gamified-sidebar-toggle"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!sidebarCollapsed}
+          >
+            {sidebarCollapsed ? "▶" : "◀"}
+          </button>
+          {!sidebarCollapsed && (
+            <ul>
+              {unit.stages.map((stage, index) => {
+                const state = progress.stages?.[stage.id];
+                const unlocked = isTeacher || index === 0 || progress.stages?.[unit.stages[index - 1].id]?.completed;
+                const isActive = index === activeStageIndex;
+                return (
+                  <li key={stage.id}>
+                    <button
+                      type="button"
+                      className={`gamified-stage-link${isActive ? " is-active" : ""}${state?.completed ? " is-complete" : ""}${
+                        !unlocked ? " is-locked" : ""
+                      }`}
+                      disabled={!unlocked}
+                      onClick={() => unlocked && setActiveStageIndex(index)}
+                    >
+                      <span className="gamified-stage-title">{stage.title}</span>
+                      <span className="gamified-stage-duration">{stage.duration}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </nav>
 
         <section className="gamified-stage-viewer">
@@ -416,6 +472,15 @@ export default function GamifiedModulePage({ unit }) {
             }
             setResultModal(null);
           }}
+        />
+      )}
+
+      {levelUpModal && (
+        <LevelUpModal
+          oldLevel={levelUpModal.oldLevel}
+          newLevel={levelUpModal.newLevel}
+          xp={levelUpModal.xp}
+          onClose={() => setLevelUpModal(null)}
         />
       )}
     </div>
@@ -643,6 +708,50 @@ function AssessmentPanel({
         )}
       </article>
     </section>
+  );
+}
+
+function LevelUpModal({ oldLevel, newLevel, xp, onClose }) {
+  const confettiPieces = Array.from({ length: 50 }).map((_, i) => ({
+    id: i,
+    delay: `${i * 0.05}s`,
+    offset: `${(Math.random() - 0.5) * 200}px`,
+  }));
+
+  return (
+    <div className="level-up-modal-overlay" onClick={onClose}>
+      <div className="level-up-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="level-up-modal__content">
+          <div className="level-up-modal__confetti">
+            {confettiPieces.map((piece) => (
+              <div
+                key={piece.id}
+                className="confetti-piece"
+                style={{
+                  '--delay': piece.delay,
+                  '--offset': piece.offset,
+                }}
+              />
+            ))}
+          </div>
+          <div className="level-up-modal__icon">🎉</div>
+          <h2 className="level-up-modal__title">Level Up!</h2>
+          <div className="level-up-modal__levels">
+            <span className="level-up-modal__old-level">Lv {oldLevel}</span>
+            <span className="level-up-modal__arrow">→</span>
+            <span className="level-up-modal__new-level">Lv {newLevel}</span>
+          </div>
+          <p className="level-up-modal__message">Congratulations! You've reached Level {newLevel}!</p>
+          <div className="level-up-modal__xp">
+            <strong>{xp} XP</strong>
+            <span>Total Experience</span>
+          </div>
+          <button type="button" className="level-up-modal__button" onClick={onClose}>
+            Continue Learning
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
