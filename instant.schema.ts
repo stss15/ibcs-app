@@ -86,6 +86,14 @@ const _schema = i.graph(
       summativeScore: i.number().optional(),
       updatedAt: i.string(),
     }),
+    classPacing: i.entity({
+      classId: i.string().indexed(),
+      track: i.string().optional(),
+      unitId: i.string(),
+      lessonId: i.string(),
+      updatedAt: i.string(),
+      updatedBy: i.string().optional(),
+    }),
   },
   {}
 );

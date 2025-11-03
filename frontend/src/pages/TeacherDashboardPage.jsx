@@ -6,9 +6,11 @@ import {
   createClass,
   createStudent,
   getTeacherDashboard,
+  updateClassPacing,
 } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import "./TeacherDashboardPage.css";
+import { getYear7LessonById } from "../../../shared/year7Curriculum.js";
 
 const STAGE_CONFIG = [
   {
@@ -88,6 +90,16 @@ const PASSWORD_WORDS = [
 const PASSWORD_SYMBOLS = ["!", "?", "@", "#", "$"];
 
 const PASSWORD_STORAGE_KEY = "ibcs.teacherPasswords";
+
+function upsertClassPacingRecords(list = [], pacing) {
+  if (!pacing?.classId) return Array.isArray(list) ? list : [];
+  const filtered = (list ?? []).filter((item) => item?.classId !== pacing.classId);
+  return [...filtered, pacing];
+}
+
+function isYear7ClassRecord(classRecord) {
+  return (classRecord?.yearGroup ?? "").toLowerCase().includes("year 7");
+}
 
 function readStoredPasswords() {
   if (typeof window === "undefined") return {};
@@ -296,6 +308,7 @@ function TeacherDashboardPage() {
 
   const [classModalOpen, setClassModalOpen] = useState(false);
   const [studentModal, setStudentModal] = useState(null); // { class: object, mode: "single" | "bulk" }
+  const [pacingState, setPacingState] = useState({});
 
   const [classForm, setClassForm] = useState(() => {
     const stage = STAGE_CONFIG[0];
@@ -388,6 +401,129 @@ function TeacherDashboardPage() {
     return map;
   }, [dashboard?.students]);
 
+  const classPacingMap = useMemo(() => {
+    const map = new Map();
+    for (const entry of dashboard?.classPacing ?? []) {
+      if (entry?.classId) {
+        map.set(entry.classId, entry);
+      }
+    }
+    return map;
+  }, [dashboard?.classPacing]);
+
+  const clearPacingMessage = useCallback((classId) => {
+    setTimeout(() => {
+      setPacingState((prev) => {
+        const current = prev[classId];
+        if (!current || current.busy) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[classId];
+        return next;
+      });
+    }, 4000);
+  }, []);
+
+  const handleStartPacing = useCallback(
+    async (classId) => {
+      if (!token) return;
+      setPacingState((prev) => ({
+        ...prev,
+        [classId]: {
+          ...(prev[classId] ?? {}),
+          busy: true,
+          message: "Updating pointer…",
+          tone: "info",
+        },
+      }));
+
+      try {
+        const response = await updateClassPacing(token, classId, { command: "start" });
+        if (response?.pacing) {
+          setDashboard((prev) => ({
+            ...prev,
+            classPacing: upsertClassPacingRecords(prev?.classPacing, response.pacing),
+          }));
+        }
+        const lessonTitle = response?.lesson?.title ?? "Lesson 1";
+        setPacingState((prev) => ({
+          ...prev,
+          [classId]: {
+            busy: false,
+            message: `Pointer set to ${lessonTitle}`,
+            tone: "success",
+          },
+        }));
+      } catch (error) {
+        setPacingState((prev) => ({
+          ...prev,
+          [classId]: {
+            busy: false,
+            message: error?.message || "Unable to update the teaching pointer.",
+            tone: "error",
+          },
+        }));
+      } finally {
+        clearPacingMessage(classId);
+      }
+    },
+    [token, clearPacingMessage],
+  );
+
+  const handleAdvancePacing = useCallback(
+    async (classId) => {
+      if (!token) return;
+      setPacingState((prev) => ({
+        ...prev,
+        [classId]: {
+          ...(prev[classId] ?? {}),
+          busy: true,
+          message: "Advancing pointer…",
+          tone: "info",
+        },
+      }));
+
+      try {
+        const response = await updateClassPacing(token, classId, { command: "advance" });
+        if (response?.pacing) {
+          setDashboard((prev) => ({
+            ...prev,
+            classPacing: upsertClassPacingRecords(prev?.classPacing, response.pacing),
+          }));
+        }
+        const lessonTitle = response?.lesson?.title ?? "the next lesson";
+        setPacingState((prev) => ({
+          ...prev,
+          [classId]: {
+            busy: false,
+            message: `Advanced to ${lessonTitle}`,
+            tone: "success",
+          },
+        }));
+      } catch (error) {
+        setPacingState((prev) => ({
+          ...prev,
+          [classId]: {
+            busy: false,
+            message: error?.message || "Unable to advance the pointer.",
+            tone: "error",
+          },
+        }));
+      } finally {
+        clearPacingMessage(classId);
+      }
+    },
+    [token, clearPacingMessage],
+  );
+
+  const handleOpenYear7Map = useCallback(
+    (classId) => {
+      navigate(`/curriculum/year7?classId=${encodeURIComponent(classId)}`);
+    },
+    [navigate],
+  );
+
   const teacherName =
     dashboard?.teacher?.displayName ?? session?.user?.displayName ?? session?.user?.username ?? "Teacher";
 
@@ -402,6 +538,71 @@ function TeacherDashboardPage() {
     { label: "Active students", value: overallStudentCount },
     { label: "Available lessons", value: availableLessons },
   ];
+
+  const studentLookup = useMemo(() => {
+    const map = new Map();
+    for (const student of dashboard?.students ?? []) {
+      map.set(student.id, student);
+    }
+    return map;
+  }, [dashboard?.students]);
+
+  const studentProgressSummary = useMemo(() => {
+    const summaries = new Map();
+    for (const record of dashboard?.progress ?? []) {
+      if (!record?.studentId) continue;
+      const student = studentLookup.get(record.studentId);
+      if (!student) continue;
+      let summary = summaries.get(record.studentId);
+      if (!summary) {
+        summary = {
+          id: record.studentId,
+          displayName: student.displayName ?? student.username ?? "Student",
+          username: student.username ?? "",
+          locked: 0,
+          available: 0,
+          formativeComplete: 0,
+          summativeComplete: 0,
+          lastUpdated: null,
+        };
+        summaries.set(record.studentId, summary);
+      }
+      const status = (record.status || "locked").toLowerCase();
+      if (status === "locked") summary.locked += 1;
+      else if (status === "available") summary.available += 1;
+      else if (status === "formative-complete") summary.formativeComplete += 1;
+      else if (status === "summative-complete") summary.summativeComplete += 1;
+      const updatedAt = record.updatedAt ? new Date(record.updatedAt).getTime() : null;
+      if (updatedAt && (!summary.lastUpdated || updatedAt > summary.lastUpdated)) {
+        summary.lastUpdated = updatedAt;
+      }
+    }
+    return Array.from(summaries.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [dashboard?.progress, studentLookup]);
+
+  const studentsNeedingAttention = useMemo(() => {
+    return studentProgressSummary
+      .filter((item) => item.available > 0 && item.formativeComplete === 0)
+      .slice(0, 6);
+  }, [studentProgressSummary]);
+
+  const recentProgress = useMemo(() => {
+    const records = [...(dashboard?.progress ?? [])]
+      .filter((record) => record.updatedAt)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 8)
+      .map((record) => {
+        const student = studentLookup.get(record.studentId);
+        return {
+          id: record.id ?? `${record.studentId}-${record.lessonSlug}`,
+          lesson: record.lessonSlug,
+          status: record.status,
+          updatedAt: record.updatedAt,
+          studentName: student?.displayName ?? student?.username ?? "Student",
+        };
+      });
+    return records;
+  }, [dashboard?.progress, studentLookup]);
 
   const handleClassStageChange = (key, value) => {
     setClassForm((prev) => {
@@ -681,6 +882,10 @@ function TeacherDashboardPage() {
           const classMeta = parseClassMeta(clazz);
           const students = studentsByClass.get(clazz.id) ?? [];
           const isOpen = expandedClassId === clazz.id;
+          const pacingRecord = classPacingMap.get(clazz.id);
+          const pacingLesson = pacingRecord ? getYear7LessonById(pacingRecord.lessonId) : null;
+          const pacingInfo = pacingState[clazz.id];
+          const isYear7 = isYear7ClassRecord(clazz);
           return (
             <article key={clazz.id} className={`teacher-class ${isOpen ? "is-open" : ""}`}>
               <header
@@ -699,6 +904,55 @@ function TeacherDashboardPage() {
 
               {isOpen && (
                 <div className="teacher-class__body">
+                  {isYear7 && (
+                    <div className="teacher-class__pacing">
+                      <div className="teacher-class__pacing-summary">
+                        <span className="teacher-class__pacing-label">Teacher-paced pointer</span>
+                        <strong>
+                          {pacingLesson
+                            ? `${pacingLesson.unitTitle}: ${pacingLesson.title}`
+                            : "Not started yet"}
+                        </strong>
+                        {pacingRecord?.updatedAt && (
+                          <span className="muted">
+                            Updated {new Date(pacingRecord.updatedAt).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="teacher-class__pacing-actions">
+                        <button
+                          type="button"
+                          className="pill"
+                          onClick={() => handleOpenYear7Map(clazz.id)}
+                        >
+                          Open Year 7 map
+                        </button>
+                        <button
+                          type="button"
+                          className="pill pill--action"
+                          onClick={() => handleStartPacing(clazz.id)}
+                          disabled={Boolean(pacingInfo?.busy)}
+                        >
+                          {pacingRecord ? "Restart at lesson 1" : "Start teaching"}
+                        </button>
+                        <button
+                          type="button"
+                          className="pill"
+                          onClick={() => handleAdvancePacing(clazz.id)}
+                          disabled={Boolean(pacingInfo?.busy) || !pacingRecord}
+                        >
+                          Advance lesson
+                        </button>
+                      </div>
+                      {pacingInfo?.message && (
+                        <p
+                          className={`teacher-pacing__status teacher-pacing__status--${pacingInfo.tone ?? "info"}`}
+                        >
+                          {pacingInfo.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="teacher-class__toolbar">
                     <button type="button" className="pill" onClick={() => openStudentModal(clazz, "single")}>
                       Add student
@@ -796,6 +1050,51 @@ function TeacherDashboardPage() {
               <span className="teacher-summary__label">Locked lessons</span>
             </div>
           </div>
+        </article>
+      </section>
+
+      <section className="teacher-insights">
+        <article>
+          <h3>Learners needing a nudge</h3>
+          <p className="muted">
+            Students with unlocked lessons but no formative completions yet. Check in to unblock them.
+          </p>
+          <ul>
+            {studentsNeedingAttention.length === 0 && <li className="muted">All caught up — no students flagged.</li>}
+            {studentsNeedingAttention.map((student) => (
+              <li key={student.id} className="teacher-insights__row">
+                <div>
+                  <strong>{student.displayName}</strong>
+                  <span className="muted">{student.available} unlocked · 0 cleared checkpoints</span>
+                </div>
+                <span className="teacher-tag">Follow up</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article>
+          <h3>Recent lesson updates</h3>
+          <p className="muted">Latest activity across your classes (most recent first).</p>
+          <ul>
+            {recentProgress.length === 0 && <li className="muted">No lesson activity recorded yet.</li>}
+            {recentProgress.map((record) => (
+              <li key={record.id} className="teacher-insights__row">
+                <div>
+                  <strong>{record.lesson}</strong>
+                  <span className="muted">{record.studentName}</span>
+                </div>
+                <div className="teacher-insights__meta">
+                  <span className={`teacher-tag teacher-tag--${(record.status || "locked").toLowerCase()}`}>
+                    {record.status ?? "locked"}
+                  </span>
+                  <span className="muted">
+                    {record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "recently"}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
         </article>
       </section>
 

@@ -64,6 +64,7 @@ async function main() {
     'studentProgress',
     'studentUnlocks',
     'classUnlocks',
+    'classPacing',
     'students',
     'classes',
     'teachers',

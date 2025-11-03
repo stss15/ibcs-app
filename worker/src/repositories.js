@@ -120,6 +120,19 @@ function sanitizeStudentProgress(doc) {
   };
 }
 
+function sanitizeClassPacing(doc) {
+  if (!doc) return null;
+  return {
+    id: extractId(doc),
+    classId: doc.classId ?? null,
+    track: doc.track ?? null,
+    unitId: doc.unitId ?? null,
+    lessonId: doc.lessonId ?? null,
+    updatedAt: doc.updatedAt ?? null,
+    updatedBy: doc.updatedBy ?? null,
+  };
+}
+
 function prepareUsername(value) {
   if (value === null || value === undefined) {
     return { username: null, usernameLower: null };
@@ -724,12 +737,28 @@ export async function getTeacherDashboardData(db, { teacherId, username }) {
   const studentUnlocks = (classesResult?.studentUnlocks ?? []).map(sanitizeStudentUnlock);
   const progress = (classesResult?.studentProgress ?? []).map(sanitizeStudentProgress);
 
+  const pacingRecords = [];
+  for (const classDoc of classes) {
+    const pacingResult = await db.query({
+      classPacing: {
+        $: {
+          where: { classId: classDoc.id },
+          limit: 1,
+        },
+      },
+    });
+    if (pacingResult?.classPacing?.[0]) {
+      pacingRecords.push(sanitizeClassPacing(pacingResult.classPacing[0]));
+    }
+  }
+
   return {
     classes,
     students,
     classUnlocks,
     studentUnlocks,
     progress,
+    classPacing: pacingRecords,
   };
 }
 
@@ -773,5 +802,70 @@ export async function getStudentDashboardData(db, username) {
     class: classDoc,
     unlocks,
     progress,
+    classPacing: await (async () => {
+      if (!student?.classId) return null;
+      const pacingResult = await db.query({
+        classPacing: {
+          $: {
+            where: { classId: student.classId },
+            limit: 1,
+          },
+        },
+      });
+      return sanitizeClassPacing(pacingResult?.classPacing?.[0]);
+    })(),
   };
+}
+
+export async function getClassPacing(db, classId) {
+  if (!classId) return null;
+  const result = await db.query({
+    classPacing: {
+      $: {
+        where: { classId },
+        limit: 1,
+      },
+    },
+  });
+  return sanitizeClassPacing(result?.classPacing?.[0]);
+}
+
+export async function setClassPacing(db, { classId, track, unitId, lessonId, updatedBy }) {
+  if (!classId || !unitId || !lessonId) {
+    throw new Error('classId, unitId, and lessonId are required to update pacing');
+  }
+  const updatedAt = new Date().toISOString();
+  await db.transact([
+    tx.classPacing[classId].update({
+      classId,
+      track: track ?? null,
+      unitId,
+      lessonId,
+      updatedAt,
+      updatedBy: updatedBy ?? null,
+    }),
+  ]);
+
+  return {
+    id: classId,
+    classId,
+    track: track ?? null,
+    unitId,
+    lessonId,
+    updatedAt,
+    updatedBy: updatedBy ?? null,
+  };
+}
+
+export async function findClassById(db, classId) {
+  if (!classId) return null;
+  const result = await db.query({
+    classes: {
+      $: {
+        where: { id: classId },
+        limit: 1,
+      },
+    },
+  });
+  return sanitizeClass(result?.classes?.[0]);
 }

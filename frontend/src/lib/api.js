@@ -108,6 +108,21 @@ export async function archiveStudent(token, payload) {
   });
 }
 
+export async function getClassPacing(token, classId) {
+  return request(`/teacher/classes/${encodeURIComponent(classId)}/pacing`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function updateClassPacing(token, classId, payload) {
+  return request(`/teacher/classes/${encodeURIComponent(classId)}/pacing`, {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
 export async function exportClassProgress(token, classId) {
   return request(`/teacher/classes/${classId}/export`, {
     method: "GET",

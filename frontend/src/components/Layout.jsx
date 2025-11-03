@@ -41,6 +41,20 @@ function Layout({ children }) {
       },
     ];
 
+    const allowYear7Link =
+      role === "teacher" ||
+      role === "admin" ||
+      studentTrack.startsWith("ks3") ||
+      (session?.user?.yearGroup ?? "").toLowerCase().includes("year 7");
+
+    if (allowYear7Link) {
+      links.push({
+        to: "/curriculum/year7",
+        label: "Year 7 map",
+        match: (pathname) => pathname.startsWith("/curriculum/year7"),
+      });
+    }
+
     const allowIbLink = role === "teacher" || role === "admin" || studentTrack.startsWith("ib");
     if (allowIbLink) {
       links.push({
@@ -72,7 +86,7 @@ function Layout({ children }) {
     }
 
     return links;
-  }, [role, studentTrack]);
+  }, [role, studentTrack, session?.user?.yearGroup]);
 
   const handleSignOut = useCallback(() => {
     clear();

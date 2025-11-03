@@ -17,9 +17,19 @@ import {
   archiveClass,
   archiveStudent,
   setStudentActiveStage,
+  findClassById,
+  getClassPacing,
+  setClassPacing,
 } from './src/repositories.js';
 import { json, readJson, withCors } from './src/http.js';
 import { createToken, verifyToken } from './src/jwt.js';
+import {
+  YEAR7_LESSON_SEQUENCE,
+  getYear7LessonById,
+  getYear7LessonIndex,
+  getYear7NextLesson,
+  getYear7DefaultPointer,
+} from '../shared/year7Curriculum.js';
 
 const BCRYPT_ROUNDS = 8;
 const CSV_HEADER = [
@@ -93,6 +103,21 @@ export default {
 
       if (pathname === '/teacher/students/archive' && request.method === 'POST') {
         return requireRole(request, env, 'teacher', handleArchiveStudent);
+      }
+
+      if (pathname.startsWith('/teacher/classes/') && pathname.endsWith('/pacing')) {
+        const segments = pathname.split('/');
+        const classId = decodeURIComponent(segments[3] || '');
+        if (request.method === 'GET') {
+          return requireRole(request, env, 'teacher', (req, env, session) =>
+            handleGetClassPacing(req, env, session, classId),
+          );
+        }
+        if (request.method === 'POST') {
+          return requireRole(request, env, 'teacher', (req, env, session) =>
+            handleUpdateClassPacing(req, env, session, classId),
+          );
+        }
       }
 
       if (pathname.startsWith('/teacher/classes/') && pathname.endsWith('/export') && request.method === 'GET') {
@@ -337,6 +362,106 @@ async function handleTeacherDashboard(_request, env, session) {
     studentUnlocks: data.studentUnlocks,
     progress: data.progress,
     lessonSummary,
+    classPacing: data.classPacing,
+  });
+}
+
+async function handleGetClassPacing(_request, env, session, classId) {
+  if (!classId) {
+    return json({ error: 'Class id is required' }, 400);
+  }
+
+  const db = getDb(env);
+  const teacher = await findTeacherByUsername(db, session.username);
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const classDoc = await findClassById(db, classId);
+  if (!classDoc || classDoc.teacherId !== teacher.id) {
+    return json({ error: 'Class not found' }, 404);
+  }
+
+  const pacing = await getClassPacing(db, classId);
+
+  return json({
+    class: classDoc,
+    pacing,
+  });
+}
+
+async function handleUpdateClassPacing(request, env, session, classId) {
+  if (!classId) {
+    return json({ error: 'Class id is required' }, 400);
+  }
+
+  const body = await readJson(request);
+  const command = String(body.command || '').toLowerCase();
+  const requestedLessonId = body.lessonId ? String(body.lessonId).trim() : '';
+  const requestedUnitId = body.unitId ? String(body.unitId).trim() : '';
+
+  const db = getDb(env);
+  const teacher = await findTeacherByUsername(db, session.username);
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const classDoc = await findClassById(db, classId);
+  if (!classDoc || classDoc.teacherId !== teacher.id) {
+    return json({ error: 'Class not found' }, 404);
+  }
+
+  const currentPacing = await getClassPacing(db, classId);
+  let nextLesson = null;
+
+  if (command === 'advance') {
+    nextLesson = getYear7NextLesson(currentPacing?.lessonId ?? '');
+    if (!nextLesson) {
+      return json({ error: 'Already at the final lesson in the sequence.' }, 400);
+    }
+  } else if (command === 'start') {
+    const defaultPointer = getYear7DefaultPointer();
+    if (!defaultPointer) {
+      return json({ error: 'Year 7 curriculum data is not configured.' }, 500);
+    }
+    nextLesson = getYear7LessonById(defaultPointer.lessonId);
+  } else if (requestedLessonId) {
+    const resolvedLesson = getYear7LessonById(requestedLessonId);
+    if (!resolvedLesson) {
+      return json({ error: 'Unknown lesson id.' }, 400);
+    }
+    if (requestedUnitId && requestedUnitId !== resolvedLesson.unitId) {
+      return json({ error: 'Lesson does not belong to the specified unit.' }, 400);
+    }
+    nextLesson = resolvedLesson;
+  } else {
+    return json({ error: 'Provide lessonId or a command (start, advance).' }, 400);
+  }
+
+  if (!nextLesson) {
+    return json({ error: 'Unable to resolve next lesson.' }, 400);
+  }
+
+  const track = body.track
+    ? String(body.track).trim() || null
+    : (classDoc.yearGroup || '').toLowerCase().includes('year 7')
+    ? 'ks3'
+    : null;
+
+  const updated = await setClassPacing(db, {
+    classId,
+    track,
+    unitId: nextLesson.unitId,
+    lessonId: nextLesson.id,
+    updatedBy: teacher.username,
+  });
+
+  const sequenceIndex = getYear7LessonIndex(updated.lessonId);
+
+  return json({
+    pacing: updated,
+    lesson: nextLesson,
+    sequenceIndex,
   });
 }
 
@@ -722,6 +847,7 @@ async function handleStudentDashboard(_request, env, session) {
     class: data.class,
     unlocks: data.unlocks,
     progress: data.progress,
+    classPacing: data.classPacing ?? null,
   });
 }
 

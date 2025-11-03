@@ -3,6 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { getStudentDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import { useCurriculumManifest } from "../hooks/useCurriculumManifest.js";
+import { getYear7LessonById } from "../../../shared/year7Curriculum.js";
+import { useGamification } from "../context/GamificationContext.jsx";
+import { progressStorageKey, readUnitProgress } from "../lib/progressStorage.js";
 import b1Unit from "../content/b1ComputationalThinking.jsx";
 import b2Unit from "../content/b2ProgrammingFundamentals.jsx";
 import "./StudentDashboardPage.css";
@@ -74,6 +77,7 @@ function StudentDashboardPage() {
   const navigate = useNavigate();
   const token = session?.token ?? null;
   const studentSession = session?.user?.role === "student" ? session.user : null;
+  const { state: gamificationState } = useGamification();
 
   const [payload, setPayload] = useState(null);
   const [status, setStatus] = useState(null);
@@ -110,33 +114,47 @@ function StudentDashboardPage() {
     };
   }, [ready, studentSession, token, navigate]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem("ibcs.b1.progress");
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      setB1Insights(parsed);
-    } catch (error) {
-      console.warn("Unable to load B1 insights", error);
-    }
-  }, []);
+  const progressOwner = studentSession?.username?.toLowerCase() || "guest";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem("ibcs.b2.progress");
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      setB2Insights(parsed);
-    } catch (error) {
-      console.warn("Unable to load B2 insights", error);
-    }
-  }, []);
+    const b1 = readUnitProgress(b1Unit.id, progressOwner).data;
+    const b2 = readUnitProgress(b2Unit.id, progressOwner).data;
+    setB1Insights(b1 || null);
+    setB2Insights(b2 || null);
+  }, [progressOwner]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const keysToWatch = [progressStorageKey(b1Unit.id, progressOwner), progressStorageKey(b2Unit.id, progressOwner)];
+    const handleStorage = (event) => {
+      if (!event.key || !keysToWatch.includes(event.key)) return;
+      const b1 = readUnitProgress(b1Unit.id, progressOwner).data;
+      const b2 = readUnitProgress(b2Unit.id, progressOwner).data;
+      setB1Insights(b1 || null);
+      setB2Insights(b2 || null);
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [progressOwner]);
 
   const student = payload?.student ?? null;
   const classInfo = payload?.class ?? null;
+  const classPacing = payload?.classPacing ?? null;
   const progress = useMemo(() => payload?.progress ?? [], [payload?.progress]);
+
+  const pointerLesson = useMemo(() => {
+    if (!classPacing?.lessonId) return null;
+    return getYear7LessonById(classPacing.lessonId);
+  }, [classPacing]);
+
+  const pointerUpdatedAt = useMemo(() => {
+    if (!classPacing?.updatedAt) return null;
+    const date = new Date(classPacing.updatedAt);
+    return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
+  }, [classPacing?.updatedAt]);
 
   const lessonStatusMap = useMemo(() => {
     const map = new Map();
@@ -151,6 +169,12 @@ function StudentDashboardPage() {
   const trackDisplayName = describeTrack(track);
   const curriculumLink = isIBTrack ? "/curriculum/ib" : "/curriculum";
   const curriculumCtaLabel = isIBTrack ? "View curriculum map" : "Open curriculum overview";
+
+  const totalXp = gamificationState.xp ?? 0;
+  const level = gamificationState.level ?? 1;
+  const streak = gamificationState.streak ?? 0;
+  const totalAttempts = gamificationState.totalAttempts ?? 0;
+  const totalCorrect = gamificationState.totalCorrect ?? 0;
 
   const unitSummaries = useMemo(() => {
     if (!manifest) return [];
@@ -239,6 +263,35 @@ function StudentDashboardPage() {
           <div>
             <span className="student-overview__label">Overall progress</span>
             <strong>{overallPercentage}%</strong>
+          </div>
+        {track.startsWith("ks3") && (
+          <div>
+            <span className="student-overview__label">Teacher pointer</span>
+            <strong>
+              {pointerLesson
+                ? `${pointerLesson.unitTitle}: ${pointerLesson.title}`
+                : "Your teacher will unlock lessons in class"}
+            </strong>
+            {pointerUpdatedAt && <span className="muted">Updated {pointerUpdatedAt}</span>}
+          </div>
+        )}
+          <div>
+            <span className="student-overview__label">Level</span>
+            <strong>Lv {level}</strong>
+          </div>
+          <div>
+            <span className="student-overview__label">XP</span>
+            <strong>{totalXp}</strong>
+          </div>
+          <div>
+            <span className="student-overview__label">Streak</span>
+            <strong>{streak}</strong>
+          </div>
+          <div>
+            <span className="student-overview__label">Accuracy</span>
+            <strong>
+              {totalAttempts > 0 ? `${Math.round((totalCorrect / totalAttempts) * 100)}%` : "—"}
+            </strong>
           </div>
         </div>
       </section>

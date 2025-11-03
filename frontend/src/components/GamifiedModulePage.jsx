@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useGamification } from "../context/GamificationContext.jsx";
 import { useSession } from "../hooks/useSession.js";
+import { readUnitProgress, writeUnitProgress } from "../lib/progressStorage.js";
 import MicroQuizSegment from "./segments/MicroQuizSegment.jsx";
 import ActivitySegment from "./segments/activities/ActivitySegment.jsx";
 import ContentSegment from "./segments/ContentSegment.jsx";
@@ -31,7 +32,7 @@ function normalizeAssessment(raw = null) {
   };
 }
 
-function buildInitialState(unit) {
+function buildInitialState(unit, profileKey) {
   const fallback = {
     version: STORAGE_VERSION,
     stages: {},
@@ -43,27 +44,27 @@ function buildInitialState(unit) {
 
   if (typeof window === "undefined") return fallback;
 
-  try {
-    const raw = window.localStorage.getItem(storageKey(unit.id));
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    if (!parsed || parsed.version !== STORAGE_VERSION) return fallback;
-    return {
-      ...fallback,
-      ...parsed,
-      assessment: normalizeAssessment(parsed.assessment),
-    };
-  } catch {
+  const { data } = readUnitProgress(unit.id, profileKey);
+  if (!data || typeof data !== "object") {
     return fallback;
   }
-}
 
-function storageKey(unitId) {
-  return `ibcs.${unitId.toLowerCase()}.progress`;
+  return {
+    ...fallback,
+    ...data,
+    version: STORAGE_VERSION,
+    assessment: normalizeAssessment(data.assessment),
+  };
 }
 
 function reducer(state, action) {
   switch (action.type) {
+    case "hydrate": {
+      return {
+        ...state,
+        ...(action.payload ?? {}),
+      };
+    }
     case "segment-progress": {
       const { stageId, nextIndex, completed } = action.payload;
       const prevStage = state.stages?.[stageId] ?? { segmentIndex: 0, completed: false };
@@ -192,8 +193,26 @@ export default function GamifiedModulePage({ unit }) {
   const { state: gamificationState, awardXp, resetStreak } = useGamification();
   const { session } = useSession();
   const isTeacher = session?.user?.role === "teacher" || session?.user?.role === "admin";
+  const profileKey = session?.user?.username?.toLowerCase() || "guest";
 
-  const [progress, dispatch] = useReducer(reducer, buildInitialState(unit));
+  const [progress, dispatch] = useReducer(
+    reducer,
+    { unit, profileKey },
+    ({ unit: initialUnit, profileKey: initialProfile }) => buildInitialState(initialUnit, initialProfile),
+  );
+  const profileRef = useRef(profileKey);
+  const unitRef = useRef(unit.id);
+
+  useEffect(() => {
+    if (profileRef.current === profileKey && unitRef.current === unit.id) {
+      return;
+    }
+    const nextState = buildInitialState(unit, profileKey);
+    dispatch({ type: "hydrate", payload: nextState });
+    profileRef.current = profileKey;
+    unitRef.current = unit.id;
+  }, [profileKey, unit]);
+
   const [activeStageIndex, setActiveStageIndex] = useState(0);
   const [resultModal, setResultModal] = useState(null);
 
@@ -201,14 +220,11 @@ export default function GamifiedModulePage({ unit }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(
-      storageKey(unit.id),
-      JSON.stringify({
-        ...progress,
-        version: STORAGE_VERSION,
-      }),
-    );
-  }, [progress, unit.id]);
+    writeUnitProgress(unit.id, profileKey, {
+      ...progress,
+      version: STORAGE_VERSION,
+    });
+  }, [progress, unit.id, profileKey]);
 
   useEffect(() => {
     const firstIncomplete = unit.stages.findIndex((stage) => !progress.stages?.[stage.id]?.completed);

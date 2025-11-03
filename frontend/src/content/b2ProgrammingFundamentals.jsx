@@ -4,67 +4,71 @@ import systemArchitecture from "../assets/system-architecture.svg";
 const keyVocabulary = [
   {
     term: "Variable",
-    definition: "Named memory location whose value can change during execution.",
+    definition: "Named reference to a value stored in memory.",
   },
   {
     term: "Data type",
-    definition: "Defines what values a variable holds and which operations are valid on that value.",
+    definition: "Describes the kind of value a variable may store and which operations are valid.",
   },
   {
     term: "Boolean",
-    definition: "True or false value used for logical tests and control flow.",
+    definition: "True or False value used in decision making.",
   },
   {
     term: "Integer",
-    definition: "Whole number value without a fractional component.",
+    definition: "Whole number without a fractional component.",
   },
   {
-    term: "Float / Double",
-    definition: "Number with a fractional component; precision depends on the language implementation.",
-  },
-  {
-    term: "Char",
-    definition: "Single character such as 'A' or '#'.",
+    term: "Float",
+    definition: "Number with a fractional component; supports decimal precision.",
   },
   {
     term: "String",
-    definition: "Ordered sequence of characters supporting slicing and concatenation.",
+    definition: "Ordered, immutable sequence of characters.",
+  },
+  {
+    term: "Character",
+    definition: "Single-character string such as \"A\".",
+  },
+  {
+    term: "List",
+    definition: "Ordered, mutable collection of values.",
+  },
+  {
+    term: "Dictionary",
+    definition: "Mapping of keys to values for structured records.",
   },
   {
     term: "Operator",
-    definition: "Symbol performing arithmetic, relational, or logical operations; includes unary and binary forms.",
+    definition: "Symbol performing arithmetic, comparison, or logical work.",
   },
   {
     term: "Assignment",
-    definition: "Evaluates the right-hand expression and stores its result in the named variable.",
+    definition: "Evaluates the right-hand expression and stores the result in a variable.",
   },
   {
-    term: "Substring / Slice",
-    definition: "Portion of a string selected by index ranges.",
+    term: "Slice",
+    definition: "Portion of a sequence selected using start:stop indexes.",
   },
   {
     term: "Concatenation",
-    definition: "Combining strings or characters end-to-end.",
+    definition: "Combining sequences end-to-end.",
   },
   {
     term: "Escape character",
-    definition: "Backslash (\\) used to insert quotes, newlines, or other special characters into strings.",
-  },
-  {
-    term: "API",
-    definition: "Language or library interface describing available methods and their usage.",
+    definition: "Backslash (\\) used to insert quotes, newlines, or tabs into strings.",
   },
   {
     term: "Exception",
-    definition: "Runtime anomaly such as invalid input or missing resources that can be handled with try/catch blocks.",
+    definition: "Runtime error that can be intercepted with try/except blocks.",
   },
   {
     term: "Debugging",
-    definition: "Techniques used to locate and fix logic, syntax, and runtime errors.",
+    definition: "Structured process of locating and fixing errors.",
   },
   {
     term: "Trace table",
-    definition: "Table logging variable values each step to verify logic flow.",
+    definition: "Table logging variable values across steps to verify logic.",
   },
 ];
 
@@ -76,12 +80,12 @@ const keyVocabularyList = keyVocabulary.map(({ term, definition }) => ({
 const overviewAim = (
   <Fragment>
     <p>
-      Build fluency writing, tracing, and debugging small programs in Python and Java. You will evaluate data types,
-      practise string manipulation, defend against runtime errors, and apply deliberate debugging workflows.
+      Build fluency writing, tracing, and debugging Python programs. You will evaluate data types, practise string
+      manipulation, defend against runtime errors, and apply deliberate debugging workflows.
     </p>
     <ul>
       <li>Choose appropriate data types and reason about scope and assignment.</li>
-      <li>Slice, search, and format strings defensively while reusing standard library APIs.</li>
+      <li>Slice, search, and format strings defensively while reusing the Python standard library.</li>
       <li>Handle exceptions gracefully and document debugging evidence.</li>
     </ul>
   </Fragment>
@@ -108,32 +112,25 @@ const learningOutcomes = (
 );
 
 const typeComparisonRows = [
-  ["Boolean", "boolean answer = true;", "flag = True", "Use for decision logic; often combined with relational tests."],
-  ["Integer", "int attempts = 3;", "attempts = 3", "Whole numbers; watch integer division in both languages."],
-  ["Float / Double", "double price = 19.95;", "price = 19.95", "Track precision when converting or comparing values."],
-  ["Char", "char grade = 'A';", "grade = 'A'", "Single character literal. Python strings are sequences—characters are substrings of length 1."],
-  ["String", 'String name = "Ibcs";', 'name = "Ibcs"', "Immutable sequences; concatenation creates new values."],
-  [
-    "Operators",
-    "Arithmetic: + - * / %; Relational: < <= > >= == !=; Logical: && || !",
-    "Arithmetic: + - * / // %; Relational: < <= > >= == !=; Logical: and or not",
-    "Division differs: `/` can yield decimals; `//` floors in Python; Java uses integer division when operands are ints.",
-  ],
-  [
-    "Assignment",
-    "score = base + bonus;",
-    "score = base + bonus",
-    "Right side fully evaluates before replace; previous value is overwritten.",
-  ],
+  ["Boolean", "flag = True", "Booleans control decision branches and loop flow."],
+  ["Integer", "attempts = 3", "Whole numbers; combine with // for floor division."],
+  ["Float", "price = 19.95", "Store decimal values; use round() or format() for display."],
+  ["String", 'name = "Ibcs"', "Immutable sequences; slicing returns new strings."],
+  ["List", "scores = [88, 76, 93]", "Ordered, mutable collection suited to loops and aggregations."],
+  ["Dictionary", '{"username": "ada", "role": "student"}', "Key/value pairs for structured records."],
+  ["Set", '{"python", "scratch"}', "Unique items with fast membership tests."],
+  ["Operators", "+ - * / // % **, comparisons < <= > >= == !=, logic and or not", "Pick the operator that matches the required behaviour."],
+  ["Assignment", "score = base + bonus", "Right side evaluates first; previous value is overwritten."],
 ];
 
 const stringMethodRows = [
-  ["charAt / Indexing", 'greeting.charAt(2)', "greeting[2]", "Returns character at index; check length to avoid exceptions."],
-  ["substring / slice", 'phrase.substring(0, 8)', "phrase[0:8]", "Start index inclusive; end exclusive; Python allows negative indexes."],
-  ["find / indexOf", 'phrase.indexOf("Sci")', 'phrase.find("Sci")', "Returns index or -1 if not found; useful before slicing."],
-  ["replace", 'phrase.replace("is", "will be")', 'phrase.replace("is", "will be")', "Creates a new string with replacements."],
-  ["split", 'sentence.split(" ")', "sentence.split()", "Returns array/list of tokens; iterate to format output."],
-  ["formatting", 'String.format("%s costs %.2f", item, price)', 'f"{item} costs {price:.2f}"', "Use formatting for readable output instead of manual concatenation."],
+  ["Indexing", "greeting[2]", "Returns character at index 2; check len(greeting) first."],
+  ["Slice", "phrase[0:8]", "Start index inclusive, end exclusive; supports negative indexes."],
+  ["find", 'phrase.find("Sci")', "Returns index or -1 if not found; test before slicing."],
+  ["replace", 'phrase.replace("is", "will be")', "Creates a new string with replacements."],
+  ["split", 'sentence.split()', "Breaks a string into a list of tokens on whitespace by default."],
+  ["strip", 'raw.strip()', "Removes leading and trailing whitespace."],
+  ["formatting", 'f"{item} costs {price:.2f}"', "Use f-strings for readable output with controlled precision."],
 ];
 
 const exceptionScenarios = [
@@ -142,8 +139,8 @@ const exceptionScenarios = [
     body: (
       <Fragment>
         <p>
-          Users may enter empty strings, negative numbers, or malformed data. Validate ranges and use try/except or
-          try/catch to present a helpful message instead of letting the program crash.
+          Users may enter empty strings, negative numbers, or malformed data. Validate ranges and wrap conversions in
+          <code>try/except</code> to present a helpful message instead of letting the program crash.
         </p>
       </Fragment>
     ),
@@ -154,7 +151,7 @@ const exceptionScenarios = [
       <Fragment>
         <p>
           Files, databases, or network resources might not exist or might be unavailable. Handle exceptions like{" "}
-          <code>FileNotFoundError</code> or <code>IOException</code> and close resources in a <code>finally</code> block.
+          <code>FileNotFoundError</code> and close resources in a <code>finally</code> block.
         </p>
       </Fragment>
     ),
@@ -314,8 +311,8 @@ export const b2Unit = {
         {
           type: "table",
           id: "b2-211-types",
-          heading: "Type Comparison Cheat Sheet",
-          columns: ["Concept", "Java focus", "Python focus", "Notes"],
+          heading: "Type Cheat Sheet",
+          columns: ["Concept", "Python example", "Why it matters"],
           rows: typeComparisonRows,
         },
         {
@@ -325,7 +322,7 @@ export const b2Unit = {
           items: [
             {
               title: "Declaration vs inference",
-              body: "Java requires you to declare the type; Python infers based on the assigned value. Keep readability high by naming variables descriptively.",
+              body: "Python infers type from the assigned value. Keep readability high by naming variables descriptively and documenting expected types when needed.",
             },
             {
               title: "Scope",
@@ -337,7 +334,7 @@ export const b2Unit = {
             },
             {
               title: "Type conversions",
-              body: "In Java use casting or helper methods like Integer.parseInt; in Python rely on constructors like int(), float(), or str().",
+              body: "Use constructors like int(), float(), str(), or bool() to convert values explicitly and capture ValueError when inputs are invalid.",
             },
           ],
         },
@@ -376,7 +373,7 @@ export const b2Unit = {
               example: "Store whether a customer opted in to marketing emails.",
             },
             {
-              term: "double / float",
+              term: "float",
               example: "Track the price of a flight ticket with cents precision.",
             },
             {
@@ -386,6 +383,10 @@ export const b2Unit = {
             {
               term: "int",
               example: "Count how many login attempts remain before lockout.",
+            },
+            {
+              term: "list",
+              example: "Maintain the quiz scores for a single student.",
             },
           ],
         },
@@ -411,27 +412,33 @@ export const b2Unit = {
           items: [
             {
               id: "b2-211-spot-1",
-              text: "double price = \"9.99\";",
-              isError: true,
-              explanation: "Assigning a string literal to a double requires parsing first.",
+              text: "price = float(\"9.99\")",
+              isError: false,
+              explanation: "Converting the string to a float succeeds when the input is numeric.",
             },
             {
               id: "b2-211-spot-2",
-              text: "int tickets = Integer.parseInt(input);",
-              isError: false,
-              explanation: "Parsing a numeric string into an int is valid when the string is numeric.",
+              text: "tickets = int(user_input)",
+              isError: true,
+              explanation: "If user_input is not numeric this raises ValueError unless wrapped in try/except.",
             },
             {
               id: "b2-211-spot-3",
-              text: "String total = 42 + \" students\";",
-              isError: false,
-              explanation: "Java concatenates primitive and string values in this context.",
+              text: "total = 42 + \" students\"",
+              isError: true,
+              explanation: "Python cannot add an int and a string without explicit conversion.",
             },
             {
               id: "b2-211-spot-4",
-              text: "boolean done = 1;",
+              text: "done = bool(1)",
+              isError: false,
+              explanation: "bool(1) evaluates to True, which is valid when you intend to cast integers to boolean.",
+            },
+            {
+              id: "b2-211-spot-5",
+              text: "stock = list({\"apples\": 3})",
               isError: true,
-              explanation: "Booleans expect true/false, not numeric literals.",
+              explanation: "Casting a dict to list drops keys unexpectedly; use list(dictionary.items()) or keep the dict type.",
             },
           ],
         },
@@ -488,14 +495,14 @@ print("After swap:", a, b)
             {
               id: "b2-211-q1",
               type: "mcq",
-              prompt: "In Java, what is the result of 7 / 2 when both operands are ints?",
+              prompt: "What does 7 // 2 evaluate to in Python?",
               options: [
                 { id: "b2-211-q1-a", label: "3.5" },
                 { id: "b2-211-q1-b", label: "3" },
                 { id: "b2-211-q1-c", label: "4" },
               ],
               answer: "b2-211-q1-b",
-              rationale: "Integer division truncates towards zero when both operands are integers.",
+              rationale: "// performs floor division, returning the integer 3 for 7 // 2.",
             },
             {
               id: "b2-211-q2",
@@ -525,13 +532,20 @@ print("After swap:", a, b)
               answer: "b2-211-q3-b",
               rationale: "Assignments overwrite values, so a temporary placeholder preserves one of them during the swap.",
             },
+            {
+              id: "b2-211-q4",
+              type: "true-false",
+              prompt: "bool(0) evaluates to False in Python.",
+              answer: true,
+              rationale: "Non-zero numbers cast to True; zero casts to False.",
+            },
           ],
         },
         {
           type: "reflection",
           id: "b2-211-reflection",
           heading: "Reflection",
-          prompt: "When would you choose a double rather than an int to store age in an application? Justify the choice.",
+          prompt: "When would you store age as a float instead of an int in a Python application? Justify the choice.",
         },
       ],
     },
@@ -569,8 +583,8 @@ print("After swap:", a, b)
               body: (
                 <Fragment>
                   <p>
-                    Java&apos;s <code>charAt</code> and Python&apos;s indexing both require 0 ≤ index &lt; length. Check
-                    the length first to avoid <code>IndexOutOfBoundsException</code> or <code>IndexError</code>.
+                    Python indexing requires <code>0 ≤ index &lt; len(sequence)</code>. Check the length first to avoid
+                    <code>IndexError</code>.
                   </p>
                 </Fragment>
               ),
@@ -580,8 +594,8 @@ print("After swap:", a, b)
               body: (
                 <Fragment>
                   <p>
-                    Use <code>indexOf</code> / <code>find</code> to locate substrings. A result of -1 means the target
-                    was not found—handle that before slicing.
+                    Use <code>find</code> to locate substrings. A result of <code>-1</code> means the target was not
+                    found—handle that before slicing.
                   </p>
                 </Fragment>
               ),
@@ -591,8 +605,8 @@ print("After swap:", a, b)
               body: (
                 <Fragment>
                   <p>
-                    Java&apos;s <code>String.format</code> or <code>printf</code> and Python f-strings produce readable
-                    output. Prefer them over manual concatenation for multi-variable strings.
+                    Python f-strings produce readable output with explicit formatting. Prefer them over manual
+                    concatenation when combining multiple values.
                   </p>
                 </Fragment>
               ),
@@ -603,7 +617,7 @@ print("After swap:", a, b)
           type: "table",
           id: "b2-212-methods",
           heading: "Common String Operations",
-          columns: ["Operation", "Java", "Python", "Why use it?"],
+          columns: ["Operation", "Python example", "Why use it?"],
           rows: stringMethodRows,
         },
         {
@@ -614,11 +628,11 @@ print("After swap:", a, b)
           instructions: "Pair each operation with the result it produces for the sample string.",
           pairs: [
             {
-              term: 's = "Old Town"; s.charAt(4)',
+              term: 's = "Old Town"; s[4]',
               example: '"T"',
             },
             {
-              term: 's = "Computer Science is fun"; s.substring(9, 16)',
+              term: 's = "Computer Science is fun"; s[9:16]',
               example: '"Science"',
             },
             {
@@ -626,7 +640,7 @@ print("After swap:", a, b)
               example: '"Computer Science will be fun"',
             },
             {
-              term: 'words = "Hello world".split(" ")',
+              term: 'words = "Hello world".split()',
               example: '["Hello", "world"]',
             },
           ],
@@ -641,9 +655,9 @@ print("After swap:", a, b)
           text:
             "Use [[b2-212-gap-find]] to locate a substring, [[b2-212-gap-slice]] to extract it, and [[b2-212-gap-format]] to output a tidy message.",
           tokens: [
-            { id: "token-find", label: "indexOf / find" },
-            { id: "token-slice", label: "substring / slice" },
-            { id: "token-format", label: "String.format / f-string" },
+            { id: "token-find", label: "find" },
+            { id: "token-slice", label: "slice" },
+            { id: "token-format", label: "f-string" },
           ],
           blanks: [
             { id: "b2-212-gap-find", answer: "token-find" },
@@ -710,9 +724,9 @@ if len(base) < 4:
             {
               id: "b2-212-q2",
               type: "true-false",
-              prompt: "Java strings are mutable by default.",
-              answer: false,
-              rationale: "Strings in Java are immutable—methods return new string instances.",
+              prompt: "Python strings are immutable.",
+              answer: true,
+              rationale: "All string operations return new strings instead of modifying the original.",
             },
             {
               id: "b2-212-q3",
@@ -735,7 +749,7 @@ if len(base) < 4:
           type: "reflection",
           id: "b2-212-reflection",
           heading: "Reflection",
-          prompt: "When concatenating numbers into strings, which formatting approach is clearest in your preferred language?",
+          prompt: "When concatenating numbers into strings, which Python formatting approach keeps your intent clearest?",
         },
       ],
     },
@@ -849,11 +863,11 @@ if len(base) < 4:
             {
               id: "b2-213-q2",
               type: "mcq",
-              prompt: "Which exception best matches a missing file scenario?",
+              prompt: "Which Python exception best matches a missing file scenario?",
               options: [
-                { id: "b2-213-q2-a", label: "FileNotFoundError / FileNotFoundException" },
-                { id: "b2-213-q2-b", label: "IndexError / ArrayIndexOutOfBoundsException" },
-                { id: "b2-213-q2-c", label: "ValueError / NumberFormatException" },
+                { id: "b2-213-q2-a", label: "FileNotFoundError" },
+                { id: "b2-213-q2-b", label: "IndexError" },
+                { id: "b2-213-q2-c", label: "ValueError" },
               ],
               answer: "b2-213-q2-a",
               rationale: "Missing resources trigger file-related exceptions that must be handled.",
@@ -1139,7 +1153,7 @@ print("Sorted:", sorted_values)
       {
         id: "b2-assessment-q3",
         prompt:
-          'For input text "Computer Science is fun", extract "Science", replace "is" with "will be", and output the final string in both Java and Python pseudocode.',
+          'For input text "Computer Science is fun", extract "Science", replace "is" with "will be", and output the final string using Python string operations.',
         marks: 5,
       },
       {

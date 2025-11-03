@@ -1,6 +1,13 @@
 IBCS APP — OPERATIONS CHANGE LOG
 ================================
 
+2025-11-05  Python-first curriculum & dashboards
+---------------------------------
+- Reworked B2.1 curriculum content and supporting docs to use Python exclusively; removed legacy Java guidance.
+- Namespaced gamified progress storage per user to prevent cross-account data leakage.
+- Enhanced student and teacher dashboards with gamification stats and learner insight panels.
+- Introduced the Year 7 teacher-paced curriculum map with live lesson pointer controls.
+
 2025-11-03  Deployment safeguards
 ---------------------------------
 - `deploy-everything.sh` now aborts when not on `main` and fetches `origin/main` to prevent non-fast-forward pushes.

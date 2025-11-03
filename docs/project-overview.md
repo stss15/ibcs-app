@@ -12,9 +12,10 @@ A free, static teaching app for IB Computer Science (first exams 2027). Students
 2. Provide interactive learning objects: MCQ, true/false, multi-select, matching, ordering, gap fill, drag/drop, playgrounds, reflections, planners, and summatives.
 3. Enforce progression rules: read → formative success → unlock next stage → attempt summative.
 4. Offer a teacher dashboard with class rosters, gating controls, progress heatmaps, marking queues, and CSV/Excel export.
-5. Keep data minimal: student display names or usernames only, salted password hashes, signed session tokens.
-6. Respect SL/HL visibility flags so HL-only content stays hidden for SL accounts.
-7. Include sandboxes (Python via Skulpt, future SQL via WASM) that can be reset safely.
+5. Deliver programming content solely through Python examples to keep student workstreams consistent.
+6. Keep data minimal: student display names or usernames only, salted password hashes, signed session tokens.
+7. Respect SL/HL visibility flags so HL-only content stays hidden for SL accounts.
+8. Include sandboxes (Python via Skulpt, future SQL via WASM) that can be reset safely.
 
 ## Non-Goals
 - No email logins, OAuth, or AI-powered authoring.

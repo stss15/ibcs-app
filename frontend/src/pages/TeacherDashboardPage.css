@@ -145,6 +145,52 @@
   gap: 0.75rem;
 }
 
+.teacher-class__pacing {
+  display: grid;
+  gap: 0.75rem;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 18px;
+  padding: 1rem 1.2rem;
+}
+
+.teacher-class__pacing-summary {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.teacher-class__pacing-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(12, 41, 124, 0.65);
+  font-weight: 700;
+}
+
+.teacher-class__pacing-summary strong {
+  font-size: 1rem;
+  color: var(--cs-blue);
+}
+
+.teacher-class__pacing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.teacher-pacing__status {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.teacher-pacing__status--success {
+  color: #16603b;
+}
+
+.teacher-pacing__status--error {
+  color: #a2102b;
+}
+
 .teacher-class__table {
   width: 100%;
   border-collapse: collapse;
@@ -196,6 +242,73 @@
 .teacher-password:hover,
 .teacher-password:focus-visible {
   background: rgba(12, 41, 124, 0.16);
+}
+
+.teacher-insights {
+  display: grid;
+  gap: clamp(1.4rem, 3vw, 2.2rem);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.teacher-insights article {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: clamp(1.4rem, 3vw, 2rem);
+  border: 1px solid rgba(12, 41, 124, 0.08);
+  box-shadow: 0 20px 45px rgba(12, 41, 124, 0.1);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.teacher-insights__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(12, 41, 124, 0.08);
+}
+
+.teacher-insights__row:last-child {
+  border-bottom: none;
+}
+
+.teacher-insights__meta {
+  display: grid;
+  gap: 0.3rem;
+  text-align: right;
+}
+
+.teacher-tag {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(12, 41, 124, 0.12);
+  color: var(--cs-blue);
+}
+
+.teacher-tag--locked {
+  background: rgba(217, 52, 77, 0.12);
+  color: #a2102b;
+}
+
+.teacher-tag--available {
+  background: rgba(12, 41, 124, 0.12);
+  color: var(--cs-blue);
+}
+
+.teacher-tag--formative-complete {
+  background: rgba(25, 135, 84, 0.14);
+  color: #16603b;
+}
+
+.teacher-tag--summative-complete {
+  background: rgba(140, 0, 255, 0.14);
+  color: #5b1d9a;
 }
 
 .teacher-table-actions {
