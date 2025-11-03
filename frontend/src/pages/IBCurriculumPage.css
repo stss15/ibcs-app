@@ -326,6 +326,63 @@
   font-size: 1.2rem;
 }
 
+.ib-b1-preview,
+.ib-b2-preview {
+  display: grid;
+  gap: 1.5rem;
+  background: rgba(12, 41, 124, 0.04);
+  border: 1px solid rgba(12, 41, 124, 0.12);
+  border-radius: 20px;
+  padding: clamp(1.6rem, 3vw, 2.2rem);
+}
+
+.ib-b1-preview__intro h3,
+.ib-b2-preview__intro h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.3rem;
+  color: var(--cs-blue);
+}
+
+.ib-b1-preview__stages,
+.ib-b2-preview__stages {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.ib-b1-preview__stages article,
+.ib-b2-preview__stages article {
+  background: var(--cs-white);
+  border-radius: 16px;
+  border: 1px solid rgba(12, 41, 124, 0.08);
+  padding: 1rem 1.2rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ib-b1-preview__stages h4,
+.ib-b2-preview__stages h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--cs-blue);
+}
+
+.ib-b1-preview__stages span,
+.ib-b2-preview__stages span {
+  font-size: 0.85rem;
+  color: rgba(12, 41, 124, 0.6);
+  font-weight: 600;
+}
+
+.ib-b1-preview__actions,
+.ib-b2-preview__actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
 @media (min-width: 1024px) {
   .ib-layout {
     grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);

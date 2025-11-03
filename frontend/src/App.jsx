@@ -10,6 +10,7 @@ import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
 import AccountPage from "./pages/AccountPage.jsx";
 import Layout from "./components/Layout.jsx";
 import B1ModulePage from "./pages/B1ModulePage.jsx";
+import B2ModulePage from "./pages/B2ModulePage.jsx";
 import { useSession } from "./hooks/useSession.js";
 
 function roleToHome(role) {
@@ -112,6 +113,14 @@ function App() {
           element={
             <RequireAuth>
               <B1ModulePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/curriculum/ib/b2"
+          element={
+            <RequireAuth>
+              <B2ModulePage />
             </RequireAuth>
           }
         />

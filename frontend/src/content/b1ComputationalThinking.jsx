@@ -222,23 +222,23 @@ export const b1Unit = {
           id: "spec-matching",
           activityType: "matching",
           heading: "Match Components to Examples",
-          instructions: "Drag or select the example that best matches each specification element.",
+          instructions: "Match each specification component to a fresh scenario example.",
           pairs: [
             {
               term: "Constraint",
-              example: "Budget €10 000 and a two-month delivery deadline.",
+              example: "Analytics dashboard must launch within four weeks and use existing cloud licences.",
             },
             {
               term: "Goal",
-              example: "Reduce hold time by 20 % within three months.",
+              example: "Achieve 95 % of grocery orders dispatched within 12 hours.",
             },
             {
               term: "Input specification",
-              example: "Customer text queries with timestamps and 1–5 satisfaction ratings.",
+              example: "IoT thermometers streaming temperature data every five minutes in CSV format.",
             },
             {
               term: "Evaluation criterion",
-              example: "User satisfaction of at least 4/5 with 24/7 availability.",
+              example: "System uptime of at least 99 % with audit trail for stock adjustments.",
             },
           ],
         },
@@ -270,12 +270,29 @@ export const b1Unit = {
             },
             {
               id: "spec-q2",
-              type: "fill-multi",
-              prompt: "The three measurable elements of a good goal are:",
-              placeholders: ["Element 1", "Element 2", "Element 3"],
-              answers: ["baseline", "target", "timeframe"],
+              type: "multi-select",
+              prompt: "Select all details that describe constraints for an e-scooter rental platform refresh.",
+              options: [
+                { id: "spec-q2-a", label: "Launch in three cities before tourist season begins." },
+                { id: "spec-q2-b", label: "Increase daily rentals by 30 % during summer." },
+                { id: "spec-q2-c", label: "Budget capped at €50 000 for hardware upgrades." },
+                { id: "spec-q2-d", label: "Provide itinerary suggestions for riders." },
+              ],
+              answers: ["spec-q2-a", "spec-q2-c"],
               rationale:
-                "Strong goals specify the baseline being improved, the target value, and the timeframe for achievement.",
+                "Constraints define boundaries such as timelines and budgets. Growth targets or feature ideas are not constraints.",
+            },
+            {
+              id: "spec-q3",
+              type: "mcq",
+              prompt: "Which question checks whether your evaluation criteria are measurable?",
+              options: [
+                { id: "spec-q3-a", label: "Who is responsible for building the dashboard?" },
+                { id: "spec-q3-b", label: "What accuracy or response time will prove the chatbot is effective?" },
+                { id: "spec-q3-c", label: "How will customer journeys be storyboarded?" },
+              ],
+              answer: "spec-q3-b",
+              rationale: "Evaluation criteria require defined success metrics such as accuracy or response time.",
             },
           ],
         },
@@ -520,23 +537,6 @@ export const b1Unit = {
           })),
         },
         {
-          type: "activity",
-          id: "flow-trace",
-          activityType: "fill-gaps",
-          heading: "Trace Table Practice",
-          instructions: "Complete the trace table for the linear search example.",
-          rows: [
-            {
-              prompt: "Step when the algorithm first finds the target?",
-              answer: "4",
-            },
-            {
-              prompt: "Value of the index variable at that step?",
-              answer: "3",
-            },
-          ],
-        },
-        {
           type: "checkpoint",
           id: "flow-quiz",
           heading: "Mini Checkpoint",
@@ -551,7 +551,7 @@ export const b1Unit = {
             {
               id: "flow-q2",
               type: "mcq",
-              prompt: "Which symbol should you use to represent a decision?",
+              prompt: "A warehouse flowchart checks \"Inventory below threshold?\" before reordering. Which symbol surrounds this question?",
               options: [
                 { id: "flow-q2-a", label: "▭ Process" },
                 { id: "flow-q2-b", label: "◇ Decision" },
@@ -559,6 +559,33 @@ export const b1Unit = {
               ],
               answer: "flow-q2-b",
               rationale: "The diamond (◇) symbol represents branching logic.",
+            },
+            {
+              id: "flow-q3",
+              type: "multi-select",
+              prompt: "Select all trace-table observations that prove a while loop stops when a match is found.",
+              options: [
+                { id: "flow-q3-a", label: "The loop flag switches from true to false once the item matches." },
+                { id: "flow-q3-b", label: "The index variable keeps incrementing even after the match." },
+                { id: "flow-q3-c", label: "The output column shows \"Found\" immediately after the condition succeeds." },
+                { id: "flow-q3-d", label: "The accumulator resets to zero each iteration." },
+              ],
+              answers: ["flow-q3-a", "flow-q3-c"],
+              rationale:
+                "A change in the loop control flag and a new output confirm the loop exits once the match occurs. Continuing increments or reset accumulators would indicate it keeps iterating.",
+            },
+            {
+              id: "flow-q4",
+              type: "mcq",
+              prompt:
+                "During a system audit you spot a connector ⊙ leading into a decision with no matching outbound connector. What risk does this introduce?",
+              options: [
+                { id: "flow-q4-a", label: "It can create an infinite branch that never rejoins the main flow." },
+                { id: "flow-q4-b", label: "It forces the process to restart from the terminator symbol." },
+                { id: "flow-q4-c", label: "It converts the decision into a process block." },
+              ],
+              answer: "flow-q4-a",
+              rationale: "Connectors must pair to maintain flow continuity; a missing pair can cause dangling branches.",
             },
           ],
         },

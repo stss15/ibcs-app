@@ -7,6 +7,8 @@ import {
   resetCurriculumManifestCache,
 } from "../hooks/useCurriculumManifest.js";
 import { IB_UNIT_METADATA, SUBTOPIC_DESCRIPTIONS } from "../lib/ibMetadata.js";
+import b1Unit from "../content/b1ComputationalThinking.jsx";
+import b2Unit from "../content/b2ProgrammingFundamentals.jsx";
 import "./IBCurriculumPage.css";
 
 function getTrackOptions(manifest) {
@@ -227,27 +229,18 @@ function IBCurriculumPage() {
                 {trackBadgeText && <span className="ib-badge ib-badge--outline">{trackBadgeText}</span>}
               </div>
             </header>
-            {selectedUnit.id === "B1" && (
-              <div className="ib-unit-launch">
-                <div>
-                  <h3>Interactive pathway available</h3>
-                  <p className="muted">
-                    Dive into the full B1 Computational Thinking learning experience complete with staged activities and
-                    assessment.
-                  </p>
-                </div>
-                <Link to="/curriculum/ib/b1" className="pill pill--action">
-                  Open B1 learning path
-                </Link>
-              </div>
-            )}
-
-            <div className="ib-chapters">
-              {selectedUnit.subtopics?.map((subtopic) => {
-                const description = SUBTOPIC_DESCRIPTIONS[subtopic.id] ?? subtopic.title;
-                const trackAllowsChapter = !subtopic.availableFor || subtopic.availableFor.includes(selectedTrack);
-                const isUnitAvailable = !selectedUnit.availableFor || selectedUnit.availableFor.includes(selectedTrack);
-                const isChapterAvailable = trackAllowsChapter && isUnitAvailable;
+            {selectedUnit.id === "B1" ? (
+              <B1LearningPreview />
+            ) : selectedUnit.id === "B2" ? (
+              <B2LearningPreview />
+            ) : (
+              <>
+                <div className="ib-chapters">
+                  {selectedUnit.subtopics?.map((subtopic) => {
+                    const description = SUBTOPIC_DESCRIPTIONS[subtopic.id] ?? subtopic.title;
+                    const trackAllowsChapter = !subtopic.availableFor || subtopic.availableFor.includes(selectedTrack);
+                    const isUnitAvailable = !selectedUnit.availableFor || selectedUnit.availableFor.includes(selectedTrack);
+                    const isChapterAvailable = trackAllowsChapter && isUnitAvailable;
 
                 return (
                   <article className="ib-chapter" key={subtopic.id}>
@@ -324,20 +317,22 @@ function IBCurriculumPage() {
                       })}
                     </ul>
                   </article>
-                );
-              })}
-            </div>
-            <footer className="ib-unit-assessment">
-              <div>
-                <h3>End of unit assessment</h3>
-                <p className="muted">
-                  Finish every chapter in {selectedUnit.id} to unlock the full unit assessment and check mastery.
-                </p>
-              </div>
-              <button type="button" className="pill pill--action" disabled>
-                Unit assessment locked
-              </button>
-            </footer>
+                  );
+                })}
+                </div>
+                <footer className="ib-unit-assessment">
+                  <div>
+                    <h3>End of unit assessment</h3>
+                    <p className="muted">
+                      Finish every chapter in {selectedUnit.id} to unlock the full unit assessment and check mastery.
+                    </p>
+                  </div>
+                  <button type="button" className="pill pill--action" disabled>
+                    Unit assessment locked
+                  </button>
+                </footer>
+              </>
+            )}
           </>
         ) : (
           <div className="ib-placeholder">
@@ -346,6 +341,64 @@ function IBCurriculumPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function B1LearningPreview() {
+  return (
+    <section className="ib-b1-preview">
+      <div className="ib-b1-preview__intro">
+        <h3>Interactive pathway available</h3>
+        <p className="muted">
+          Work through staged content, formative checkpoints, and the end-of-unit assessment inside the B1 learning
+          path. Progress and attempts save automatically on this device.
+        </p>
+      </div>
+      <div className="ib-b1-preview__stages">
+        {b1Unit.stages.map((stage) => (
+          <article key={stage.id}>
+            <h4>{stage.title}</h4>
+            <span>{stage.duration}</span>
+            <p>{stage.description}</p>
+          </article>
+        ))}
+      </div>
+      <div className="ib-b1-preview__actions">
+        <Link to="/curriculum/ib/b1" className="pill pill--action">
+          Open B1 learning path
+        </Link>
+        <p className="muted">Formative assessments unlock sequentially—teachers can track attempts from the dashboard.</p>
+      </div>
+    </section>
+  );
+}
+
+function B2LearningPreview() {
+  return (
+    <section className="ib-b2-preview">
+      <div className="ib-b2-preview__intro">
+        <h3>Interactive pathway available</h3>
+        <p className="muted">
+          Explore staged lessons on variables, strings, exceptions, and debugging. Includes an in-browser Python
+          playground for safe practice—progress saves locally on this device.
+        </p>
+      </div>
+      <div className="ib-b2-preview__stages">
+        {b2Unit.stages.map((stage) => (
+          <article key={stage.id}>
+            <h4>{stage.title}</h4>
+            <span>{stage.duration}</span>
+            <p>{stage.description}</p>
+          </article>
+        ))}
+      </div>
+      <div className="ib-b2-preview__actions">
+        <Link to="/curriculum/ib/b2" className="pill pill--action">
+          Open B2 learning path
+        </Link>
+        <span className="muted">Python runs in-browser using Skulpt—no installation required.</span>
+      </div>
+    </section>
   );
 }
 

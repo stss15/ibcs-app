@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import b1Unit from "../content/b1ComputationalThinking.jsx";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Sk from "skulpt";
+import b2Unit from "../content/b2ProgrammingFundamentals.jsx";
 import { useSession } from "../hooks/useSession.js";
-import "./B1ModulePage.css";
+import "./B2ModulePage.css";
 
-const STORAGE_KEY = "ibcs.b1.progress";
+const STORAGE_KEY = "ibcs.b2.progress";
 
 function cn(base, modifiers = {}) {
   const classes = [base];
@@ -29,14 +30,14 @@ function loadProgress() {
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (error) {
-    console.warn("Failed to parse B1 progress", error);
+    console.warn("Failed to parse B2 progress", error);
     return null;
   }
 }
 
 function buildStageState(existing = {}) {
   const stageState = {};
-  for (const stage of b1Unit.stages) {
+  for (const stage of b2Unit.stages) {
     const prev = existing[stage.id] ?? {};
     stageState[stage.id] = {
       segmentIndex: typeof prev.segmentIndex === "number" ? prev.segmentIndex : 0,
@@ -71,14 +72,14 @@ function saveProgress(progress) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
   } catch (error) {
-    console.warn("Failed to persist B1 progress", error);
+    console.warn("Failed to persist B2 progress", error);
   }
 }
 
 function isStageUnlocked(stagesState, stageId, index, isTeacher) {
   if (isTeacher) return true;
   if (index === 0) return true;
-  const previousStage = b1Unit.stages[index - 1];
+  const previousStage = b2Unit.stages[index - 1];
   const prevState = stagesState[previousStage.id];
   return Boolean(prevState?.completed);
 }
@@ -89,10 +90,10 @@ function formatPercentage(value) {
 
 function computeOverallProgress(progress) {
   const completed = Object.values(progress.stages).filter((entry) => entry.completed).length;
-  return completed / b1Unit.stages.length;
+  return completed / b2Unit.stages.length;
 }
 
-function B1ModulePage() {
+function B2ModulePage() {
   const { session } = useSession();
   const role = session?.user?.role ?? null;
   const isTeacher = role === "teacher" || role === "admin";
@@ -100,7 +101,7 @@ function B1ModulePage() {
   const [progress, setProgress] = useState(() => normaliseProgress(loadProgress()));
 
   const firstIncompleteIndex = useMemo(() => {
-    return b1Unit.stages.findIndex((stage) => !progress.stages[stage.id]?.completed);
+    return b2Unit.stages.findIndex((stage) => !progress.stages[stage.id]?.completed);
   }, [progress.stages]);
 
   const [activeStageIndex, setActiveStageIndex] = useState(() =>
@@ -173,33 +174,33 @@ function B1ModulePage() {
 
   const overallProgress = computeOverallProgress(progress);
 
-  const activeStage = b1Unit.stages[activeStageIndex];
+  const activeStage = b2Unit.stages[activeStageIndex];
 
   return (
-    <div className="b1-page">
-      <header className="b1-hero">
+    <div className="b2-page">
+      <header className="b2-hero">
         <div>
-          <span className="b1-hero__eyebrow">IB Computer Science · B1</span>
-          <h1>{b1Unit.title}</h1>
-          <p>{b1Unit.guidingQuestion}</p>
-          <div className="b1-hero__meta">
-            <span>{b1Unit.hours.sl}</span>
-            <span>{b1Unit.hours.hl}</span>
+          <span className="b2-hero__eyebrow">IB Computer Science · B2</span>
+          <h1>{b2Unit.title}</h1>
+          <p>{b2Unit.guidingQuestion}</p>
+          <div className="b2-hero__meta">
+            <span>{b2Unit.hours.sl}</span>
+            <span>{b2Unit.hours.hl}</span>
           </div>
         </div>
-        <div className="b1-progress-summary">
-          <span className="b1-progress-summary__label">Overall progress</span>
+        <div className="b2-progress-summary">
+          <span className="b2-progress-summary__label">Overall progress</span>
           <strong>{formatPercentage(overallProgress)}</strong>
-          <div className="b1-progress-summary__bar" aria-hidden="true">
+          <div className="b2-progress-summary__bar" aria-hidden="true">
             <div style={{ width: `${overallProgress * 100}%` }} />
           </div>
         </div>
       </header>
 
-      <main className="b1-main">
-        <nav className="b1-stages" aria-label="Stage navigation">
+      <main className="b2-main">
+        <nav className="b2-stages" aria-label="Stage navigation">
           <ul>
-            {b1Unit.stages.map((stage, index) => {
+            {b2Unit.stages.map((stage, index) => {
               const state = progress.stages[stage.id];
               const unlocked = isStageUnlocked(progress.stages, stage.id, index, isTeacher);
               const isActive = index === activeStageIndex;
@@ -207,7 +208,7 @@ function B1ModulePage() {
                 <li key={stage.id}>
                   <button
                     type="button"
-                    className={cn("b1-stage-link", {
+                    className={cn("b2-stage-link", {
                       "is-active": isActive,
                       "is-complete": state?.completed,
                       "is-locked": !unlocked,
@@ -217,8 +218,8 @@ function B1ModulePage() {
                     }}
                     disabled={!unlocked}
                   >
-                    <span className="b1-stage-link__title">{stage.title}</span>
-                    <span className="b1-stage-link__duration">{stage.duration}</span>
+                    <span className="b2-stage-link__title">{stage.title}</span>
+                    <span className="b2-stage-link__duration">{stage.duration}</span>
                   </button>
                 </li>
               );
@@ -226,7 +227,7 @@ function B1ModulePage() {
           </ul>
         </nav>
 
-        <section className="b1-stage-viewer">
+        <section className="b2-stage-viewer">
           <StagePlayer
             stage={activeStage}
             stageState={progress.stages[activeStage.id]}
@@ -283,14 +284,14 @@ function StagePlayer({
   const displayIndex = Math.min(currentIndex, total - 1);
 
   return (
-    <div className="b1-stage">
-      <header className="b1-stage__header">
+    <div className="b2-stage">
+      <header className="b2-stage__header">
         <div>
-          <span className="b1-stage__eyebrow">Stage {stage.id}</span>
+          <span className="b2-stage__eyebrow">Stage {stage.id}</span>
           <h2>{stage.title}</h2>
           <p>{stage.description}</p>
         </div>
-        <span className="b1-stage__progress">
+        <span className="b2-stage__progress">
           {displayIndex + 1} / {total}
         </span>
       </header>
@@ -310,7 +311,7 @@ function StagePlayer({
           isTeacher={isTeacher}
         />
       ) : (
-        <div className="b1-stage__complete">
+        <div className="b2-stage__complete">
           <p>Stage complete! Use the navigation to continue with the next stage.</p>
         </div>
       )}
@@ -356,6 +357,14 @@ function SegmentRenderer({
           onAttempt={attemptHandler}
         />
       );
+    case "python-playground":
+      return (
+        <PythonPlaygroundSegment
+          {...sharedProps}
+          attemptStats={attemptStats}
+          onAttempt={attemptHandler}
+        />
+      );
     case "checkpoint":
       return <CheckpointSegment {...sharedProps} attemptStats={attemptStats} onAttempt={attemptHandler} />;
     case "reflection":
@@ -376,9 +385,9 @@ function SegmentRenderer({
   }
 }
 
-function SegmentNav({ onBack, onComplete, completeLabel = "Continue" }) {
+function SegmentNav({ onBack, onComplete, completeLabel = "Continue", completeDisabled = false }) {
   return (
-    <div className="b1-segment-nav">
+    <div className="b2-segment-nav">
       {onBack ? (
         <button type="button" className="btn btn--ghost" onClick={onBack}>
           Back
@@ -386,7 +395,7 @@ function SegmentNav({ onBack, onComplete, completeLabel = "Continue" }) {
       ) : (
         <span />
       )}
-      <button type="button" className="btn btn--primary" onClick={onComplete}>
+      <button type="button" className="btn btn--primary" onClick={onComplete} disabled={completeDisabled}>
         {completeLabel}
       </button>
     </div>
@@ -395,11 +404,11 @@ function SegmentNav({ onBack, onComplete, completeLabel = "Continue" }) {
 
 function ContentSegment({ segment, onComplete, onBack }) {
   return (
-    <article className="b1-card">
+    <article className="b2-card">
       <header>
         <h3>{segment.heading}</h3>
       </header>
-      <div className="b1-card__body">{segment.body}</div>
+      <div className="b2-card__body">{segment.body}</div>
       <SegmentNav onBack={onBack} onComplete={onComplete} />
     </article>
   );
@@ -407,13 +416,13 @@ function ContentSegment({ segment, onComplete, onBack }) {
 
 function ListSegment({ segment, onComplete, onBack }) {
   return (
-    <article className="b1-card">
+    <article className="b2-card">
       <header>
         <h3>{segment.heading}</h3>
       </header>
-      <div className="b1-card__body b1-card__body--list">
+      <div className="b2-card__body b2-card__body--list">
         {segment.items?.map((item) => (
-          <div key={item.title} className="b1-list-item">
+          <div key={item.title} className="b2-list-item">
             <h4>{item.title}</h4>
             <div>{item.body}</div>
           </div>
@@ -426,18 +435,18 @@ function ListSegment({ segment, onComplete, onBack }) {
 
 function VocabularySegment({ segment, onComplete, onBack }) {
   return (
-    <article className="b1-card">
+    <article className="b2-card">
       <header>
         <h3>{segment.heading}</h3>
         <p>Tap a term to reveal its definition.</p>
       </header>
-      <details className="b1-vocab" open>
+      <details className="b2-vocab" open>
         <summary className="sr-only">Vocabulary list</summary>
-        <div className="b1-vocab__grid">
+        <div className="b2-vocab__grid">
           {segment.entries?.map((entry) => (
-            <div key={entry.term} className="b1-vocab__item">
-              <span className="b1-vocab__term">{entry.term}</span>
-              <span className="b1-vocab__definition">{entry.definition}</span>
+            <div key={entry.term} className="b2-vocab__item">
+              <span className="b2-vocab__term">{entry.term}</span>
+              <span className="b2-vocab__definition">{entry.definition}</span>
             </div>
           ))}
         </div>
@@ -449,11 +458,11 @@ function VocabularySegment({ segment, onComplete, onBack }) {
 
 function TableSegment({ segment, onComplete, onBack }) {
   return (
-    <article className="b1-card">
+    <article className="b2-card">
       <header>
         <h3>{segment.heading}</h3>
       </header>
-      <div className="b1-table-wrapper">
+      <div className="b2-table-wrapper">
         <table>
           <thead>
             <tr>
@@ -480,11 +489,11 @@ function TableSegment({ segment, onComplete, onBack }) {
 
 function WorkedExampleSegment({ segment, onComplete, onBack }) {
   return (
-    <article className="b1-card">
+    <article className="b2-card">
       <header>
         <h3>{segment.heading}</h3>
       </header>
-      <div className="b1-table-wrapper">
+      <div className="b2-table-wrapper">
         <table>
           <tbody>
             {segment.rows?.map(([label, value]) => (
@@ -503,11 +512,11 @@ function WorkedExampleSegment({ segment, onComplete, onBack }) {
 
 function AccordionSegment({ segment, onComplete, onBack }) {
   return (
-    <article className="b1-card">
+    <article className="b2-card">
       <header>
         <h3>{segment.heading}</h3>
       </header>
-      <div className="b1-accordion">
+      <div className="b2-accordion">
         {segment.items?.map((item, index) => (
           <details key={index} open={index === 0}>
             <summary>{item.title}</summary>
@@ -569,7 +578,7 @@ function ActivitySegment({
       );
     default:
       return (
-        <article className="b1-card">
+        <article className="b2-card">
           <header>
             <h3>{segment.heading}</h3>
           </header>
@@ -580,13 +589,164 @@ function ActivitySegment({
   }
 }
 
+function PythonPlaygroundSegment({ segment, onComplete, onBack, isTeacher, attemptStats, onAttempt }) {
+  const [code, setCode] = useState(() => segment.starterCode ?? "");
+  const [output, setOutput] = useState("");
+  const [status, setStatus] = useState("idle");
+  const [running, setRunning] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
+  const outputRef = useRef(null);
+
+  useEffect(() => {
+    setCode(segment.starterCode ?? "");
+    setOutput("");
+    setStatus("idle");
+    setHasRun(false);
+  }, [segment.id, segment.starterCode]);
+
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [output]);
+
+  function builtinRead(x) {
+    const files = Sk.builtinFiles?.files ?? Sk.builtinFiles?.["files"];
+    if (!files || !files[x]) {
+      throw new Error(`File not found: ${x}`);
+    }
+    return files[x];
+  }
+
+  async function handleRun() {
+    setRunning(true);
+    setOutput("");
+    setStatus("idle");
+    let success = false;
+    try {
+      Sk.python3 = true;
+      Sk.configure({
+        output: (text) => {
+          setOutput((prev) => prev + text);
+        },
+        read: builtinRead,
+        __future__: Sk.python3,
+      });
+      await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
+      setStatus("success");
+      success = true;
+    } catch (error) {
+      const message = error?.toString ? error.toString() : String(error);
+      setOutput((prev) => prev + (prev.endsWith("\n") || prev.length === 0 ? "" : "\n") + message);
+      setStatus("error");
+    } finally {
+      setRunning(false);
+      setHasRun(true);
+      if (typeof onAttempt === "function") {
+        onAttempt(segment.id, success);
+      }
+    }
+  }
+
+  function handleReset() {
+    setCode(segment.starterCode ?? "");
+    setOutput("");
+    setStatus("idle");
+    setHasRun(false);
+  }
+
+  function handleInsertSnippet(snippet) {
+    if (!snippet) return;
+    setCode((prev) => {
+      const needsNewline = prev.length > 0 && !prev.endsWith("\n");
+      return `${prev}${needsNewline ? "\n" : ""}${snippet}`;
+    });
+  }
+
+  const hasSnippets = Array.isArray(segment.snippets) && segment.snippets.length > 0;
+  const continueDisabled = !hasRun && !isTeacher;
+
+  return (
+    <article className={cn("b2-card", { "is-success": status === "success", "is-error": status === "error" })}>
+      <header>
+        <h3>{segment.heading}</h3>
+        <AttemptBadge attemptStats={attemptStats} />
+      </header>
+      <div className="b2-card__body">
+        {segment.prompt}
+        <div className="b2-playground">
+          <div className="b2-playground__editor">
+            <label htmlFor={`${segment.id}-editor`}>Python editor</label>
+            <textarea
+              id={`${segment.id}-editor`}
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              rows={12}
+              spellCheck={false}
+            />
+            {hasSnippets && (
+              <div className="b2-playground__snippets">
+                <span>Quick insert:</span>
+                {segment.snippets.map((snippet) => (
+                  <button
+                    type="button"
+                    key={snippet.id}
+                    className="pill pill--outline"
+                    onClick={() => handleInsertSnippet(snippet.code)}
+                  >
+                    {snippet.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="b2-playground__console">
+            <div className="b2-playground__console-header">
+              <span>Console</span>
+              {status === "success" && <span className="b2-status b2-status--success">Ran successfully</span>}
+              {status === "error" && <span className="b2-status b2-status--error">Runtime error</span>}
+            </div>
+            <pre ref={outputRef} aria-live="polite">
+              {output || "Run the code to see output here."}
+            </pre>
+          </div>
+        </div>
+        <div className="b2-playground__controls">
+          <button type="button" className="btn btn--ghost" onClick={handleReset} disabled={running}>
+            Reset starter
+          </button>
+          <button type="button" className="btn btn--primary" onClick={handleRun} disabled={running}>
+            {running ? "Running…" : "Run code"}
+          </button>
+        </div>
+      </div>
+      <SegmentNav
+        onBack={onBack}
+        onComplete={onComplete}
+        completeDisabled={continueDisabled}
+        completeLabel={continueDisabled ? "Run code to continue" : "Continue"}
+      />
+      {continueDisabled && !isTeacher && (
+        <p className="b2-feedback" role="status">
+          Run the playground at least once to unlock the next segment.
+        </p>
+      )}
+      {status === "error" && (
+        <p className="b2-feedback is-error" role="status">
+          Review the message in the console, adjust your code, and run again.
+        </p>
+      )}
+    </article>
+  );
+}
+
 function AttemptBadge({ attemptStats }) {
   const attempts = attemptStats?.count ?? 0;
   const correct = attemptStats?.correct ?? 0;
   return (
-    <span className="b1-attempt-badge">
+    <span className="b2-attempt-badge">
       Attempts: {attempts}
-      <span className="b1-attempt-badge__detail">
+      <span className="b2-attempt-badge__detail">
         {" "}
         · Correct: {correct}/{attempts}
       </span>
@@ -622,13 +782,13 @@ function MatchingActivity({ segment, onComplete, onBack, isTeacher, attemptStats
   }
 
   return (
-    <article className={cn("b1-card", { "is-success": status === "success", "is-error": status === "error" })}>
+    <article className={cn("b2-card", { "is-success": status === "success", "is-error": status === "error" })}>
       <header>
         <h3>{segment.heading}</h3>
         <p>{segment.instructions}</p>
         <AttemptBadge attemptStats={attemptStats} />
       </header>
-      <div className="b1-matching">
+      <div className="b2-matching">
         {segment.pairs.map((pair, index) => (
           <label key={pair.term}>
             <span>{pair.term}</span>
@@ -658,7 +818,7 @@ function MatchingActivity({ segment, onComplete, onBack, isTeacher, attemptStats
           </label>
         ))}
       </div>
-      <div className="b1-segment-nav">
+      <div className="b2-segment-nav">
         {onBack ? (
           <button type="button" className="btn btn--ghost" onClick={onBack}>
             Back
@@ -666,7 +826,7 @@ function MatchingActivity({ segment, onComplete, onBack, isTeacher, attemptStats
         ) : (
           <span />
         )}
-        <div className="b1-segment-nav__actions">
+        <div className="b2-segment-nav__actions">
           {isTeacher && (
             <button type="button" className="btn btn--outline" onClick={onComplete}>
               Mark complete
@@ -678,7 +838,7 @@ function MatchingActivity({ segment, onComplete, onBack, isTeacher, attemptStats
         </div>
       </div>
       {feedback && (
-        <p role="status" className="b1-feedback">
+        <p role="status" className="b2-feedback">
           {feedback}
         </p>
       )}
@@ -737,13 +897,13 @@ function OrderingActivity({ segment, onComplete, onBack, isTeacher, attemptStats
   }
 
   return (
-    <article className={cn("b1-card", { "is-success": status === "success", "is-error": status === "error" })}>
+    <article className={cn("b2-card", { "is-success": status === "success", "is-error": status === "error" })}>
       <header>
         <h3>{segment.heading}</h3>
         <p>{segment.instructions}</p>
         <AttemptBadge attemptStats={attemptStats} />
       </header>
-      <ol className="b1-ordering">
+      <ol className="b2-ordering">
         {items.map((item, index) => (
           <li key={item.text}>
             <span>{item.text}</span>
@@ -774,7 +934,7 @@ function OrderingActivity({ segment, onComplete, onBack, isTeacher, attemptStats
           </li>
         ))}
       </ol>
-      <div className="b1-segment-nav">
+      <div className="b2-segment-nav">
         {onBack ? (
           <button type="button" className="btn btn--ghost" onClick={onBack}>
             Back
@@ -782,7 +942,7 @@ function OrderingActivity({ segment, onComplete, onBack, isTeacher, attemptStats
         ) : (
           <span />
         )}
-        <div className="b1-segment-nav__actions">
+        <div className="b2-segment-nav__actions">
           {isTeacher && (
             <button type="button" className="btn btn--outline" onClick={onComplete}>
               Mark complete
@@ -794,7 +954,7 @@ function OrderingActivity({ segment, onComplete, onBack, isTeacher, attemptStats
         </div>
       </div>
       {feedback && (
-        <p role="status" className="b1-feedback">
+        <p role="status" className="b2-feedback">
           {feedback}
         </p>
       )}
@@ -830,13 +990,13 @@ function PlannerActivity({
   }
 
   return (
-    <article className="b1-card">
+    <article className="b2-card">
       <header>
         <h3>{segment.heading}</h3>
         <p>{segment.instructions}</p>
         <AttemptBadge attemptStats={attemptStats} />
       </header>
-      <form className="b1-planner" onSubmit={handleSubmit}>
+      <form className="b2-planner" onSubmit={handleSubmit}>
         {segment.panels?.map((panel) => (
           <label key={panel.id}>
             <span>{panel.label}</span>
@@ -847,7 +1007,7 @@ function PlannerActivity({
             />
           </label>
         ))}
-        <div className="b1-segment-nav">
+        <div className="b2-segment-nav">
           {onBack ? (
             <button type="button" className="btn btn--ghost" onClick={onBack}>
               Back
@@ -855,7 +1015,7 @@ function PlannerActivity({
           ) : (
             <span />
           )}
-          <div className="b1-segment-nav__actions">
+          <div className="b2-segment-nav__actions">
             {isTeacher && (
               <button type="button" className="btn btn--outline" onClick={onComplete}>
                 Mark complete
@@ -867,7 +1027,7 @@ function PlannerActivity({
           </div>
         </div>
         {!completed && (
-          <p className="b1-feedback" role="status">
+          <p className="b2-feedback" role="status">
             Fill in every panel to continue.
           </p>
         )}
@@ -907,7 +1067,7 @@ function CheckpointSegment({ segment, onComplete, onBack, isTeacher, attemptStat
   }
 
   return (
-    <article className={cn("b1-card", { "is-success": status === "success", "is-error": status === "error" })}>
+    <article className={cn("b2-card", { "is-success": status === "success", "is-error": status === "error" })}>
       <header>
         <h3>{segment.heading}</h3>
         <AttemptBadge attemptStats={attemptStats} />
@@ -917,7 +1077,7 @@ function CheckpointSegment({ segment, onComplete, onBack, isTeacher, attemptStat
           event.preventDefault();
           evaluate();
         }}
-        className="b1-checkpoint"
+        className="b2-checkpoint"
       >
         {segment.questions?.map((question) => (
           <CheckpointQuestion
@@ -936,7 +1096,7 @@ function CheckpointSegment({ segment, onComplete, onBack, isTeacher, attemptStat
             status={locked ? (isCorrect(question, responses[question.id]) ? "correct" : "incorrect") : "idle"}
           />
         ))}
-        <div className="b1-segment-nav">
+        <div className="b2-segment-nav">
           {onBack ? (
             <button type="button" className="btn btn--ghost" onClick={onBack}>
               Back
@@ -944,7 +1104,7 @@ function CheckpointSegment({ segment, onComplete, onBack, isTeacher, attemptStat
           ) : (
             <span />
           )}
-          <div className="b1-segment-nav__actions">
+          <div className="b2-segment-nav__actions">
             {isTeacher && (
               <button type="button" className="btn btn--outline" onClick={onComplete}>
                 Mark complete
@@ -956,7 +1116,7 @@ function CheckpointSegment({ segment, onComplete, onBack, isTeacher, attemptStat
           </div>
         </div>
         {feedback && (
-          <p role="status" className="b1-feedback">
+          <p role="status" className="b2-feedback">
             {feedback}
           </p>
         )}
@@ -986,7 +1146,7 @@ function isCorrect(question, value) {
 }
 
 function CheckpointQuestion({ question, value, onChange, showRationale, disabled, status }) {
-  const itemClass = cn("b1-checkpoint__item", {
+  const itemClass = cn("b2-checkpoint__item", {
     "is-correct": status === "correct",
     "is-incorrect": status === "incorrect",
   });
@@ -995,7 +1155,7 @@ function CheckpointQuestion({ question, value, onChange, showRationale, disabled
       return (
         <fieldset className={itemClass} disabled={disabled}>
           <legend>{question.prompt}</legend>
-          <div className="b1-checkpoint__options">
+          <div className="b2-checkpoint__options">
             {[true, false].map((option) => (
               <label key={String(option)}>
                 <input
@@ -1010,14 +1170,14 @@ function CheckpointQuestion({ question, value, onChange, showRationale, disabled
               </label>
             ))}
           </div>
-          {showRationale && <p className="b1-rationale">{question.rationale}</p>}
+          {showRationale && <p className="b2-rationale">{question.rationale}</p>}
         </fieldset>
       );
     case "mcq":
       return (
         <fieldset className={itemClass} disabled={disabled}>
           <legend>{question.prompt}</legend>
-          <div className="b1-checkpoint__options">
+          <div className="b2-checkpoint__options">
             {question.options?.map((option) => (
               <label key={option.id}>
                 <input
@@ -1032,14 +1192,14 @@ function CheckpointQuestion({ question, value, onChange, showRationale, disabled
               </label>
             ))}
           </div>
-          {showRationale && <p className="b1-rationale">{question.rationale}</p>}
+          {showRationale && <p className="b2-rationale">{question.rationale}</p>}
         </fieldset>
       );
     case "multi-select":
       return (
         <fieldset className={itemClass} disabled={disabled}>
           <legend>{question.prompt}</legend>
-          <div className="b1-checkpoint__options">
+          <div className="b2-checkpoint__options">
             {question.options?.map((option) => {
               const selected = Array.isArray(value) ? value.includes(option.id) : false;
               return (
@@ -1065,7 +1225,7 @@ function CheckpointQuestion({ question, value, onChange, showRationale, disabled
               );
             })}
           </div>
-          {showRationale && <p className="b1-rationale">{question.rationale}</p>}
+          {showRationale && <p className="b2-rationale">{question.rationale}</p>}
         </fieldset>
       );
     default:
@@ -1082,7 +1242,7 @@ function ReflectionSegment({ segment, onComplete, onBack, reflections, onReflect
   }
 
   return (
-    <article className="b1-card">
+    <article className="b2-card">
       <header>
         <h3>{segment.heading}</h3>
       </header>
@@ -1093,7 +1253,7 @@ function ReflectionSegment({ segment, onComplete, onBack, reflections, onReflect
         onChange={(event) => setValue(event.target.value)}
         aria-label={segment.heading}
       />
-      <div className="b1-segment-nav">
+      <div className="b2-segment-nav">
         {onBack ? (
           <button type="button" className="btn btn--ghost" onClick={onBack}>
             Back
@@ -1113,7 +1273,7 @@ function AssessmentPanel({ progress, setProgress, isTeacher }) {
   const allStagesComplete = useMemo(() => Object.values(progress.stages).every((stage) => stage.completed), [progress]);
   const [expanded, setExpanded] = useState(false);
 
-  const assessment = b1Unit.assessment;
+  const assessment = b2Unit.assessment;
 
   const handleResponseChange = (questionId, value) => {
     setProgress((prev) => ({
@@ -1164,7 +1324,7 @@ function AssessmentPanel({ progress, setProgress, isTeacher }) {
   );
 
   return (
-    <section className="b1-assessment">
+    <section className="b2-assessment">
       <header>
         <h2>End-of-Unit Assessment</h2>
         <span>
@@ -1180,21 +1340,21 @@ function AssessmentPanel({ progress, setProgress, isTeacher }) {
         </button>
       </header>
       {!allStagesComplete && (
-        <p className="b1-assessment__lock">
+        <p className="b2-assessment__lock">
           Complete all learning stages to unlock the assessment. You are {formatPercentage(computeOverallProgress(progress))}
           {" "}through the unit.
         </p>
       )}
       {expanded && allStagesComplete && (
-        <div className="b1-assessment__body">
+        <div className="b2-assessment__body">
           <p>
             Answer each question in the spaces provided. Your responses save automatically in this browser. Use the
             download button to produce a PDF copy to share with your teacher.
           </p>
-          <ol className="b1-assessment__questions">
+          <ol className="b2-assessment__questions">
             {assessment.questions.map((question) => (
               <li key={question.id}>
-                <div className="b1-assessment__prompt">
+                <div className="b2-assessment__prompt">
                   <p>{question.prompt}</p>
                   <span>{question.marks} marks</span>
                 </div>
@@ -1206,7 +1366,7 @@ function AssessmentPanel({ progress, setProgress, isTeacher }) {
               </li>
             ))}
           </ol>
-          <div className="b1-assessment__actions">
+          <div className="b2-assessment__actions">
             <button type="button" className="btn btn--primary" onClick={handleExport}>
               Download as PDF
             </button>
@@ -1230,7 +1390,7 @@ function AssessmentPanel({ progress, setProgress, isTeacher }) {
 
 function TeacherMarkingHints() {
   return (
-    <aside className="b1-assessment__teacher">
+    <aside className="b2-assessment__teacher">
       <h3>Teacher view</h3>
       <p>
         Record marks and feedback in your teacher dashboard. The PDF export captures student answers so you can annotate
@@ -1242,8 +1402,8 @@ function TeacherMarkingHints() {
 
 function TeacherMarkingPanel({ assessment, progress, onMarkChange, onFeedbackChange, totalAwarded }) {
   return (
-    <aside className="b1-assessment__teacher b1-assessment__teacher--panel">
-      <div className="b1-assessment__teacher-header">
+    <aside className="b2-assessment__teacher b2-assessment__teacher--panel">
+      <div className="b2-assessment__teacher-header">
         <h3>Teacher marking workspace</h3>
         <span>
           Total awarded: {totalAwarded} / {assessment.totalMarks}
@@ -1253,10 +1413,10 @@ function TeacherMarkingPanel({ assessment, progress, onMarkChange, onFeedbackCha
         Enter the awarded marks and feedback for each item. Values persist locally. Export the assessment to share a PDF
         copy with annotations.
       </p>
-      <div className="b1-assessment__teacher-grid">
+      <div className="b2-assessment__teacher-grid">
         {assessment.questions.map((question) => (
-          <div key={question.id} className="b1-assessment__teacher-item">
-            <div className="b1-assessment__teacher-meta">
+          <div key={question.id} className="b2-assessment__teacher-item">
+            <div className="b2-assessment__teacher-meta">
               <h4>{question.prompt}</h4>
               <span>{question.marks} marks</span>
             </div>
@@ -1285,4 +1445,4 @@ function TeacherMarkingPanel({ assessment, progress, onMarkChange, onFeedbackCha
   );
 }
 
-export default B1ModulePage;
+export default B2ModulePage;

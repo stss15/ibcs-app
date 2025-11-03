@@ -4,6 +4,7 @@ import { getStudentDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import { useCurriculumManifest } from "../hooks/useCurriculumManifest.js";
 import b1Unit from "../content/b1ComputationalThinking.jsx";
+import b2Unit from "../content/b2ProgrammingFundamentals.jsx";
 import "./StudentDashboardPage.css";
 
 function normaliseStatus(status) {
@@ -29,6 +30,31 @@ function progressLabel(status) {
   }
 }
 
+function buildAttemptRows(unit, insights) {
+  if (!insights?.attempts) return [];
+  const rows = [];
+  const attempts = insights.attempts;
+  unit.stages.forEach((stage) => {
+    (stage.segments ?? []).forEach((segment) => {
+      if (["activity", "checkpoint", "python-playground"].includes(segment.type)) {
+        const stats = attempts?.[segment.id];
+        if (!stats) return;
+        const count = stats.count ?? 0;
+        const correct = stats.correct ?? 0;
+        rows.push({
+          stage: stage.title,
+          segment: segment.heading ?? segment.title ?? segment.id,
+          attempts: count,
+          correct,
+          successRate: count > 0 ? Math.round((correct / count) * 100) : null,
+        });
+      }
+    });
+  });
+  rows.sort((a, b) => b.attempts - a.attempts);
+  return rows;
+}
+
 function describeTrack(track) {
   const value = (track || "").toLowerCase();
   if (value.startsWith("ib")) {
@@ -52,6 +78,7 @@ function StudentDashboardPage() {
   const [payload, setPayload] = useState(null);
   const [status, setStatus] = useState(null);
   const [b1Insights, setB1Insights] = useState(null);
+  const [b2Insights, setB2Insights] = useState(null);
 
   const { manifest } = useCurriculumManifest();
 
@@ -95,9 +122,21 @@ function StudentDashboardPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem("ibcs.b2.progress");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      setB2Insights(parsed);
+    } catch (error) {
+      console.warn("Unable to load B2 insights", error);
+    }
+  }, []);
+
   const student = payload?.student ?? null;
   const classInfo = payload?.class ?? null;
-  const progress = payload?.progress ?? [];
+  const progress = useMemo(() => payload?.progress ?? [], [payload?.progress]);
 
   const lessonStatusMap = useMemo(() => {
     const map = new Map();
@@ -153,29 +192,24 @@ function StudentDashboardPage() {
   const totalCompleted = unitSummaries.reduce((sum, unit) => sum + unit.completed, 0);
   const overallPercentage = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0;
 
-  const b1AttemptRows = useMemo(() => {
-    if (!b1Insights?.attempts) return [];
-    const rows = [];
-    const attempts = b1Insights.attempts;
-    b1Unit.stages.forEach((stage) => {
-      (stage.segments ?? []).forEach((segment) => {
-        if (segment.type === "activity" || segment.type === "checkpoint") {
-          const stats = attempts[segment.id];
-          if (stats) {
-            rows.push({
-              stage: stage.title,
-              segment: segment.heading ?? segment.title ?? segment.id,
-              attempts: stats.count,
-              correct: stats.correct,
-              successRate: stats.count > 0 ? Math.round((stats.correct / stats.count) * 100) : null,
-            });
-          }
-        }
-      });
-    });
-    rows.sort((a, b) => b.attempts - a.attempts);
-    return rows;
-  }, [b1Insights]);
+  const b1AttemptRows = useMemo(() => buildAttemptRows(b1Unit, b1Insights), [b1Insights]);
+  const b2AttemptRows = useMemo(() => buildAttemptRows(b2Unit, b2Insights), [b2Insights]);
+  const interactiveAttemptSections = [
+    {
+      id: "B1",
+      title: "B1 computational thinking insights",
+      description:
+        "Attempts recorded for interactive checkpoints in the B1 learning path. Data saves locally on this device.",
+      rows: b1AttemptRows,
+    },
+    {
+      id: "B2",
+      title: "B2 programming fundamentals insights",
+      description:
+        "Attempts recorded for checkpoints, activities, and Python playground runs in the B2 learning path.",
+      rows: b2AttemptRows,
+    },
+  ].filter((section) => section.rows.length > 0);
 
   if (!ready) {
     return null;
@@ -276,13 +310,11 @@ function StudentDashboardPage() {
         </div>
       </section>
 
-      {b1AttemptRows.length > 0 && (
-        <section className="student-insights">
+      {interactiveAttemptSections.map((section) => (
+        <section className="student-insights" key={section.id}>
           <header className="student-insights__header">
-            <h2>B1 computational thinking insights</h2>
-            <p className="muted">
-              Attempts recorded for interactive checkpoints in the B1 learning path. Data saves locally on this device.
-            </p>
+            <h2>{section.title}</h2>
+            <p className="muted">{section.description}</p>
           </header>
           <div className="student-insights__table">
             <table>
@@ -296,8 +328,8 @@ function StudentDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {b1AttemptRows.map((row, index) => (
-                  <tr key={`${row.segment}-${index}`}>
+                {section.rows.map((row, index) => (
+                  <tr key={`${section.id}-${row.segment}-${index}`}>
                     <td>{row.stage}</td>
                     <td>{row.segment}</td>
                     <td>{row.attempts}</td>
@@ -309,7 +341,7 @@ function StudentDashboardPage() {
             </table>
           </div>
         </section>
-      )}
+      ))}
 
       <section className="student-lesson-feed">
         <header>
