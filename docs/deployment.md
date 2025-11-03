@@ -6,6 +6,9 @@
 ```bash
 ./fix-and-deploy.sh
 ```
+
+> **Heads-up:** Run deployments from the `main` branch. If you are on another branch, switch first:
+> `git checkout main && git pull --ff-only origin main`
 ### Pipeline stages
 1. **Push schema** – Executes `./push-schema.sh`. Non-fatal issues surface as warnings.
 2. **Build frontend** – Runs `npm run build` inside `frontend/`. Dependencies install only when `node_modules` is absent.

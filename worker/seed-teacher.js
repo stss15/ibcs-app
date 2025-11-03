@@ -54,15 +54,37 @@ async function seedTeacher() {
   const needsPrompt = !cliArgs.username || !cliArgs.password || !cliArgs['display-name'];
   const rl = needsPrompt ? readline.createInterface({ input, output }) : null;
 
-  const usernameInput = cliArgs.username ?? (await rl.question('Teacher username [MrStewart]: '));
-  const passwordInput = cliArgs.password ?? (await rl.question('Teacher password: '));
-  const displayNameInput = cliArgs['display-name'] ?? (await rl.question('Display name [Mr. Stewart]: '));
+  const resolveInput = async (provided, promptText, fallback) => {
+    if (provided !== undefined && provided !== null) {
+      return provided;
+    }
+    if (rl) {
+      return rl.question(promptText);
+    }
+    return fallback;
+  };
+
+  const usernameInput = await resolveInput(cliArgs.username, 'Teacher username [MrStewart]: ', 'MrStewart');
+  const passwordInput = await resolveInput(cliArgs.password, 'Teacher password: ', '');
+  const displayNameInput = await resolveInput(cliArgs['display-name'], 'Display name [Mr. Stewart]: ', 'Mr. Stewart');
+  const firstNameInput = await resolveInput(cliArgs['first-name'], 'First name [Mr.]: ', '');
+  const lastNameInput = await resolveInput(cliArgs['last-name'], 'Last name [Stewart]: ', '');
 
   if (rl) rl.close();
 
   const username = usernameInput.trim() || 'MrStewart';
   const password = passwordInput.trim();
   const displayName = displayNameInput.trim() || 'Mr. Stewart';
+
+  const normalizedFirstName = (firstNameInput ?? '').trim();
+  const normalizedLastName = (lastNameInput ?? '').trim();
+  const displayNameParts = displayName.split(/\s+/).filter(Boolean);
+  const firstName = normalizedFirstName || displayNameParts[0] || username || 'Teacher';
+  const lastName =
+    normalizedLastName || displayNameParts.slice(1).join(' ') || (displayNameParts.length ? 'Teacher' : 'Account');
+
+  const safeLastName = lastName.trim() || 'Teacher';
+  const safeFirstName = firstName.trim() || 'Teacher';
 
   if (!password) {
     throw new Error('Password is required');
@@ -79,6 +101,8 @@ async function seedTeacher() {
   const created = await createTeacherRecord(db, {
     username,
     password: passwordHash,
+    firstName: safeFirstName,
+    lastName: safeLastName,
     displayName,
   });
 

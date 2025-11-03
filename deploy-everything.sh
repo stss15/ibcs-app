@@ -10,6 +10,20 @@ ROOT="$SCRIPT_DIR"
 FRONTEND="$ROOT/frontend"
 WORKER="$ROOT/worker"
 
+cd "$ROOT"
+
+ensure_main_branch() {
+  local current_branch
+  current_branch="$(git rev-parse --abbrev-ref HEAD)"
+  if [ "$current_branch" != "main" ]; then
+    echo "⚠️  fix-and-deploy.sh must run from the main branch. Current branch: $current_branch"
+    echo "   Run: git checkout main && git pull --ff-only origin main"
+    exit 1
+  fi
+}
+
+ensure_main_branch
+
 maybe_install() {
   local target_dir="$1"
   if [ ! -d "$target_dir/node_modules" ]; then
@@ -67,6 +81,14 @@ echo ""
 # Step 5: Commit and push to GitHub
 echo "📦 Step 5: Deploying to GitHub Pages..."
 cd "$ROOT"
+if git fetch --quiet origin main; then
+  if ! git merge-base --is-ancestor origin/main HEAD; then
+    echo "⚠️  Local main is behind origin/main. Run 'git pull --ff-only origin main' before deploying."
+    exit 1
+  fi
+else
+  echo "⚠️  Unable to verify origin/main (fetch failed). Continuing without remote sync check."
+fi
 git add -A
 git commit -m "Deploy working app" || echo "Nothing to commit"
 if ! git push origin main; then
