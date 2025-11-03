@@ -1,0 +1,55 @@
+# Frontend Architecture, CSS, and JS Conventions
+
+## Tech Stack
+- **React 18 + Vite** SPA located in `frontend/`
+- **React Router** for authenticated routing
+- **InstantDB** for persistence via the Cloudflare Worker (`frontend/src/lib/api.js`)
+- **Skulpt** for Python playgrounds within gamified segments
+
+## High-Level Structure
+```
+frontend/src/
+├── App.jsx                 # Router + layout shell
+├── components/             # Shared UI (layout, gamified segments, dashboards)
+├── content/                # Unit definitions consumed by GamifiedModulePage
+├── context/                # React contexts (e.g., GamificationContext)
+├── hooks/                  # Reusable hooks (session, manifest)
+├── pages/                  # Route-level components (B1ModulePage, dashboards, etc.)
+├── styles/                 # Global CSS tokens + resets
+└── utils/                  # Lightweight helpers (e.g., shuffle)
+```
+
+## Gamified Module Core
+- `components/GamifiedModulePage.jsx` is the shared engine for unit pages (B1, B2, future units).
+- Segments are rendered via `components/segments/**`, each matching a `type` in the unit schema (`content`, `list`, `table`, `accordion`, `micro-quiz`, `activity`, `python-playground`, `reflection`, `demo`).
+- Activities live in `components/segments/activities/` (matching, ordering, drag-drop, gap-fill, image-hotspot, planner). Use the utilities in `frontend/src/utils/array.js` where needed.
+- Gamification state (XP, streaks, sprites) is provided by `context/GamificationContext.jsx` and persisted to `localStorage`.
+
+## CSS Conventions
+- Global tokens and resets reside in `styles/global.css`.
+- Component-scoped styles for gamified screens are in `components/GamifiedModulePage.css` and `components/segments/**/*.css`.
+- Use BEM-flavoured class names (`gamified-`, `activity-`, `b2-`) to avoid collisions.
+- Prefer CSS custom properties defined in `:root` for colours, spacing, and typography if adding new tokens.
+- When introducing unit-specific visual tweaks, keep them within the page CSS (`pages/B1ModulePage.css`, etc.) and reuse shared variables.
+
+## JavaScript Patterns
+- Keep stateful logic inside hooks or context providers; segment components should remain stateless where possible.
+- Use functional `setState` updates when deriving state from previous values (e.g., progress reducers).
+- For local persistence, centralise read/write calls through the reducer in `GamifiedModulePage.jsx`—do not scatter `localStorage` access in individual segments.
+- Activity components should always call `onAttempt(segmentId, payload)` so XP, streaks, and dashboards stay in sync.
+- When adding new segment types, extend the switch in `SegmentRenderer` and create a dedicated component under `components/segments/`.
+
+## Routing & Navigation
+- Protected routes use `RequireAuth` inside `App.jsx` with role filters (`teacher`, `student`, `admin`).
+- Module pages (`/curriculum/ib/b1`, `/curriculum/ib/b2`) simply inject their unit object into `GamifiedModulePage`.
+- Curriculum previews live in `pages/IBCurriculumPage.jsx` and should mirror new units by importing their `unit` object and passing it into preview cards.
+
+## Manifest & Content Loading
+- `hooks/useCurriculumManifest.js` loads `frontend/src/data/curriculumManifest.json` (generated from assets) to drive navigation.
+- When adding a unit, update the manifest (or the generator script) and ensure previews fall back gracefully when absent.
+
+## Testing & Linting
+- Run `npm run lint` before committing changes; ESLint covers React hooks order and unused variables.
+- `npm run build` ensures production bundles remain under chunk limits; if warnings occur, consider `dynamic import()` and `manualChunks` in `vite.config.js`.
+
+

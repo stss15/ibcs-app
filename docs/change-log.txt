@@ -1,0 +1,18 @@
+IBCS APP — OPERATIONS CHANGE LOG
+================================
+
+2025-11-03  Docs consolidation
+--------------------------------
+- Centralised operational guides under `docs/` with new index, setup, architecture, content-authoring, deployment, and AI agent playbooks.
+- Added lazy dependency installs and defensive git push handling to `deploy-everything.sh`.
+- Archived legacy docs (`AI_AGENT_GUIDE.md`, `initial_setup.txt`, `APP_AIM.txt`) in favour of the new hub.
+
+Notes:
+- Update this file whenever workflows, scripts, or architecture guidance changes in a way that affects maintainers or agents.
+
+2025-11-05  Authentication normalisation & lesson UX tidy
+----------------------------------------
+- Added `usernameLower` fields to InstantDB schema and worker repositories so logins behave case-insensitively across admin, teacher, and student roles.
+- Updated Cloudflare Worker auth flows to issue lowercased token usernames and reuse the new fields during verification, bulk student creation, and dashboard lookups.
+- Refreshed the lesson detail page to surface migration status, link to active B1/B2 modules, and remove unfinished interactive placeholders.
+

@@ -120,44 +120,159 @@ function sanitizeStudentProgress(doc) {
   };
 }
 
+function prepareUsername(value) {
+  if (value === null || value === undefined) {
+    return { username: null, usernameLower: null };
+  }
+  const raw = String(value).trim();
+  if (!raw) {
+    return { username: null, usernameLower: null };
+  }
+  return {
+    username: raw,
+    usernameLower: raw.toLowerCase(),
+  };
+}
+
+async function ensureUsernameLower(db, collection, doc) {
+  if (!doc) return null;
+  if (doc.usernameLower) return doc;
+  const { usernameLower } = prepareUsername(doc.username);
+  if (!usernameLower) return doc;
+  const targetId = extractId(doc);
+  if (!targetId) return doc;
+  try {
+    await db.transact([
+      tx[collection][targetId].update({
+        usernameLower,
+      }),
+    ]);
+    doc.usernameLower = usernameLower;
+  } catch (error) {
+    console.warn(`Failed to backfill ${collection} usernameLower for ${doc.username}`, error);
+  }
+  return doc;
+}
+
 /* ------------------------------------------------------------------ *
  * Lookup helpers
  * ------------------------------------------------------------------ */
 
 export async function findAdminByUsername(db, username) {
-  const result = await db.query({
-    admins: {
-      $: {
-        where: { username },
-        limit: 1,
+  const { username: canonical, usernameLower } = prepareUsername(username);
+  if (!canonical && !usernameLower) {
+    return null;
+  }
+
+  if (usernameLower) {
+    const byLower = await db.query({
+      admins: {
+        $: {
+          where: { usernameLower },
+          limit: 1,
+        },
       },
-    },
-  });
-  return sanitizeAdmin(result?.admins?.[0]);
+    });
+    if (byLower?.admins?.[0]) {
+      const doc = await ensureUsernameLower(db, 'admins', byLower.admins[0]);
+      return sanitizeAdmin(doc);
+    }
+  }
+
+  if (canonical) {
+    const result = await db.query({
+      admins: {
+        $: {
+          where: { username: canonical },
+          limit: 1,
+        },
+      },
+    });
+    if (result?.admins?.[0]) {
+      const doc = await ensureUsernameLower(db, 'admins', result.admins[0]);
+      return sanitizeAdmin(doc);
+    }
+  }
+
+  return null;
 }
 
 export async function findTeacherByUsername(db, username) {
-  const result = await db.query({
-    teachers: {
-      $: {
-        where: { username },
-        limit: 1,
+  const { username: canonical, usernameLower } = prepareUsername(username);
+  if (!canonical && !usernameLower) {
+    return null;
+  }
+
+  if (usernameLower) {
+    const byLower = await db.query({
+      teachers: {
+        $: {
+          where: { usernameLower },
+          limit: 1,
+        },
       },
-    },
-  });
-  return sanitizeTeacher(result?.teachers?.[0]);
+    });
+    if (byLower?.teachers?.[0]) {
+      const doc = await ensureUsernameLower(db, 'teachers', byLower.teachers[0]);
+      return sanitizeTeacher(doc);
+    }
+  }
+
+  if (canonical) {
+    const result = await db.query({
+      teachers: {
+        $: {
+          where: { username: canonical },
+          limit: 1,
+        },
+      },
+    });
+    if (result?.teachers?.[0]) {
+      const doc = await ensureUsernameLower(db, 'teachers', result.teachers[0]);
+      return sanitizeTeacher(doc);
+    }
+  }
+
+  return null;
 }
 
 export async function findStudentByUsername(db, username) {
-  const result = await db.query({
-    students: {
-      $: {
-        where: { username },
-        limit: 1,
+  const { username: canonical, usernameLower } = prepareUsername(username);
+  if (!canonical && !usernameLower) {
+    return null;
+  }
+
+  if (usernameLower) {
+    const byLower = await db.query({
+      students: {
+        $: {
+          where: { usernameLower },
+          limit: 1,
+        },
       },
-    },
-  });
-  return sanitizeStudent(result?.students?.[0]);
+    });
+    if (byLower?.students?.[0]) {
+      const doc = await ensureUsernameLower(db, 'students', byLower.students[0]);
+      return sanitizeStudent(doc);
+    }
+  }
+
+  if (canonical) {
+    const result = await db.query({
+      students: {
+        $: {
+          where: { username: canonical },
+          limit: 1,
+        },
+      },
+    });
+    if (result?.students?.[0]) {
+      const doc = await ensureUsernameLower(db, 'students', result.students[0]);
+      return sanitizeStudent(doc);
+    }
+  }
+
+  return null;
 }
 
 /* ------------------------------------------------------------------ *
@@ -167,10 +282,12 @@ export async function findStudentByUsername(db, username) {
 export async function createAdmin(db, { username, password, firstName, lastName, displayName }) {
   const adminId = id();
   const createdAt = new Date().toISOString();
+  const { username: normalizedUsername, usernameLower } = prepareUsername(username);
 
   await db.transact([
     tx.admins[adminId].update({
-      username,
+      username: normalizedUsername,
+      usernameLower,
       password,
       firstName,
       lastName,
@@ -181,7 +298,7 @@ export async function createAdmin(db, { username, password, firstName, lastName,
 
   return {
     id: adminId,
-    username,
+    username: normalizedUsername,
     firstName,
     lastName,
     displayName,
@@ -192,10 +309,12 @@ export async function createAdmin(db, { username, password, firstName, lastName,
 export async function createTeacher(db, { username, password, firstName, lastName, displayName }) {
   const teacherId = id();
   const createdAt = new Date().toISOString();
+  const { username: normalizedUsername, usernameLower } = prepareUsername(username);
 
   await db.transact([
     tx.teachers[teacherId].update({
-      username,
+      username: normalizedUsername,
+      usernameLower,
       password,
       firstName,
       lastName,
@@ -206,7 +325,7 @@ export async function createTeacher(db, { username, password, firstName, lastNam
 
   return {
     id: teacherId,
-    username,
+    username: normalizedUsername,
     firstName,
     lastName,
     displayName,
@@ -317,14 +436,16 @@ export async function createStudent(
 ) {
   const studentId = id();
   const createdAt = new Date().toISOString();
+  const { username: normalizedUsername, usernameLower } = prepareUsername(username);
   const track = resolveTrack({ programme, yearGroup });
   const defaultLessons = getDefaultLessonsForTrack(track);
   const initialStage = defaultLessons.length > 0 ? defaultLessons[0] : 'A1.1.1';
-  const displayName = [firstName, lastName].filter(Boolean).join(' ') || username || 'Student';
+  const displayName = [firstName, lastName].filter(Boolean).join(' ') || normalizedUsername || 'Student';
 
   await db.transact([
     tx.students[studentId].update({
-      username: username || null,
+      username: normalizedUsername,
+      usernameLower,
       password,
       firstName,
       lastName,
@@ -354,7 +475,7 @@ export async function createStudent(
 
   return {
     id: studentId,
-    username: username || null,
+    username: normalizedUsername,
     firstName,
     lastName,
     displayName,
@@ -398,11 +519,13 @@ export async function bulkCreateStudents(db, students) {
     const track = resolveTrack({ programme: student.programme, yearGroup: student.yearGroup });
     const defaultLessons = getDefaultLessonsForTrack(track);
     const initialStage = defaultLessons.length > 0 ? defaultLessons[0] : 'A1.1.1';
-    const displayName = [student.firstName, student.lastName].filter(Boolean).join(' ') || student.username || 'Student';
+    const { username: normalizedUsername, usernameLower } = prepareUsername(student.username);
+    const displayName = [student.firstName, student.lastName].filter(Boolean).join(' ') || normalizedUsername || 'Student';
 
     mutations.push(
       tx.students[studentId].update({
-        username: student.username || null,
+        username: normalizedUsername,
+        usernameLower,
         password: student.password,
         firstName: student.firstName,
         lastName: student.lastName,
@@ -432,7 +555,7 @@ export async function bulkCreateStudents(db, students) {
 
     created.push({
       id: studentId,
-      username: student.username || null,
+      username: normalizedUsername,
       firstName: student.firstName,
       lastName: student.lastName,
       displayName,
@@ -611,16 +734,7 @@ export async function getTeacherDashboardData(db, { teacherId, username }) {
 }
 
 export async function getStudentDashboardData(db, username) {
-  const studentResult = await db.query({
-    students: {
-      $: {
-        where: { username },
-        limit: 1,
-      },
-    },
-  });
-
-  const student = sanitizeStudent(studentResult?.students?.[0]);
+  const student = await findStudentByUsername(db, username);
   if (!student || student.status === 'archived') {
     return { student: null, class: null, unlocks: [], progress: [] };
   }

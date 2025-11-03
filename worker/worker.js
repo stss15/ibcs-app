@@ -125,6 +125,7 @@ async function handleLogin(request, env) {
   const { role = 'teacher', username = '', password = '' } = await readJson(request);
   const normalizedRole = String(role).toLowerCase();
   const normalizedUsername = String(username).trim();
+  const normalizedUsernameLower = normalizedUsername.toLowerCase();
   const normalizedPassword = String(password);
 
   if (!normalizedUsername || !normalizedPassword) {
@@ -158,10 +159,12 @@ async function handleLogin(request, env) {
     return json({ error: 'Account archived' }, 403);
   }
 
+  const canonicalUsername = userDoc.username ?? normalizedUsername;
+  const tokenUsername = (canonicalUsername || normalizedUsernameLower).toLowerCase();
   const token = await createToken(
     {
       sub: userDoc.id,
-      username: normalizedUsername,
+      username: tokenUsername,
       role: normalizedRole,
     },
     env.TOKEN_SECRET,

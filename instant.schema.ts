@@ -5,6 +5,7 @@ const _schema = i.graph(
   {
     admins: i.entity({
       username: i.string().unique().indexed(),
+      usernameLower: i.string().optional().unique().indexed(),
       password: i.string(),
       firstName: i.string(),
       lastName: i.string(),
@@ -13,6 +14,7 @@ const _schema = i.graph(
     }),
     teachers: i.entity({
       username: i.string().unique().indexed(),
+      usernameLower: i.string().optional().unique().indexed(),
       password: i.string(),
       firstName: i.string(),
       lastName: i.string(),
@@ -31,6 +33,7 @@ const _schema = i.graph(
     }),
     students: i.entity({
       username: i.string().optional().indexed(),
+      usernameLower: i.string().optional().unique().indexed(),
       password: i.string(),
       firstName: i.string(),
       lastName: i.string(),
