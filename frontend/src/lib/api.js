@@ -115,6 +115,13 @@ export async function getClassPacing(token, classId) {
   });
 }
 
+export async function getTeacherStudentDashboard(token, studentId) {
+  return request(`/teacher/students/${encodeURIComponent(studentId)}/dashboard`, {
+    method: "GET",
+    token,
+  });
+}
+
 export async function updateClassPacing(token, classId, payload) {
   return request(`/teacher/classes/${encodeURIComponent(classId)}/pacing`, {
     method: "POST",

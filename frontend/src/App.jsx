@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import LoginPage from "./pages/LoginPage.jsx";
 import TeacherDashboardPage from "./pages/TeacherDashboardPage.jsx";
+import TeacherStudentDashboardPage from "./pages/TeacherStudentDashboardPage.jsx";
 import StudentDashboardPage from "./pages/StudentDashboardPage.jsx";
 import CurriculumMapPage from "./pages/CurriculumMapPage.jsx";
 import IBCurriculumPage from "./pages/IBCurriculumPage.jsx";
@@ -64,6 +65,14 @@ function App() {
           element={
             <RequireAuth roles={["teacher"]}>
               <TeacherDashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/dashboard/student/:studentId"
+          element={
+            <RequireAuth roles={["teacher"]}>
+              <TeacherStudentDashboardPage />
             </RequireAuth>
           }
         />

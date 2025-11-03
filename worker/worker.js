@@ -12,6 +12,7 @@ import {
   createStudentUnlock,
   getTeacherDashboardData,
   getStudentDashboardData,
+  getStudentDashboardDataById,
   listTeachers,
   archiveTeacher,
   archiveClass,
@@ -103,6 +104,14 @@ export default {
 
       if (pathname === '/teacher/students/archive' && request.method === 'POST') {
         return requireRole(request, env, 'teacher', handleArchiveStudent);
+      }
+
+      if (pathname.startsWith('/teacher/students/') && pathname.endsWith('/dashboard') && request.method === 'GET') {
+        const segments = pathname.split('/');
+        const studentId = decodeURIComponent(segments[3] || '');
+        return requireRole(request, env, 'teacher', (req, env, session) =>
+          handleTeacherStudentDashboard(req, env, session, studentId),
+        );
       }
 
       if (pathname.startsWith('/teacher/classes/') && pathname.endsWith('/pacing')) {
@@ -748,6 +757,31 @@ async function handleArchiveStudent(request, env, session) {
 
   const archivedAt = await archiveStudent(db, studentId);
   return json({ archivedAt });
+}
+
+async function handleTeacherStudentDashboard(_request, env, session, studentId) {
+  if (!studentId) {
+    return json({ error: 'Student id required' }, 400);
+  }
+
+  const db = getDb(env);
+  const teacher = await findTeacherByUsername(db, session.username);
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const data = await getStudentDashboardDataById(db, studentId);
+  if (!data.student || data.student.teacherId !== teacher.id) {
+    return json({ error: 'Student not found' }, 404);
+  }
+
+  return json({
+    student: formatSessionUser('student', data.student),
+    class: data.class,
+    unlocks: data.unlocks,
+    progress: data.progress,
+    classPacing: data.classPacing ?? null,
+  });
 }
 
 async function handleClassExport(_request, env, session, classId) {

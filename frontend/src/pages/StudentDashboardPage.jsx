@@ -72,6 +72,513 @@ function describeTrack(track) {
   return "Curriculum";
 }
 
+function createUnitSummaries(manifest, lessonStatusMap, track) {
+  if (!manifest) return [];
+  const units = manifest.units ?? [];
+  return units
+    .filter((unit) => !unit.availableFor || unit.availableFor.includes(track))
+    .map((unit) => {
+      const chapters = unit.subtopics ?? [];
+      const lessons = [];
+      chapters.forEach((chapter) => {
+        (chapter.lessons ?? [])
+          .filter((lesson) => !lesson.availableFor || lesson.availableFor.includes(track))
+          .forEach((lesson) => {
+            lessons.push({
+              id: lesson.id,
+              title: lesson.title,
+              chapterTitle: chapter.title,
+              status: lessonStatusMap.get(lesson.id) ?? "locked",
+            });
+          });
+      });
+      const total = lessons.length || 1;
+      const completed = lessons.filter((lesson) => isLessonComplete(lesson.status)).length;
+      const unlocked = lessons.filter((lesson) => lesson.status !== "locked").length;
+      const inProgress = Math.max(unlocked - completed, 0);
+      const locked = Math.max(total - unlocked, 0);
+      const percentage = Math.round((completed / total) * 100);
+      const nextLesson = lessons.find((lesson) => !isLessonComplete(lesson.status));
+      return {
+        id: unit.id,
+        title: unit.title,
+        description: unit.summary,
+        completedCount: completed,
+        unlockedCount: unlocked,
+        inProgressCount: inProgress,
+        lockedCount: locked,
+        totalCount: total,
+        percentage,
+        lessons,
+        nextLesson,
+      };
+    });
+}
+
+function createRecentUpdates(progress) {
+  const sorted = [...progress].sort((a, b) => {
+    const aTime = a?.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const bTime = b?.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return bTime - aTime;
+  });
+  return sorted.slice(0, 6).map((record, index) => ({
+    ...record,
+    id: record.id ?? `${record.lessonSlug ?? "lesson"}-${index}`,
+  }));
+}
+
+function StudentDashboardLayout({
+  studentName,
+  track,
+  trackDisplayName,
+  curriculumLink,
+  curriculumCtaLabel,
+  overallPercentage,
+  totalCompleted,
+  totalLessons,
+  classInfo,
+  activeStage,
+  pointerLesson,
+  pointerUpdatedAt,
+  gamification,
+  unitSummaries,
+  interactiveAttemptSections,
+  recentUpdates,
+  status,
+  isIBTrack,
+}) {
+  const [selectedUnitId, setSelectedUnitId] = useState(() => unitSummaries[0]?.id ?? null);
+  const [activeInsightId, setActiveInsightId] = useState(() => interactiveAttemptSections[0]?.id ?? null);
+
+  useEffect(() => {
+    if (unitSummaries.length === 0) {
+      setSelectedUnitId(null);
+      return;
+    }
+    setSelectedUnitId((prev) => {
+      if (prev && unitSummaries.some((unit) => unit.id === prev)) {
+        return prev;
+      }
+      return unitSummaries[0].id;
+    });
+  }, [unitSummaries]);
+
+  useEffect(() => {
+    if (interactiveAttemptSections.length === 0) {
+      setActiveInsightId(null);
+      return;
+    }
+    setActiveInsightId((prev) => {
+      if (prev && interactiveAttemptSections.some((section) => section.id === prev)) {
+        return prev;
+      }
+      return interactiveAttemptSections[0].id;
+    });
+  }, [interactiveAttemptSections]);
+
+  const selectedUnit = useMemo(() => {
+    if (unitSummaries.length === 0) return null;
+    return unitSummaries.find((unit) => unit.id === selectedUnitId) ?? unitSummaries[0];
+  }, [unitSummaries, selectedUnitId]);
+
+  const breakdown = useMemo(() => {
+    if (!selectedUnit) return [];
+    return [
+      { id: "complete", label: "Complete", value: selectedUnit.completedCount },
+      { id: "progress", label: "In progress", value: selectedUnit.inProgressCount },
+      { id: "locked", label: "Locked", value: selectedUnit.lockedCount },
+    ];
+  }, [selectedUnit]);
+
+  const breakdownTotal = breakdown.reduce((sum, item) => sum + item.value, 0);
+
+  const activeInsight = useMemo(() => {
+    if (interactiveAttemptSections.length === 0) return null;
+    return interactiveAttemptSections.find((section) => section.id === activeInsightId) ?? interactiveAttemptSections[0];
+  }, [interactiveAttemptSections, activeInsightId]);
+
+  const focusSegments = useMemo(() => {
+    if (!activeInsight?.rows?.length) return [];
+    const sorted = [...activeInsight.rows].sort((a, b) => {
+      const aRate = a.successRate ?? 0;
+      const bRate = b.successRate ?? 0;
+      return aRate - bRate;
+    });
+    return sorted.slice(0, 3);
+  }, [activeInsight]);
+
+  const nextLesson = selectedUnit?.nextLesson ?? null;
+  const nextLessonIsUnlocked = nextLesson && nextLesson.status !== "locked";
+
+  const gamificationLevel = typeof gamification?.level === "number" ? gamification.level : null;
+  const gamificationXp = typeof gamification?.xp === "number" ? gamification.xp : null;
+  const gamificationStreak = typeof gamification?.streak === "number" ? gamification.streak : null;
+  const computedAccuracy = useMemo(() => {
+    if (typeof gamification?.accuracy === "number") return gamification.accuracy;
+    if (typeof gamification?.totalAttempts === "number" && gamification.totalAttempts > 0 && typeof gamification?.totalCorrect === "number") {
+      return Math.round((gamification.totalCorrect / gamification.totalAttempts) * 100);
+    }
+    return null;
+  }, [gamification?.accuracy, gamification?.totalAttempts, gamification?.totalCorrect]);
+
+  return (
+    <div className="page-shell page-shell--fluid student-dashboard">
+      <section className="student-dashboard__hero">
+        <div className="student-dashboard__hero-left">
+          <span className="student-dashboard__eyebrow">Student dashboard</span>
+          <h1>Hi {studentName}</h1>
+          <p className="muted">
+            Your progress through the {trackDisplayName} pathway lives here. Lessons unlock as your teacher enables
+            them—use this page to see what to tackle next.
+          </p>
+
+          <div className="student-dashboard__meta-grid">
+            <div className="student-dashboard__meta-card">
+              <span>Track</span>
+              <strong>{track.toUpperCase()}</strong>
+            </div>
+            <div className="student-dashboard__meta-card">
+              <span>Active stage</span>
+              <strong>{activeStage ?? "Pending"}</strong>
+            </div>
+            <div className="student-dashboard__meta-card">
+              <span>Overall progress</span>
+              <strong>{overallPercentage}%</strong>
+            </div>
+          </div>
+
+          <div className="student-dashboard__class-card">
+            <div>
+              <span className="student-dashboard__class-eyebrow">Your class</span>
+              <strong>{classInfo ? classInfo.className : "Awaiting placement"}</strong>
+              <p className="muted">
+                {classInfo
+                  ? classInfo.description || classInfo.yearGroup || "Connected to your class"
+                  : "Your teacher will place you into a class soon."}
+              </p>
+              {track.startsWith("ks3") && (
+                <div className="student-dashboard__pointer">
+                  <span>Teacher pointer</span>
+                  <strong>
+                    {pointerLesson
+                      ? `${pointerLesson.unitTitle}: ${pointerLesson.title}`
+                      : "Your teacher will set the next lesson in class"}
+                  </strong>
+                  {pointerUpdatedAt && <small>Updated {pointerUpdatedAt}</small>}
+                </div>
+              )}
+            </div>
+            {classInfo && (
+              <div className="student-dashboard__class-meta">
+                <span>Teacher · {classInfo.teacherUsername ?? "Assigned"}</span>
+                {classInfo.yearGroup && <span>Year group · {classInfo.yearGroup}</span>}
+                <span>Class code · {classInfo.id}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="student-dashboard__hero-actions">
+            <Link to={curriculumLink} className="pill">
+              {curriculumCtaLabel}
+            </Link>
+          </div>
+        </div>
+
+        <div className="student-dashboard__summary">
+          <CircularProgress
+            value={overallPercentage}
+            label="overall progress"
+            caption={`${totalCompleted}/${totalLessons} lessons`}
+          />
+          <div className="student-dashboard__stat-grid">
+            <div className="student-dashboard__stat-card">
+              <span>Level</span>
+              <strong>{gamificationLevel != null ? `Lv ${gamificationLevel}` : "—"}</strong>
+            </div>
+            <div className="student-dashboard__stat-card">
+              <span>XP</span>
+              <strong>{gamificationXp != null ? gamificationXp : "—"}</strong>
+            </div>
+            <div className="student-dashboard__stat-card">
+              <span>Streak</span>
+              <strong>{gamificationStreak != null ? gamificationStreak : "—"}</strong>
+            </div>
+            <div className="student-dashboard__stat-card">
+              <span>Accuracy</span>
+              <strong>{computedAccuracy != null ? `${computedAccuracy}%` : "—"}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {status && <p className={`status-banner status-banner--${status.tone}`}>{status.message}</p>}
+
+      <section className="student-dashboard__view">
+        <div className="student-dashboard__unit-column">
+          <header>
+            <h2>{trackDisplayName} units</h2>
+            <p className="muted">Select a unit to explore detailed progress.</p>
+          </header>
+          <div className="student-dashboard__unit-list">
+            {unitSummaries.map((unit) => (
+              <button
+                key={unit.id}
+                type="button"
+                className={`student-dashboard__unit-button ${selectedUnit?.id === unit.id ? "is-active" : ""}`}
+                onClick={() => setSelectedUnitId(unit.id)}
+              >
+                <div>
+                  <strong>{unit.title}</strong>
+                  {unit.description && <span>{unit.description}</span>}
+                </div>
+                <div className="student-dashboard__mini-summary">
+                  <span>{unit.percentage}%</span>
+                  <div className="student-dashboard__mini-bar">
+                    <div style={{ width: `${Math.min(unit.percentage, 100)}%` }} />
+                  </div>
+                  <small>
+                    {unit.completedCount} / {unit.totalCount} lessons
+                  </small>
+                </div>
+              </button>
+            ))}
+            {unitSummaries.length === 0 && (
+              <p className="student-dashboard__empty muted">
+                Units will appear once your teacher shares the curriculum with your class.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="student-dashboard__detail-panel">
+          {selectedUnit ? (
+            <>
+              <header className="student-dashboard__unit-header">
+                <div>
+                  <span className="student-dashboard__eyebrow">Selected unit</span>
+                  <h2>{selectedUnit.title}</h2>
+                  {selectedUnit.description && <p className="muted">{selectedUnit.description}</p>}
+                </div>
+                <div className="student-dashboard__unit-score">
+                  <strong>{selectedUnit.percentage}%</strong>
+                  <span>complete</span>
+                  <small>
+                    {selectedUnit.completedCount} of {selectedUnit.totalCount} lessons
+                  </small>
+                </div>
+              </header>
+
+              <div className="student-dashboard__unit-breakdown">
+                <div className="student-dashboard__stack-bar" role="presentation">
+                  {breakdown
+                    .filter((item) => item.value > 0 && breakdownTotal > 0)
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className={`student-dashboard__stack-bar-segment student-dashboard__stack-bar-segment--${item.id}`}
+                        style={{ width: `${(item.value / breakdownTotal) * 100}%` }}
+                        aria-label={`${item.label}: ${item.value}`}
+                      />
+                    ))}
+                </div>
+                <div className="student-dashboard__unit-counters">
+                  <span>{selectedUnit.completedCount} complete</span>
+                  <span>{selectedUnit.inProgressCount} in progress</span>
+                  <span>{selectedUnit.lockedCount} locked</span>
+                </div>
+              </div>
+
+              <div className="student-dashboard__unit-actions">
+                <Link
+                  to={
+                    isIBTrack
+                      ? { pathname: "/curriculum/ib", state: { focusUnit: selectedUnit.id } }
+                      : curriculumLink
+                  }
+                  className="pill"
+                >
+                  View unit map
+                </Link>
+                {nextLesson && (
+                  nextLessonIsUnlocked ? (
+                    <Link to={`/lesson/${nextLesson.id}`} className="pill pill--action">
+                      Resume {nextLesson.title}
+                    </Link>
+                  ) : (
+                    <span className="student-dashboard__hint">
+                      Next lesson ({nextLesson.title}) unlocks soon.
+                    </span>
+                  )
+                )}
+              </div>
+
+              <div className="student-dashboard__lesson-list">
+                <div className="student-dashboard__list-header">
+                  <h3>Lesson timeline</h3>
+                  <span className="muted">
+                    Ordered sequence · first {Math.min(selectedUnit.lessons.length, 6)} shown
+                  </span>
+                </div>
+                <ul className="student-dashboard__lesson-items">
+                  {selectedUnit.lessons.slice(0, 6).map((lesson) => (
+                    <li key={lesson.id}>
+                      <div>
+                        <strong>{lesson.title}</strong>
+                        {lesson.chapterTitle && <span className="muted">{lesson.chapterTitle}</span>}
+                      </div>
+                      <span className={`student-tag student-tag--${normaliseStatus(lesson.status)}`}>
+                        {progressLabel(lesson.status)}
+                      </span>
+                    </li>
+                  ))}
+                  {selectedUnit.lessons.length === 0 && (
+                    <li className="muted">Lessons will appear once unlocked.</li>
+                  )}
+                </ul>
+              </div>
+
+              <div className="student-dashboard__insights">
+                <div className="student-dashboard__insight-panel">
+                  <div className="student-dashboard__insight-header">
+                    <h3>Checkpoint insights</h3>
+                    <div className="student-dashboard__tabs" role="tablist">
+                      {interactiveAttemptSections.map((section) => (
+                        <button
+                          key={section.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={activeInsight?.id === section.id}
+                          className={`student-dashboard__tab ${activeInsight?.id === section.id ? "is-active" : ""}`}
+                          onClick={() => setActiveInsightId(section.id)}
+                        >
+                          {section.id}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {activeInsight && activeInsight.rows.length > 0 ? (
+                    <>
+                      <div className="student-dashboard__focus">
+                        <span className="muted">Segments to revisit</span>
+                        <ul>
+                          {focusSegments.map((row, index) => (
+                            <li key={`${row.segment}-${index}`}>
+                              <strong>{row.segment}</strong>
+                              <span>{row.successRate != null ? `${row.successRate}%` : "—"} success</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="student-dashboard__insight-scroll">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Stage</th>
+                              <th>Activity</th>
+                              <th>Attempts</th>
+                              <th>Correct</th>
+                              <th>Success</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {activeInsight.rows.slice(0, 12).map((row, index) => (
+                              <tr key={`${activeInsight.id}-${row.segment}-${index}`}>
+                                <td>{row.stage}</td>
+                                <td>{row.segment}</td>
+                                <td>{row.attempts}</td>
+                                <td>{row.correct}</td>
+                                <td>{row.successRate != null ? `${row.successRate}%` : "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="student-dashboard__empty muted">
+                      Complete interactive checkpoints to unlock insights.
+                    </p>
+                  )}
+                </div>
+
+                <div className="student-dashboard__timeline">
+                  <div className="student-dashboard__list-header">
+                    <h3>Recent updates</h3>
+                    <span className="muted">Latest lessons · most recent first</span>
+                  </div>
+                  <ul>
+                    {recentUpdates.length === 0 && (
+                      <li className="muted">No lessons tracked yet — start with your first unlocked topic.</li>
+                    )}
+                    {recentUpdates.map((record) => (
+                      <li key={record.id}>
+                        <div>
+                          <strong>{record.lessonSlug}</strong>
+                          <span className={`student-tag student-tag--${normaliseStatus(record.status)}`}>
+                            {progressLabel(record.status)}
+                          </span>
+                        </div>
+                        <span className="muted">
+                          Updated {record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "recently"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="student-dashboard__empty-panel">
+              <h2>No unit selected yet</h2>
+              <p className="muted">Once your teacher unlocks lessons, you will see progress here.</p>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function CircularProgress({ value, size = 148, strokeWidth = 12, label, caption }) {
+  const numericValue = Number.isFinite(value) ? value : 0;
+  const clamped = Math.max(0, Math.min(100, Math.round(numericValue)));
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (clamped / 100) * circumference;
+
+  return (
+    <div className="circular-progress" style={{ width: size, height: size }}>
+      <svg className="circular-progress__svg" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          className="circular-progress__track"
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        <circle
+          className="circular-progress__indicator"
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          fill="none"
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="circular-progress__label">
+        <strong>{clamped}%</strong>
+        {label && <span>{label}</span>}
+        {caption && <small>{caption}</small>}
+      </div>
+    </div>
+  );
+}
+
 function StudentDashboardPage() {
   const { session, ready } = useSession();
   const navigate = useNavigate();
@@ -176,249 +683,85 @@ function StudentDashboardPage() {
   const totalAttempts = gamificationState.totalAttempts ?? 0;
   const totalCorrect = gamificationState.totalCorrect ?? 0;
 
-  const unitSummaries = useMemo(() => {
-    if (!manifest) return [];
-    const units = manifest.units ?? [];
-    return units
-      .filter((unit) => !unit.availableFor || unit.availableFor.includes(track))
-      .map((unit) => {
-        const chapters = unit.subtopics ?? [];
-        const lessons = [];
-        chapters.forEach((chapter) => {
-          (chapter.lessons ?? [])
-            .filter((lesson) => !lesson.availableFor || lesson.availableFor.includes(track))
-            .forEach((lesson) => {
-              lessons.push({
-                id: lesson.id,
-                title: lesson.title,
-                status: lessonStatusMap.get(lesson.id) ?? "locked",
-              });
-            });
-        });
-        const total = lessons.length || 1;
-        const completed = lessons.filter((lesson) => isLessonComplete(lesson.status)).length;
-        const unlocked = lessons.filter((lesson) => lesson.status !== "locked").length;
-        const percentage = Math.round((completed / total) * 100);
-        return {
-          id: unit.id,
-          title: unit.title,
-          description: unit.summary,
-          completed,
-          unlocked,
-          total,
-          percentage,
-          firstChapter: chapters[0]?.id ?? null,
-        };
-      });
-  }, [manifest, lessonStatusMap, track]);
+  const unitSummaries = useMemo(
+    () => createUnitSummaries(manifest, lessonStatusMap, track),
+    [manifest, lessonStatusMap, track],
+  );
 
-  const totalLessons = unitSummaries.reduce((sum, unit) => sum + unit.total, 0);
-  const totalCompleted = unitSummaries.reduce((sum, unit) => sum + unit.completed, 0);
+  const totalLessons = unitSummaries.reduce((sum, unit) => sum + unit.totalCount, 0);
+  const totalCompleted = unitSummaries.reduce((sum, unit) => sum + unit.completedCount, 0);
   const overallPercentage = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0;
+
+  const recentUpdates = useMemo(() => createRecentUpdates(progress), [progress]);
 
   const b1AttemptRows = useMemo(() => buildAttemptRows(b1Unit, b1Insights), [b1Insights]);
   const b2AttemptRows = useMemo(() => buildAttemptRows(b2Unit, b2Insights), [b2Insights]);
-  const interactiveAttemptSections = [
-    {
-      id: "B1",
-      title: "B1 computational thinking insights",
-      description:
-        "Attempts recorded for interactive checkpoints in the B1 learning path. Data saves locally on this device.",
-      rows: b1AttemptRows,
-    },
-    {
-      id: "B2",
-      title: "B2 programming fundamentals insights",
-      description:
-        "Attempts recorded for checkpoints, activities, and Python playground runs in the B2 learning path.",
-      rows: b2AttemptRows,
-    },
-  ].filter((section) => section.rows.length > 0);
+  const interactiveAttemptSections = useMemo(
+    () =>
+      [
+        {
+          id: "B1",
+          title: "B1 computational thinking insights",
+          description:
+            "Attempts recorded for interactive checkpoints in the B1 learning path. Data saves locally on this device.",
+          rows: b1AttemptRows,
+        },
+        {
+          id: "B2",
+          title: "B2 programming fundamentals insights",
+          description:
+            "Attempts recorded for checkpoints, activities, and Python playground runs in the B2 learning path.",
+          rows: b2AttemptRows,
+        },
+      ].filter((section) => section.rows.length > 0),
+    [b1AttemptRows, b2AttemptRows],
+  );
 
-  if (!ready) {
-    return null;
-  }
+  const gamificationSummary = {
+    level,
+    xp: totalXp,
+    streak,
+    totalAttempts,
+    totalCorrect,
+    accuracy: totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : null,
+  };
 
-  if (!studentSession) {
+  if (!ready || !studentSession) {
     return null;
   }
 
   return (
-    <div className="page-shell page-shell--fluid student-page">
-      <section className="page-hero student-hero">
-        <div className="page-hero__content">
-          <span className="page-hero__eyebrow">Student dashboard</span>
-          <h1 className="page-hero__title">Hi {studentSession.displayName ?? studentSession.username}</h1>
-          <p className="muted">Your progress through the {trackDisplayName} pathway lives here. Lessons unlock as your teacher enables them—use this page to see what to tackle next.</p>
-        </div>
-        <div className="student-overview">
-          <div>
-            <span className="student-overview__label">Track</span>
-            <strong>{track.toUpperCase()}</strong>
-          </div>
-          <div>
-            <span className="student-overview__label">Active stage</span>
-            <strong>{student?.activeStage ?? "Pending"}</strong>
-          </div>
-          <div>
-            <span className="student-overview__label">Overall progress</span>
-            <strong>{overallPercentage}%</strong>
-          </div>
-        {track.startsWith("ks3") && (
-          <div>
-            <span className="student-overview__label">Teacher pointer</span>
-            <strong>
-              {pointerLesson
-                ? `${pointerLesson.unitTitle}: ${pointerLesson.title}`
-                : "Your teacher will unlock lessons in class"}
-            </strong>
-            {pointerUpdatedAt && <span className="muted">Updated {pointerUpdatedAt}</span>}
-          </div>
-        )}
-          <div>
-            <span className="student-overview__label">Level</span>
-            <strong>Lv {level}</strong>
-          </div>
-          <div>
-            <span className="student-overview__label">XP</span>
-            <strong>{totalXp}</strong>
-          </div>
-          <div>
-            <span className="student-overview__label">Streak</span>
-            <strong>{streak}</strong>
-          </div>
-          <div>
-            <span className="student-overview__label">Accuracy</span>
-            <strong>
-              {totalAttempts > 0 ? `${Math.round((totalCorrect / totalAttempts) * 100)}%` : "—"}
-            </strong>
-          </div>
-        </div>
-      </section>
-
-      {status && <p className={`status-banner status-banner--${status.tone}`}>{status.message}</p>}
-
-      <section className="student-class-card">
-        <header>
-          <h2>Your class</h2>
-          <Link to={curriculumLink} className="pill">
-            {curriculumCtaLabel}
-          </Link>
-        </header>
-        {classInfo ? (
-          <div className="student-class-card__body">
-            <div>
-              <strong>{classInfo.className}</strong>
-              {classInfo.description && <p className="muted">{classInfo.description}</p>}
-            </div>
-            <div className="student-class-card__meta">
-              <span>Teacher · {classInfo.teacherUsername ?? "Assigned"}</span>
-              {classInfo.yearGroup && <span>Year group · {classInfo.yearGroup}</span>}
-              <span>Class code · {classInfo.id}</span>
-            </div>
-          </div>
-        ) : (
-          <p className="muted">Your teacher will place you into a class soon.</p>
-        )}
-      </section>
-
-      <section className="student-units">
-        <header>
-          <div>
-            <h2>{trackDisplayName} units</h2>
-            <p className="muted">Work through each unit in turn. Completed lessons fill the bar for that topic.</p>
-          </div>
-          <span className="student-unit-progress">{totalCompleted} of {totalLessons} lessons complete</span>
-        </header>
-        <div className="student-unit-grid">
-          {unitSummaries.map((unit) => (
-            <article key={unit.id} className="student-unit-card">
-              <header>
-                <h3>{unit.title}</h3>
-                <span>{unit.percentage}%</span>
-              </header>
-              {unit.description && <p className="muted">{unit.description}</p>}
-              <div className="student-progress-bar" aria-label={`${unit.completed} of ${unit.total} lessons complete`}>
-                <div style={{ width: `${Math.min(unit.percentage, 100)}%` }} />
-              </div>
-              <div className="student-unit-stats">
-                <span>{unit.completed} complete</span>
-                <span>{unit.unlocked} unlocked</span>
-                <span>{unit.total} total</span>
-              </div>
-              <Link
-                to={
-                  isIBTrack
-                    ? { pathname: "/curriculum/ib", state: { focusUnit: unit.id } }
-                    : curriculumLink
-                }
-              >
-                Continue unit
-              </Link>
-            </article>
-          ))}
-          {unitSummaries.length === 0 && (
-            <p className="muted">Units will appear once your teacher shares the curriculum with your class.</p>
-          )}
-        </div>
-      </section>
-
-      {interactiveAttemptSections.map((section) => (
-        <section className="student-insights" key={section.id}>
-          <header className="student-insights__header">
-            <h2>{section.title}</h2>
-            <p className="muted">{section.description}</p>
-          </header>
-          <div className="student-insights__table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Stage</th>
-                  <th>Activity</th>
-                  <th>Attempts</th>
-                  <th>Correct</th>
-                  <th>Success rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {section.rows.map((row, index) => (
-                  <tr key={`${section.id}-${row.segment}-${index}`}>
-                    <td>{row.stage}</td>
-                    <td>{row.segment}</td>
-                    <td>{row.attempts}</td>
-                    <td>{row.correct}</td>
-                    <td>{row.successRate != null ? `${row.successRate}%` : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
-
-      <section className="student-lesson-feed">
-        <header>
-          <h2>Recent lesson updates</h2>
-        </header>
-        <ul>
-          {progress.length === 0 && <li className="muted">No lessons tracked yet — start with your first unlocked topic.</li>}
-          {progress.map((record) => (
-            <li key={record.id}>
-              <div>
-                <strong>{record.lessonSlug}</strong>
-                <span className={`student-tag student-tag--${normaliseStatus(record.status)}`}>
-                  {progressLabel(record.status)}
-                </span>
-              </div>
-              <span className="muted">
-                Updated {record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "recently"}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
+    <StudentDashboardLayout
+      studentName={studentSession.displayName ?? studentSession.username}
+      track={track}
+      trackDisplayName={trackDisplayName}
+      curriculumLink={curriculumLink}
+      curriculumCtaLabel={curriculumCtaLabel}
+      overallPercentage={overallPercentage}
+      totalCompleted={totalCompleted}
+      totalLessons={totalLessons}
+      classInfo={classInfo}
+      activeStage={student?.activeStage ?? null}
+      pointerLesson={pointerLesson}
+      pointerUpdatedAt={pointerUpdatedAt}
+      gamification={gamificationSummary}
+      unitSummaries={unitSummaries}
+      interactiveAttemptSections={interactiveAttemptSections}
+      recentUpdates={recentUpdates}
+      status={status}
+      isIBTrack={isIBTrack}
+    />
   );
 }
 
 export default StudentDashboardPage;
+export {
+  StudentDashboardLayout,
+  createUnitSummaries,
+  createRecentUpdates,
+  normaliseStatus,
+  progressLabel,
+  isLessonComplete,
+  buildAttemptRows,
+  describeTrack,
+};

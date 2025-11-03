@@ -762,8 +762,7 @@ export async function getTeacherDashboardData(db, { teacherId, username }) {
   };
 }
 
-export async function getStudentDashboardData(db, username) {
-  const student = await findStudentByUsername(db, username);
+async function buildStudentDashboardPayload(db, student) {
   if (!student || student.status === 'archived') {
     return { student: null, class: null, unlocks: [], progress: [] };
   }
@@ -797,24 +796,47 @@ export async function getStudentDashboardData(db, username) {
   const unlocks = (unlocksResult?.studentUnlocks ?? []).map(sanitizeStudentUnlock);
   const progress = (progressResult?.studentProgress ?? []).map(sanitizeStudentProgress);
 
+  const classPacing = await (async () => {
+    if (!student?.classId) return null;
+    const pacingResult = await db.query({
+      classPacing: {
+        $: {
+          where: { classId: student.classId },
+          limit: 1,
+        },
+      },
+    });
+    return sanitizeClassPacing(pacingResult?.classPacing?.[0]);
+  })();
+
   return {
     student,
     class: classDoc,
     unlocks,
     progress,
-    classPacing: await (async () => {
-      if (!student?.classId) return null;
-      const pacingResult = await db.query({
-        classPacing: {
-          $: {
-            where: { classId: student.classId },
-            limit: 1,
-          },
-        },
-      });
-      return sanitizeClassPacing(pacingResult?.classPacing?.[0]);
-    })(),
+    classPacing,
   };
+}
+
+export async function getStudentDashboardData(db, username) {
+  const student = await findStudentByUsername(db, username);
+  return buildStudentDashboardPayload(db, student);
+}
+
+export async function getStudentDashboardDataById(db, studentId) {
+  if (!studentId) {
+    return { student: null, class: null, unlocks: [], progress: [] };
+  }
+  const result = await db.query({
+    students: {
+      $: {
+        where: { id: studentId },
+        limit: 1,
+      },
+    },
+  });
+  const student = sanitizeStudent(result?.students?.[0]);
+  return buildStudentDashboardPayload(db, student);
 }
 
 export async function getClassPacing(db, classId) {

@@ -304,10 +304,10 @@ function TeacherDashboardPage() {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
-  const [expandedClassId, setExpandedClassId] = useState(null);
+  const [selectedClassId, setSelectedClassId] = useState(null);
 
   const [classModalOpen, setClassModalOpen] = useState(false);
-  const [studentModal, setStudentModal] = useState(null); // { class: object, mode: "single" | "bulk" }
+  const [studentModal, setStudentModal] = useState(null);
   const [pacingState, setPacingState] = useState({});
 
   const [classForm, setClassForm] = useState(() => {
@@ -387,6 +387,19 @@ function TeacherDashboardPage() {
     return [...list].sort((a, b) => a.className.localeCompare(b.className));
   }, [dashboard?.classes]);
 
+  useEffect(() => {
+    if (classes.length === 0) {
+      setSelectedClassId(null);
+      return;
+    }
+    setSelectedClassId((prev) => {
+      if (prev && classes.some((clazz) => clazz.id === prev)) {
+        return prev;
+      }
+      return classes[0].id;
+    });
+  }, [classes]);
+
   const studentsByClass = useMemo(() => {
     const map = new Map();
     for (const student of dashboard?.students ?? []) {
@@ -395,8 +408,8 @@ function TeacherDashboardPage() {
       }
       map.get(student.classId).push(student);
     }
-    for (const value of map.values()) {
-      value.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    for (const list of map.values()) {
+      list.sort((a, b) => a.displayName.localeCompare(b.displayName));
     }
     return map;
   }, [dashboard?.students]);
@@ -410,6 +423,17 @@ function TeacherDashboardPage() {
     }
     return map;
   }, [dashboard?.classPacing]);
+
+  const selectedClass = useMemo(() => classes.find((clazz) => clazz.id === selectedClassId) ?? null, [classes, selectedClassId]);
+  const selectedStudents = useMemo(
+    () => (selectedClass ? studentsByClass.get(selectedClass.id) ?? [] : []),
+    [selectedClass, studentsByClass],
+  );
+  const selectedClassMeta = useMemo(() => (selectedClass ? parseClassMeta(selectedClass) : null), [selectedClass]);
+  const selectedPacing = selectedClass ? classPacingMap.get(selectedClass.id) ?? null : null;
+  const selectedPacingLesson = selectedPacing ? getYear7LessonById(selectedPacing.lessonId) : null;
+  const selectedPacingInfo = selectedClass ? pacingState[selectedClass.id] : null;
+  const isYear7Selected = selectedClass ? isYear7ClassRecord(selectedClass) : false;
 
   const clearPacingMessage = useCallback((classId) => {
     setTimeout(() => {
@@ -536,7 +560,8 @@ function TeacherDashboardPage() {
   const summaryCards = [
     { label: "Active classes", value: classes.length },
     { label: "Active students", value: overallStudentCount },
-    { label: "Available lessons", value: availableLessons },
+    { label: "Formative complete", value: formativeComplete },
+    { label: "Summative complete", value: summativeComplete },
   ];
 
   const studentLookup = useMemo(() => {
@@ -567,11 +592,11 @@ function TeacherDashboardPage() {
         };
         summaries.set(record.studentId, summary);
       }
-      const status = (record.status || "locked").toLowerCase();
-      if (status === "locked") summary.locked += 1;
-      else if (status === "available") summary.available += 1;
-      else if (status === "formative-complete") summary.formativeComplete += 1;
-      else if (status === "summative-complete") summary.summativeComplete += 1;
+      const statusValue = (record.status || "locked").toLowerCase();
+      if (statusValue === "locked") summary.locked += 1;
+      else if (statusValue === "available") summary.available += 1;
+      else if (statusValue === "formative-complete") summary.formativeComplete += 1;
+      else if (statusValue === "summative-complete") summary.summativeComplete += 1;
       const updatedAt = record.updatedAt ? new Date(record.updatedAt).getTime() : null;
       if (updatedAt && (!summary.lastUpdated || updatedAt > summary.lastUpdated)) {
         summary.lastUpdated = updatedAt;
@@ -669,8 +694,10 @@ function TeacherDashboardPage() {
       });
       setStatus({ tone: "success", message: `Class ${className} created.` });
       setClassModalOpen(false);
-      setExpandedClassId(created?.id ?? null);
       await loadDashboard();
+      if (created?.id) {
+        setSelectedClassId(created.id);
+      }
     } catch (error) {
       setStatus({ tone: "error", message: error.message || "Unable to create class." });
     }
@@ -825,6 +852,47 @@ function TeacherDashboardPage() {
     }
   };
 
+  const handleCopyCredentials = useCallback(async () => {
+    if (!selectedClass || selectedStudents.length === 0) {
+      setStatus({ tone: "error", message: "Select a class with stored passwords first." });
+      return;
+    }
+
+    const lines = selectedStudents
+      .map((student) => {
+        const password = resolveStoredPassword(passwordLookup, student);
+        if (!password || password.startsWith("$2")) return null;
+        const name = student.displayName ?? `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim() || student.username || "Student";
+        const username = student.username ?? "—";
+        return `${name}\t${username}\t${password}`;
+      })
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      setStatus({ tone: "error", message: "No stored passwords available for this class." });
+      return;
+    }
+
+    const header = "Name\tUsername\tPassword";
+    const payload = [header, ...lines].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(payload);
+      setStatus({ tone: "success", message: "Credentials copied to clipboard." });
+    } catch (error) {
+      console.warn("Clipboard copy failed", error);
+      setStatus({ tone: "error", message: "Unable to copy credentials. Try again." });
+    }
+  }, [passwordLookup, selectedClass, selectedStudents]);
+
+  const handleViewStudentDashboard = useCallback(
+    (studentId) => {
+      if (!studentId) return;
+      navigate(`/dashboard/student/${encodeURIComponent(studentId)}`);
+    },
+    [navigate],
+  );
+
   if (!ready) {
     return null;
   }
@@ -834,258 +902,284 @@ function TeacherDashboardPage() {
   }
 
   return (
-    <div className="page-shell page-shell--fluid teacher-page">
-      <section className="page-hero teacher-hero">
-        <div className="page-hero__content">
-          <span className="page-hero__eyebrow">Teacher dashboard</span>
-          <h1 className="page-hero__title">Good day, {teacherName}</h1>
+    <div className="page-shell page-shell--fluid teacher-dashboard">
+      <section className="teacher-dashboard__hero">
+        <div className="teacher-dashboard__hero-left">
+          <span className="teacher-dashboard__eyebrow">Teacher dashboard</span>
+          <h1>Good day, {teacherName}</h1>
           <p className="muted">
             Manage classes, enrol students, and monitor lesson unlocks. Everything updates in real time as your classes
             progress through the IB Computer Science curriculum.
           </p>
-        </div>
-        <div className="page-hero__actions">
-          <button type="button" className="pill pill--action" onClick={openClassModal}>
-            Add class
-          </button>
-          {classes.length > 0 && (
+          <div className="teacher-dashboard__hero-actions">
+            <button type="button" className="pill pill--action" onClick={openClassModal}>
+              Add class
+            </button>
             <button
               type="button"
               className="pill"
-              onClick={() => openStudentModal(classes[0], "single")}
+              onClick={() => (selectedClass ? openStudentModal(selectedClass, "single") : classes[0] && openStudentModal(classes[0], "single"))}
+              disabled={classes.length === 0}
             >
               Add student
             </button>
-          )}
+          </div>
         </div>
-      </section>
-
-      <section className="teacher-summary">
-        {summaryCards.map((card) => (
-          <article key={card.label}>
-            <span className="teacher-summary__value">{card.value}</span>
-            <span className="teacher-summary__label">{card.label}</span>
-          </article>
-        ))}
+        <div className="teacher-dashboard__summary-grid">
+          {summaryCards.map((card) => (
+            <article key={card.label}>
+              <span className="teacher-dashboard__summary-value">{card.value}</span>
+              <span className="teacher-dashboard__summary-label">{card.label}</span>
+            </article>
+          ))}
+        </div>
       </section>
 
       {status && <p className={`status-banner status-banner--${status.tone}`}>{status.message}</p>}
 
-      <section className="teacher-class-list">
-        {classes.length === 0 && !loading && (
-          <div className="teacher-empty">
-            <p>No classes yet. Start by adding a class so you can enrol students.</p>
+      <section className="teacher-dashboard__workspace">
+        <aside className="teacher-dashboard__class-panel">
+          <header>
+            <h2>Your classes</h2>
+            <p className="muted">Select a class to review students, pacing, and quick actions.</p>
+          </header>
+          <div className="teacher-dashboard__class-list">
+            {classes.length === 0 && !loading && <p className="muted">Create your first class to get started.</p>}
+            {classes.map((clazz) => {
+              const students = studentsByClass.get(clazz.id) ?? [];
+              const meta = parseClassMeta(clazz);
+              const isSelected = selectedClassId === clazz.id;
+              return (
+                <button
+                  key={clazz.id}
+                  type="button"
+                  className={`teacher-dashboard__class-button ${isSelected ? "is-active" : ""}`}
+                  onClick={() => setSelectedClassId(clazz.id)}
+                >
+                  <div>
+                    <strong>{clazz.className}</strong>
+                    <span>{meta.yearGroupLabel}</span>
+                  </div>
+                  <div className="teacher-dashboard__class-meta-chip">
+                    <span>{students.length} students</span>
+                    <span>{meta.cohort}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        )}
+        </aside>
 
-        {classes.map((clazz) => {
-          const classMeta = parseClassMeta(clazz);
-          const students = studentsByClass.get(clazz.id) ?? [];
-          const isOpen = expandedClassId === clazz.id;
-          const pacingRecord = classPacingMap.get(clazz.id);
-          const pacingLesson = pacingRecord ? getYear7LessonById(pacingRecord.lessonId) : null;
-          const pacingInfo = pacingState[clazz.id];
-          const isYear7 = isYear7ClassRecord(clazz);
-          return (
-            <article key={clazz.id} className={`teacher-class ${isOpen ? "is-open" : ""}`}>
-              <header
-                className="teacher-class__header"
-                onClick={() => setExpandedClassId(isOpen ? null : clazz.id)}
-              >
+        <div className="teacher-dashboard__class-detail">
+          {selectedClass ? (
+            <>
+              <header className="teacher-dashboard__class-header">
                 <div>
-                  <h2>{clazz.className}</h2>
-                  <p className="muted">{classMeta.yearGroupLabel}</p>
+                  <span className="teacher-dashboard__eyebrow">Selected class</span>
+                  <h2>{selectedClass.className}</h2>
+                  {selectedClassMeta && <p className="muted">{selectedClassMeta.yearGroupLabel}</p>}
                 </div>
-                <div className="teacher-class__meta">
-                  <span>{students.length} students</span>
-                  <span>{classMeta.cohort}</span>
+                <div className="teacher-dashboard__class-actions">
+                  <button type="button" className="pill" onClick={() => openStudentModal(selectedClass, "single")}>
+                    Add student
+                  </button>
+                  <button type="button" className="pill" onClick={() => openStudentModal(selectedClass, "bulk")}>
+                    Import CSV
+                  </button>
+                  <button type="button" className="pill" onClick={handleCopyCredentials}>
+                    Copy credentials
+                  </button>
                 </div>
               </header>
 
-              {isOpen && (
-                <div className="teacher-class__body">
-                  {isYear7 && (
-                    <div className="teacher-class__pacing">
-                      <div className="teacher-class__pacing-summary">
-                        <span className="teacher-class__pacing-label">Teacher-paced pointer</span>
-                        <strong>
-                          {pacingLesson
-                            ? `${pacingLesson.unitTitle}: ${pacingLesson.title}`
-                            : "Not started yet"}
-                        </strong>
-                        {pacingRecord?.updatedAt && (
-                          <span className="muted">
-                            Updated {new Date(pacingRecord.updatedAt).toLocaleString()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="teacher-class__pacing-actions">
-                        <button
-                          type="button"
-                          className="pill"
-                          onClick={() => handleOpenYear7Map(clazz.id)}
-                        >
-                          Open Year 7 map
-                        </button>
-                        <button
-                          type="button"
-                          className="pill pill--action"
-                          onClick={() => handleStartPacing(clazz.id)}
-                          disabled={Boolean(pacingInfo?.busy)}
-                        >
-                          {pacingRecord ? "Restart at lesson 1" : "Start teaching"}
-                        </button>
-                        <button
-                          type="button"
-                          className="pill"
-                          onClick={() => handleAdvancePacing(clazz.id)}
-                          disabled={Boolean(pacingInfo?.busy) || !pacingRecord}
-                        >
-                          Advance lesson
-                        </button>
-                      </div>
-                      {pacingInfo?.message && (
-                        <p
-                          className={`teacher-pacing__status teacher-pacing__status--${pacingInfo.tone ?? "info"}`}
-                        >
-                          {pacingInfo.message}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  <div className="teacher-class__toolbar">
-                    <button type="button" className="pill" onClick={() => openStudentModal(clazz, "single")}>
-                      Add student
+              <div className="teacher-dashboard__class-summary">
+                <div>
+                  <span>Total students</span>
+                  <strong>{selectedStudents.length}</strong>
+                </div>
+                <div>
+                  <span>Available lessons</span>
+                  <strong>{availableLessons}</strong>
+                </div>
+                <div>
+                  <span>Locked lessons</span>
+                  <strong>{lockedLessons}</strong>
+                </div>
+              </div>
+
+              {isYear7Selected && (
+                <div className="teacher-dashboard__pacing">
+                  <div className="teacher-dashboard__pacing-summary">
+                    <span>Teacher-paced pointer</span>
+                    <strong>
+                      {selectedPacingLesson
+                        ? `${selectedPacingLesson.unitTitle}: ${selectedPacingLesson.title}`
+                        : "Pointer not set"}
+                    </strong>
+                    {selectedPacing?.updatedAt && (
+                      <small>Updated {new Date(selectedPacing.updatedAt).toLocaleString()}</small>
+                    )}
+                  </div>
+                  <div className="teacher-dashboard__pacing-actions">
+                    <button type="button" className="pill" onClick={() => handleOpenYear7Map(selectedClass.id)}>
+                      Open Year 7 map
                     </button>
-                    <button type="button" className="pill" onClick={() => openStudentModal(clazz, "bulk")}>
-                      Import CSV
+                    <button
+                      type="button"
+                      className="pill pill--action"
+                      onClick={() => handleStartPacing(selectedClass.id)}
+                      disabled={Boolean(selectedPacingInfo?.busy)}
+                    >
+                      {selectedPacing ? "Restart at lesson 1" : "Start teaching"}
+                    </button>
+                    <button
+                      type="button"
+                      className="pill"
+                      onClick={() => handleAdvancePacing(selectedClass.id)}
+                      disabled={Boolean(selectedPacingInfo?.busy) || !selectedPacing}
+                    >
+                      Advance lesson
                     </button>
                   </div>
-
-                  <table className="teacher-class__table">
-                    <thead>
-                      <tr>
-                        <th>Student</th>
-                        <th>Username</th>
-                        <th>Password</th>
-                        <th>Track</th>
-                        <th>Stage</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {students.map((student) => {
-                        const storedPassword = resolveStoredPassword(passwordLookup, student) ?? student.password ?? "";
-                        const isHash = typeof storedPassword === "string" && storedPassword.startsWith("$2b$");
-                        const plainPassword = isHash ? "" : storedPassword;
-                        const isVisible = visiblePasswords[student.id];
-                        return (
-                          <tr key={student.id}>
-                            <td>
-                              <span className="teacher-student-name">{student.displayName}</span>
-                              <span className="teacher-student-sub">Joined {new Date(student.createdAt).toLocaleDateString()}</span>
-                            </td>
-                            <td>{student.username || "—"}</td>
-                            <td>
-                              {plainPassword ? (
-                                <button
-                                  type="button"
-                                  className="teacher-password"
-                                  onClick={() => togglePassword(student.id)}
-                                >
-                                  {isVisible ? plainPassword : "••••••"}
-                                </button>
-                              ) : (
-                                <span className="muted">Not available</span>
-                              )}
-                            </td>
-                            <td>{student.curriculumTrack ? student.curriculumTrack.toUpperCase() : "—"}</td>
-                            <td>{student.activeStage ? student.activeStage.toUpperCase() : "—"}</td>
-                            <td className="teacher-table-actions">
-                              <button
-                                type="button"
-                                className="button-outline button-outline--danger"
-                                onClick={() => handleArchive(student.id)}
-                              >
-                                Archive
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {students.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="muted">
-                            No students yet. Use “Add student” to enrol the first learner.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                  {selectedPacingInfo?.message && (
+                    <p className={`teacher-dashboard__pacing-status teacher-dashboard__pacing-status--${selectedPacingInfo.tone ?? "info"}`}>
+                      {selectedPacingInfo.message}
+                    </p>
+                  )}
                 </div>
               )}
-            </article>
-          );
-        })}
+
+              <div className="teacher-dashboard__table-wrapper">
+                <table className="teacher-dashboard__table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Username</th>
+                      <th>Password</th>
+                      <th>Track</th>
+                      <th>Stage</th>
+                      <th aria-label="Actions" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedStudents.map((student) => {
+                      const storedPassword = resolveStoredPassword(passwordLookup, student) ?? student.password ?? "";
+                      const isHash = typeof storedPassword === "string" && storedPassword.startsWith("$2");
+                      const plainPassword = isHash ? "" : storedPassword;
+                      const isVisible = visiblePasswords[student.id];
+                      return (
+                        <tr key={student.id} onClick={() => handleViewStudentDashboard(student.id)} className="teacher-dashboard__student-row">
+                          <td>
+                            <span className="teacher-student-name">{student.displayName}</span>
+                            <span className="teacher-student-sub">Joined {new Date(student.createdAt).toLocaleDateString()}</span>
+                          </td>
+                          <td>{student.username || "—"}</td>
+                          <td>
+                            {plainPassword ? (
+                              <button
+                                type="button"
+                                className="teacher-password"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  togglePassword(student.id);
+                                }}
+                              >
+                                {isVisible ? plainPassword : "••••••"}
+                              </button>
+                            ) : (
+                              <span className="muted">Not available</span>
+                            )}
+                          </td>
+                          <td>{student.curriculumTrack ? student.curriculumTrack.toUpperCase() : "—"}</td>
+                          <td>{student.activeStage ? student.activeStage.toUpperCase() : "—"}</td>
+                          <td className="teacher-dashboard__table-actions">
+                            <button
+                              type="button"
+                              className="button-outline button-outline--danger"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleArchive(student.id);
+                              }}
+                            >
+                              Archive
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {selectedStudents.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="muted">
+                          No students yet. Use “Add student” to enrol the first learner.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <div className="teacher-dashboard__empty-detail">
+              <h2>Select a class to view its roster</h2>
+              <p className="muted">Once you choose a class, you can copy credentials, manage pacing, and monitor progress.</p>
+            </div>
+          )}
+        </div>
       </section>
 
-      <section className="teacher-progress">
-        <article>
+      <section className="teacher-dashboard__insights">
+        <article className="teacher-dashboard__card">
           <h3>Lesson progress snapshot</h3>
-          <div className="teacher-progress__cards">
+          <div className="teacher-dashboard__metrics">
             <div>
-              <span className="teacher-summary__value">{summativeComplete}</span>
-              <span className="teacher-summary__label">Summative complete</span>
+              <span>{summativeComplete}</span>
+              <small>Summative complete</small>
             </div>
             <div>
-              <span className="teacher-summary__value">{formativeComplete}</span>
-              <span className="teacher-summary__label">Formative complete</span>
+              <span>{formativeComplete}</span>
+              <small>Formative complete</small>
             </div>
             <div>
-              <span className="teacher-summary__value">{availableLessons}</span>
-              <span className="teacher-summary__label">Available lessons</span>
+              <span>{availableLessons}</span>
+              <small>Available lessons</small>
             </div>
             <div>
-              <span className="teacher-summary__value">{lockedLessons}</span>
-              <span className="teacher-summary__label">Locked lessons</span>
+              <span>{lockedLessons}</span>
+              <small>Locked lessons</small>
             </div>
           </div>
         </article>
-      </section>
 
-      <section className="teacher-insights">
-        <article>
+        <article className="teacher-dashboard__card">
           <h3>Learners needing a nudge</h3>
-          <p className="muted">
-            Students with unlocked lessons but no formative completions yet. Check in to unblock them.
-          </p>
-          <ul>
+          <p className="muted">Students with unlocked lessons but no formative completions yet.</p>
+          <ul className="teacher-dashboard__list">
             {studentsNeedingAttention.length === 0 && <li className="muted">All caught up — no students flagged.</li>}
             {studentsNeedingAttention.map((student) => (
-              <li key={student.id} className="teacher-insights__row">
+              <li key={student.id}>
                 <div>
                   <strong>{student.displayName}</strong>
                   <span className="muted">{student.available} unlocked · 0 cleared checkpoints</span>
                 </div>
-                <span className="teacher-tag">Follow up</span>
+                <span className="teacher-dashboard__tag">Follow up</span>
               </li>
             ))}
           </ul>
         </article>
 
-        <article>
+        <article className="teacher-dashboard__card">
           <h3>Recent lesson updates</h3>
           <p className="muted">Latest activity across your classes (most recent first).</p>
-          <ul>
+          <ul className="teacher-dashboard__list teacher-dashboard__list--compact">
             {recentProgress.length === 0 && <li className="muted">No lesson activity recorded yet.</li>}
             {recentProgress.map((record) => (
-              <li key={record.id} className="teacher-insights__row">
+              <li key={record.id}>
                 <div>
                   <strong>{record.lesson}</strong>
                   <span className="muted">{record.studentName}</span>
                 </div>
-                <div className="teacher-insights__meta">
-                  <span className={`teacher-tag teacher-tag--${(record.status || "locked").toLowerCase()}`}>
+                <div className="teacher-dashboard__list-meta">
+                  <span className={`teacher-dashboard__tag teacher-dashboard__tag--${(record.status || "locked").toLowerCase()}`}>
                     {record.status ?? "locked"}
                   </span>
                   <span className="muted">
