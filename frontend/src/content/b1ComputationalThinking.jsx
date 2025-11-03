@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import flowchartBasics from "../assets/flowchart-basics.svg";
 
 const keyVocabulary = [
   {
@@ -451,6 +452,25 @@ export const b1Unit = {
           ],
         },
         {
+          type: "activity",
+          id: "ct-classify",
+          activityType: "classification",
+          heading: "Match Scenarios to CT Concepts",
+          instructions: "Drag each scenario to the computational thinking concept it best represents.",
+          categories: [
+            { id: "decomposition", title: "Decomposition", description: "Break a complex task into manageable parts." },
+            { id: "patterns", title: "Pattern recognition", description: "Spot repeated structures or behaviours." },
+            { id: "abstraction", title: "Abstraction", description: "Filter noise to focus on essentials." },
+            { id: "algorithm", title: "Algorithmic design", description: "Plan the exact steps to follow." },
+          ],
+          tokens: [
+            { id: "ct-token-1", label: "Group past exam questions by topic before revising.", answer: "patterns" },
+            { id: "ct-token-2", label: "Describe login validation as inputs, decisions, and outputs.", answer: "abstraction" },
+            { id: "ct-token-3", label: "Sketch the cafeteria ordering process as stations.", answer: "decomposition" },
+            { id: "ct-token-4", label: "Write pseudocode for a playlist shuffle routine.", answer: "algorithm" },
+          ],
+        },
+        {
           type: "micro-quiz",
           id: "ct-quiz",
           heading: "Concept Checkpoint",
@@ -515,6 +535,27 @@ export const b1Unit = {
           rows: flowchartSymbols.map((symbol) => [symbol.symbol, symbol.name, symbol.function]),
         },
         {
+          type: "activity",
+          id: "flow-labels",
+          activityType: "diagram-label",
+          heading: "Label the Flowchart",
+          instructions: "Drag each label onto the numbered hotspot to identify the correct ISO symbol.",
+          image: {
+            src: flowchartBasics,
+            alt: "Simplified flowchart with three numbered callouts.",
+          },
+          tokens: [
+            { id: "label-start", label: "Terminator (Start/End)" },
+            { id: "label-process", label: "Process" },
+            { id: "label-decision", label: "Decision" },
+          ],
+          targets: [
+            { id: "spot-start", x: 18.5, y: 9, answer: "label-start" },
+            { id: "spot-process", x: 56, y: 67, answer: "label-process" },
+            { id: "spot-decision", x: 81, y: 15, answer: "label-decision" },
+          ],
+        },
+        {
           type: "content",
           id: "flow-examples",
           heading: "Worked Examples",
@@ -541,6 +582,26 @@ export const b1Unit = {
             term: symbol.symbol,
             example: `${symbol.name} — ${symbol.function}`,
           })),
+        },
+        {
+          type: "activity",
+          id: "flow-gap",
+          activityType: "gap-fill",
+          heading: "Trace Table Sentence Builder",
+          instructions: "Drag each phrase into the sentence to explain what a trace table records.",
+          interaction: "drag",
+          text:
+            "A trace table captures the [[flow-state]] of variables, the [[flow-condition]] being evaluated, and the [[flow-output]] produced at each step.",
+          tokens: [
+            { id: "token-state", label: "current state" },
+            { id: "token-condition", label: "condition result" },
+            { id: "token-output", label: "output or action" },
+          ],
+          blanks: [
+            { id: "flow-state", answer: "token-state" },
+            { id: "flow-condition", answer: "token-condition" },
+            { id: "flow-output", answer: "token-output" },
+          ],
         },
         {
           type: "micro-quiz",

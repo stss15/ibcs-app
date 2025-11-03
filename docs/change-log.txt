@@ -16,3 +16,8 @@ Notes:
 - Updated Cloudflare Worker auth flows to issue lowercased token usernames and reuse the new fields during verification, bulk student creation, and dashboard lookups.
 - Refreshed the lesson detail page to surface migration status, link to active B1/B2 modules, and remove unfinished interactive placeholders.
 
+2025-11-05  Gamified interactions & layout polish
+----------------------------------------
+- Introduced new activity components (`classification`, `diagram-label`, `code-completion`, `spot-error`) and overhauled ordering/gap-fill interactions for drag-and-drop play.
+- Centered stage content with animated transitions, added scroll-to-top behaviour, and expanded attempt badges with per-attempt scoring details.
+- Updated B1/B2 unit content to use the richer activities, including diagram labelling, word-bank fill-ins, code completion, and exception handling classification.

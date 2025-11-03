@@ -16,12 +16,20 @@ Use this guide when creating or updating IB units inside `frontend/src/content/`
 | `table` | `ContentSegment` | Provide `columns` + `rows` arrays; keep tables narrow for mobile. |
 | `accordion` | `ContentSegment` | Ordered `items[{ title, body }]` for expandable deep dives. |
 | `micro-quiz` | `MicroQuizSegment` | 1–3 instant-check questions; supply `rationale` for wrong answers. |
-| `activity` | `ActivitySegment` | `activityType` one of `matching`, `ordering`, `gap-fill`, `drag-drop`, `image-hotspot`, `planner`. |
+| `activity` | `ActivitySegment` | `activityType` one of `matching`, `ordering`, `gap-fill`, `drag-drop`, `image-hotspot`, `planner`, `classification`, `diagram-label`, `code-completion`, `spot-error`. |
 | `python-playground` | `PythonPlaygroundSegment` | Requires `starterCode`; optional `snippets`, `fillTasks`. |
 | `demo` | `DemoSegment` | References a reusable entry in the `lessonDemos` InstantDB collection. |
 | `reflection` | `ReflectionSegment` | Prompt students; result saves locally and in analytics. |
 
 Add new segment types by adding a component under `components/segments/` and extending the switch in `GamifiedModulePage.jsx`.
+
+**New activity types**
+
+- `classification` – Drag labels into named categories. Provide `categories[{ id, title, description? }]` and `tokens[{ id, label, answer }]`.
+- `diagram-label` – Overlay drop zones on an image. Supply `image{ src, alt }`, `tokens[]`, and `targets[{ id, x, y, answer }]` where `x`/`y` are percentages.
+- `code-completion` – Insert short-form code inputs inside preformatted blocks. Define `code` with `[[placeholderId]]` markers and `placeholders[{ id, answer, label?, hint?, trimInput?, caseSensitive? }]`.
+- `spot-error` – Present a list of statements where learners select the incorrect ones. Each `item` should include `{ id, text, isError, explanation? }`.
+- `gap-fill` supports `interaction: "drag"` plus an optional `tokens[]` array to present a draggable word bank instead of dropdowns.
 
 ## 2. Gamification Layer
 - `useGamification()` exposes `awardXp`, `resetStreak`, and levels. Award XP only via `onAttempt` payloads.
@@ -51,5 +59,3 @@ Add new segment types by adding a component under `components/segments/` and ext
 - Supply rationales for all micro-quiz options; they power the feedback ribbons.
 - Use consistent terminology with the project overview doc and IB syllabus.
 - Test new activities manually; ensure the “Check answers” button locks the card after success.
-
-

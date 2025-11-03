@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useGamification } from "../context/GamificationContext.jsx";
 import { useSession } from "../hooks/useSession.js";
 import MicroQuizSegment from "./segments/MicroQuizSegment.jsx";
@@ -101,11 +101,18 @@ function reducer(state, action) {
     }
     case "attempt": {
       const { segmentId, success } = action.payload;
+      const correctCount = Number(action.payload?.correctCount ?? 0);
+      const totalCount = Number(action.payload?.totalCount ?? 0);
       const current = state.attempts?.[segmentId] ?? { count: 0, correct: 0 };
       const updated = {
         count: current.count + 1,
         correct: current.correct + (success ? 1 : 0),
         lastResult: success ? "correct" : "incorrect",
+        last: {
+          correct: correctCount,
+          total: totalCount,
+          success: Boolean(success),
+        },
         updatedAt: Date.now(),
       };
       return {
@@ -234,7 +241,16 @@ export default function GamifiedModulePage({ unit }) {
     const correctCount = Number(normalized.correctCount ?? (success ? normalized.totalCount ?? 0 : 0));
     const totalCount = Number(normalized.totalCount ?? normalized.correctCount ?? 0);
 
-    dispatch({ type: "attempt", payload: { segmentId, success } });
+    const resolvedTotal = Number.isFinite(totalCount) && totalCount > 0 ? totalCount : correctCount;
+    dispatch({
+      type: "attempt",
+      payload: {
+        segmentId,
+        success,
+        correctCount,
+        totalCount: resolvedTotal,
+      },
+    });
 
     if (success) {
       if (correctCount > 0) {
@@ -244,7 +260,7 @@ export default function GamifiedModulePage({ unit }) {
         awardXp({
           xpGained: xpAward,
           correct: correctCount,
-          attempts: totalCount || correctCount,
+          attempts: resolvedTotal || correctCount,
           spriteUnlocks: normalized.spriteUnlocks,
         });
         setResultModal({
@@ -252,7 +268,7 @@ export default function GamifiedModulePage({ unit }) {
           success: true,
           xpAward,
           correctCount,
-          totalCount: totalCount || correctCount,
+          totalCount: resolvedTotal,
         });
       } else if (normalized.onAdvance) {
         // Allow silent success without XP (e.g. informational segments)
@@ -264,7 +280,7 @@ export default function GamifiedModulePage({ unit }) {
         ...normalized,
         success: false,
         correctCount,
-        totalCount,
+        totalCount: resolvedTotal,
         xpAward: 0,
       });
     }
@@ -396,10 +412,22 @@ function StagePlayer({ unit, stage, progress, onAdvance, onReflectionSave, onPla
   const stageProgress = stageId ? progress.stages?.[stageId] ?? {} : {};
   const initialIndex = Math.min(stageProgress.segmentIndex ?? 0, segments.length);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const stageContainerRef = useRef(null);
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
   }, [initialIndex, stageId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const node = stageContainerRef.current;
+    if (!node) return;
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    node.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [stageId, currentIndex]);
 
   if (!stage) {
     return (
@@ -433,7 +461,7 @@ function StagePlayer({ unit, stage, progress, onAdvance, onReflectionSave, onPla
   }
 
   return (
-    <div className="gamified-stage">
+    <div className="gamified-stage" ref={stageContainerRef}>
       <header className="gamified-stage-header">
         <div>
           <span className="gamified-stage-eyebrow">Stage {stage.id}</span>

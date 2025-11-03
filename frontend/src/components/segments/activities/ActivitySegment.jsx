@@ -4,6 +4,10 @@ import DragDropActivity from "./DragDropActivity.jsx";
 import GapFillActivity from "./GapFillActivity.jsx";
 import ImageHotspotActivity from "./ImageHotspotActivity.jsx";
 import PlannerActivity from "./PlannerActivity.jsx";
+import ClassificationActivity from "./ClassificationActivity.jsx";
+import CodeCompletionActivity from "./CodeCompletionActivity.jsx";
+import SpotTheErrorActivity from "./SpotTheErrorActivity.jsx";
+import DiagramLabelActivity from "./DiagramLabelActivity.jsx";
 
 export default function ActivitySegment(props) {
   const { segment } = props;
@@ -20,6 +24,14 @@ export default function ActivitySegment(props) {
       return <ImageHotspotActivity {...props} />;
     case "planner":
       return <PlannerActivity {...props} />;
+    case "classification":
+      return <ClassificationActivity {...props} />;
+    case "code-completion":
+      return <CodeCompletionActivity {...props} />;
+    case "spot-error":
+      return <SpotTheErrorActivity {...props} />;
+    case "diagram-label":
+      return <DiagramLabelActivity {...props} />;
     default:
       return (
         <article className="gamified-card">
@@ -31,4 +43,3 @@ export default function ActivitySegment(props) {
       );
   }
 }
-

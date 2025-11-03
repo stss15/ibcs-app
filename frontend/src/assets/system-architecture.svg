@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <defs>
+    <linearGradient id="systemBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fbff"/>
+      <stop offset="100%" stop-color="#e5f2ff"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="6" refY="6" orient="auto-start-reverse">
+      <path d="M2 2 L10 6 L2 10 z" fill="#0f2f75"/>
+    </marker>
+  </defs>
+  <rect width="640" height="360" fill="url(#systemBg)"/>
+
+  <g font-family="Inter, 'Segoe UI', sans-serif" font-size="16" fill="#0f2f75" stroke="#0f2f75" stroke-width="2">
+    <rect x="70" y="150" width="120" height="80" rx="18" fill="#fff"/>
+    <text x="130" y="190" text-anchor="middle" dominant-baseline="middle">Input</text>
+
+    <rect x="260" y="90" width="120" height="80" rx="18" fill="#fff"/>
+    <text x="320" y="130" text-anchor="middle" dominant-baseline="middle">CPU</text>
+
+    <rect x="260" y="210" width="120" height="80" rx="18" fill="#fff"/>
+    <text x="320" y="250" text-anchor="middle" dominant-baseline="middle">Cache</text>
+
+    <rect x="430" y="150" width="140" height="80" rx="18" fill="#fff"/>
+    <text x="500" y="190" text-anchor="middle" dominant-baseline="middle">Output</text>
+
+    <line x1="190" y1="190" x2="260" y2="130" marker-end="url(#arrow)"/>
+    <line x1="190" y1="190" x2="260" y2="250" marker-end="url(#arrow)"/>
+    <line x1="380" y1="130" x2="430" y2="190" marker-end="url(#arrow)"/>
+    <line x1="380" y1="250" x2="430" y2="190" marker-end="url(#arrow)"/>
+  </g>
+
+  <g fill="#2f54eb" stroke="#2f54eb" stroke-width="2" font-family="Inter, 'Segoe UI', sans-serif" font-size="13">
+    <circle cx="200" cy="150" r="14" fill="#fff"/>
+    <text x="200" y="150" text-anchor="middle" dominant-baseline="middle">1</text>
+
+    <circle cx="320" cy="70" r="14" fill="#fff"/>
+    <text x="320" y="70" text-anchor="middle" dominant-baseline="middle">2</text>
+
+    <circle cx="320" cy="320" r="14" fill="#fff"/>
+    <text x="320" y="320" text-anchor="middle" dominant-baseline="middle">3</text>
+
+    <circle cx="540" cy="140" r="14" fill="#fff"/>
+    <text x="540" y="140" text-anchor="middle" dominant-baseline="middle">4</text>
+  </g>
+</svg>

@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import systemArchitecture from "../assets/system-architecture.svg";
 
 const keyVocabulary = [
   {
@@ -342,6 +343,29 @@ export const b2Unit = {
         },
         {
           type: "activity",
+          id: "b2-211-diagram",
+          activityType: "diagram-label",
+          heading: "Label the System Components",
+          instructions: "Drag each label onto the numbered hotspot to identify how data flows through a simple computer system.",
+          image: {
+            src: systemArchitecture,
+            alt: "Diagram showing input, CPU, cache and output blocks.",
+          },
+          tokens: [
+            { id: "sys-input", label: "Input devices" },
+            { id: "sys-cpu", label: "CPU" },
+            { id: "sys-cache", label: "Cache / RAM" },
+            { id: "sys-output", label: "Output devices" },
+          ],
+          targets: [
+            { id: "spot-input", x: 31, y: 42, answer: "sys-input" },
+            { id: "spot-cpu", x: 50, y: 20, answer: "sys-cpu" },
+            { id: "spot-cache", x: 50, y: 89, answer: "sys-cache" },
+            { id: "spot-output", x: 84, y: 39, answer: "sys-output" },
+          ],
+        },
+        {
+          type: "activity",
           id: "b2-211-matching",
           activityType: "matching",
           heading: "Match the Data Type to the Scenario",
@@ -376,6 +400,39 @@ export const b2Unit = {
             "Assign the value of variable B to variable A.",
             "Assign temp to variable B.",
             "Declare the temporary variable temp.",
+          ],
+        },
+        {
+          type: "activity",
+          id: "b2-211-spot",
+          activityType: "spot-error",
+          heading: "Spot the Type Errors",
+          instructions: "Select every line that would raise a type or casting issue.",
+          items: [
+            {
+              id: "b2-211-spot-1",
+              text: "double price = \"9.99\";",
+              isError: true,
+              explanation: "Assigning a string literal to a double requires parsing first.",
+            },
+            {
+              id: "b2-211-spot-2",
+              text: "int tickets = Integer.parseInt(input);",
+              isError: false,
+              explanation: "Parsing a numeric string into an int is valid when the string is numeric.",
+            },
+            {
+              id: "b2-211-spot-3",
+              text: "String total = 42 + \" students\";",
+              isError: false,
+              explanation: "Java concatenates primitive and string values in this context.",
+            },
+            {
+              id: "b2-211-spot-4",
+              text: "boolean done = 1;",
+              isError: true,
+              explanation: "Booleans expect true/false, not numeric literals.",
+            },
           ],
         },
         {
@@ -575,6 +632,26 @@ print("After swap:", a, b)
           ],
         },
         {
+          type: "activity",
+          id: "b2-212-gap",
+          activityType: "gap-fill",
+          heading: "Fill the String Toolkit",
+          instructions: "Drag the correct method into each blank to complete the description.",
+          interaction: "drag",
+          text:
+            "Use [[b2-212-gap-find]] to locate a substring, [[b2-212-gap-slice]] to extract it, and [[b2-212-gap-format]] to output a tidy message.",
+          tokens: [
+            { id: "token-find", label: "indexOf / find" },
+            { id: "token-slice", label: "substring / slice" },
+            { id: "token-format", label: "String.format / f-string" },
+          ],
+          blanks: [
+            { id: "b2-212-gap-find", answer: "token-find" },
+            { id: "b2-212-gap-slice", answer: "token-slice" },
+            { id: "b2-212-gap-format", answer: "token-format" },
+          ],
+        },
+        {
           type: "python-playground",
           id: "b2-212-playground",
           heading: "Try It: Build a Password Tag",
@@ -711,6 +788,40 @@ if len(base) < 4:
         },
         {
           type: "activity",
+          id: "b2-213-classify",
+          activityType: "classification",
+          heading: "Classify the Exception Strategy",
+          instructions: "Drag each scenario to the way you would respond to it.",
+          categories: [
+            { id: "prevent", title: "Prevent", description: "Validate or constrain inputs before they fail." },
+            { id: "handle", title: "Handle", description: "Catch the error and present a friendly message." },
+            { id: "recover", title: "Recover", description: "Retry or fallback to keep the program running." },
+          ],
+          tokens: [
+            {
+              id: "b2-213-token-1",
+              label: "Ensure age is 0-120 before converting user input.",
+              answer: "prevent",
+            },
+            {
+              id: "b2-213-token-2",
+              label: "Wrap file access in try/except and show a missing-file notice.",
+              answer: "handle",
+            },
+            {
+              id: "b2-213-token-3",
+              label: "Retry a network request with exponential back-off.",
+              answer: "recover",
+            },
+            {
+              id: "b2-213-token-4",
+              label: "Validate dropdown selections so invalid IDs never hit the server.",
+              answer: "prevent",
+            },
+          ],
+        },
+        {
+          type: "activity",
           id: "b2-213-ordering",
           activityType: "ordering",
           heading: "Ordering: Handle Input Safely",
@@ -824,6 +935,33 @@ if len(base) < 4:
             {
               term: "Suspect off-by-one error in nested loop",
               example: "Use step execution to watch the loop counters progress together.",
+            },
+          ],
+        },
+        {
+          type: "activity",
+          id: "b2-214-completion",
+          activityType: "code-completion",
+          heading: "Code Completion: Debug Logger",
+          instructions: "Fill in the missing expressions to finish the debugging helper.",
+          prompt: (
+            <Fragment>
+              <p>Use deliberate logging to capture what your loop is doing at runtime.</p>
+            </Fragment>
+          ),
+          code: `for index, value in enumerate(numbers):\n    [[b2-214-gap-log]]\n    if [[b2-214-gap-condition]]:\n        print("Found the value", value)\n`,
+          placeholders: [
+            {
+              id: "b2-214-gap-log",
+              answer: "print(f\"Checking index {index}: {value}\")",
+              label: "Log statement",
+              hint: "Print both the index and current value.",
+            },
+            {
+              id: "b2-214-gap-condition",
+              answer: "value == target",
+              label: "Condition",
+              hint: "Compare the current value to the target before printing.",
             },
           ],
         },
@@ -1025,4 +1163,3 @@ print("Sorted:", sorted_values)
 };
 
 export default b2Unit;
-
