@@ -27,7 +27,7 @@ Use this document as the operational script whenever the AI agent contributes to
 - Log noteworthy updates in `change-log.txt` (date, summary, files impacted).
 
 ## 4. Quality Checks
-- Run `npm run lint` (frontend) and/or `npm test` when applicable.
+- Run `npm run lint` (frontend) before committing changes.
 - For deployment changes, dry run `./fix-and-deploy.sh` or the affected stage when feasible.
 - Highlight verification steps in the PR/summary so maintainers can reproduce.
 

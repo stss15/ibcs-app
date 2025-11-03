@@ -22,7 +22,7 @@ frontend/src/
 ## Gamified Module Core
 - `components/GamifiedModulePage.jsx` is the shared engine for unit pages (B1, B2, future units).
 - Segments are rendered via `components/segments/**`, each matching a `type` in the unit schema (`content`, `list`, `table`, `accordion`, `micro-quiz`, `activity`, `python-playground`, `reflection`, `demo`).
-- Activities live in `components/segments/activities/` (matching, ordering, drag-drop, gap-fill, image-hotspot, planner). Use the utilities in `frontend/src/utils/array.js` where needed.
+- Activities live in `components/segments/activities/` with types: `matching`, `ordering`, `drag-drop`, `gap-fill`, `image-hotspot`, `planner`, `classification`, `diagram-label`, `code-completion`, `spot-error`. Use the utilities in `frontend/src/utils/array.js` where needed.
 - Gamification state (XP, streaks, sprites) is provided by `context/GamificationContext.jsx` and persisted to `localStorage`.
 
 ## CSS Conventions
@@ -41,7 +41,20 @@ frontend/src/
 
 ## Routing & Navigation
 - Protected routes use `RequireAuth` inside `App.jsx` with role filters (`teacher`, `student`, `admin`).
-- Module pages (`/curriculum/ib/b1`, `/curriculum/ib/b2`) simply inject their unit object into `GamifiedModulePage`.
+- Main routes:
+  - `/` - Landing/login page (redirects authenticated users to role-specific dashboards)
+  - `/dashboard` - Teacher dashboard (requires `teacher` role)
+  - `/dashboard/student/:studentId` - Teacher view of individual student
+  - `/student` - Student dashboard (requires `student` role)
+  - `/admin` - Admin dashboard (requires `admin` role)
+  - `/account` - Account management (any authenticated user)
+  - `/curriculum` - Curriculum map overview
+  - `/curriculum/ib` - IB curriculum overview
+  - `/curriculum/year7` - Year 7 curriculum map
+  - `/curriculum/ib/b1`, `/curriculum/ib/b2` - Gamified module pages (B1, B2)
+  - `/topic/:id` - Topic detail page
+  - `/lesson/:lessonId` - Lesson detail page
+- Module pages (`/curriculum/ib/b1`, `/curriculum/ib/b2`) inject their unit object into `GamifiedModulePage`.
 - Curriculum previews live in `pages/IBCurriculumPage.jsx` and should mirror new units by importing their `unit` object and passing it into preview cards.
 
 ## Manifest & Content Loading

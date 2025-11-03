@@ -157,24 +157,55 @@
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 0.85rem;
-  border-radius: 16px;
-  padding: 0.85rem 1rem;
-  border: 1px solid transparent;
-  background: rgba(37, 99, 235, 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  gap: 1rem;
+  border-radius: var(--radius-xl);
+  padding: 1rem 1.2rem;
+  border: 2px solid transparent;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(246, 248, 255, 0.9));
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.y7-lesson::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--cs-blue), var(--cs-blue-light));
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.y7-lesson:hover {
+  transform: translateX(4px);
+  box-shadow: var(--shadow-md);
+}
+
+.y7-lesson:hover::before {
+  opacity: 1;
 }
 
 .y7-lesson__index {
   flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
   display: grid;
   place-items: center;
-  font-weight: 700;
-  background: rgba(37, 99, 235, 0.2);
-  color: var(--cs-blue);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--cs-blue), var(--cs-blue-light));
+  color: white;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.y7-lesson:hover .y7-lesson__index {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: var(--shadow-md);
 }
 
 .y7-lesson__content {
@@ -202,40 +233,82 @@
 }
 
 .y7-lesson--complete {
-  border-color: rgba(34, 197, 94, 0.35);
-  background: rgba(34, 197, 94, 0.08);
+  border-color: var(--color-success);
+  background: linear-gradient(135deg, var(--color-success-light), rgba(255, 255, 255, 0.95));
+}
+
+.y7-lesson--complete::before {
+  opacity: 1;
+  background: linear-gradient(180deg, var(--color-success), var(--color-success-dark));
 }
 
 .y7-lesson--complete .y7-lesson__index {
-  background: rgba(34, 197, 94, 0.25);
-  color: #16603b;
+  background: linear-gradient(135deg, var(--color-success), var(--color-success-dark));
+  color: white;
+}
+
+.y7-lesson--complete .y7-lesson__index::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.2em;
 }
 
 .y7-lesson__status--complete {
-  background: rgba(34, 197, 94, 0.18);
-  color: #16603b;
+  background: var(--color-success-light);
+  color: var(--color-success-dark);
+  font-weight: 700;
 }
 
 .y7-lesson--current {
-  border-color: rgba(234, 179, 8, 0.45);
-  background: rgba(234, 179, 8, 0.12);
-  box-shadow: 0 16px 40px rgba(234, 179, 8, 0.18);
+  border-color: var(--color-warning);
+  background: linear-gradient(135deg, var(--color-warning-light), rgba(255, 255, 255, 0.95));
+  box-shadow: var(--shadow-lg), 0 0 30px rgba(245, 158, 11, 0.2);
   transform: translateY(-2px);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.y7-lesson--current::before {
+  opacity: 1;
+  background: linear-gradient(180deg, var(--color-warning), #d97706);
 }
 
 .y7-lesson--current .y7-lesson__index {
-  background: rgba(234, 179, 8, 0.35);
-  color: #92400e;
+  background: linear-gradient(135deg, var(--color-warning), #d97706);
+  color: white;
+  animation: bounce 1s ease-in-out infinite;
 }
 
 .y7-lesson__status--current {
-  background: rgba(234, 179, 8, 0.2);
+  background: var(--color-warning-light);
   color: #92400e;
+  font-weight: 700;
+}
+
+.y7-lesson__status--current::before {
+  content: '→ ';
 }
 
 .y7-lesson--locked {
-  opacity: 0.55;
+  opacity: 0.5;
   background: rgba(15, 23, 42, 0.03);
+  filter: grayscale(0.5);
+}
+
+.y7-lesson--locked .y7-lesson__index {
+  background: rgba(15, 23, 42, 0.2);
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.y7-lesson--locked .y7-lesson__index::after {
+  content: '🔒';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.9em;
 }
 
 .y7-lesson__status--locked {
@@ -244,14 +317,27 @@
 }
 
 .y7-lesson--ready {
-  border-color: rgba(59, 130, 246, 0.45);
-  background: rgba(59, 130, 246, 0.12);
-  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.18);
+  border-color: var(--cs-blue-light);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(255, 255, 255, 0.95));
+  box-shadow: var(--shadow-md), 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+.y7-lesson--ready::before {
+  opacity: 1;
+}
+
+.y7-lesson--ready .y7-lesson__index {
+  animation: wiggle 2s ease-in-out infinite;
 }
 
 .y7-lesson__status--ready {
-  background: rgba(59, 130, 246, 0.18);
-  color: rgba(12, 41, 124, 0.85);
+  background: var(--color-info-light);
+  color: var(--cs-blue);
+  font-weight: 700;
+}
+
+.y7-lesson__status--ready::before {
+  content: '⭐ ';
 }
 
 .y7-unit__toggle {

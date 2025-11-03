@@ -33,7 +33,8 @@ Add new segment types by adding a component under `components/segments/` and ext
 
 ## 2. Gamification Layer
 - `useGamification()` exposes `awardXp`, `resetStreak`, and levels. Award XP only via `onAttempt` payloads.
-- Base XP: `correctCount * 10`. Streak bonus: `+5` for every third consecutive success.
+- Base XP: `correctCount * 10`. Streak bonus: `+5` for every 3rd consecutive success (awarded at streaks 2, 5, 8, etc.). Formula: `Math.floor((streak + 1) / 3) * 5`.
+- Levels increase every 150 XP (level = `Math.floor(xp / 150) + 1`).
 - Always pass `totalCount` so dashboards can compute success rates.
 - Failure should call `resetStreak()` through `handleAttempt` (already handled in `GamifiedModulePage`).
 
@@ -49,8 +50,10 @@ Add new segment types by adding a component under `components/segments/` and ext
 9. Update `docs/change-log.txt` if you introduce a new segment type or adjust schema expectations.
 
 ## 4. Analytics & Dashboards
+- Progress is stored per-user in `localStorage` with namespace `ibcs.{unitId}.{username}.progress` (current version: 2).
 - Attempts are persisted under `progress.attempts[segmentId]` with `{ count, correct, lastResult, updatedAt }`.
 - Reflections and planner entries save into `progress.reflections` / `progress.planner` for student dashboards.
+- Assessment state includes `status`, `responses`, `marks`, `teacherNotes`, and `updatedAt`.
 - Teachers view aggregate data via `StudentDashboardPage.jsx` (local storage insights) and InstantDB for class-level data.
 
 ## 5. Best Practices

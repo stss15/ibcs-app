@@ -25,7 +25,7 @@ Use these commands when a specific stage fails and you want to retry it alone.
 cd worker
 npx wrangler deploy
 
-# Teacher seed
+# Teacher seed (optional: --first-name and --last-name; script will prompt or auto-fill from display-name)
 node worker/seed-teacher.js --username=MrStewart --password=SGSD2024! --display-name="Mr. Stewart"
 
 # Frontend build only

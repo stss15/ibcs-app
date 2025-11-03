@@ -51,25 +51,55 @@
 }
 
 .student-dashboard__meta-card {
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(12, 41, 124, 0.08);
-  border-radius: 18px;
-  padding: 0.85rem 1.1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(246, 248, 255, 0.9));
+  border: 2px solid rgba(12, 41, 124, 0.1);
+  border-radius: var(--radius-xl);
+  padding: 1rem 1.2rem;
   display: grid;
-  gap: 0.35rem;
-  box-shadow: 0 16px 36px rgba(12, 41, 124, 0.12);
+  gap: 0.4rem;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.student-dashboard__meta-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--cs-blue), var(--cs-blue-light));
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.student-dashboard__meta-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(12, 41, 124, 0.2);
+}
+
+.student-dashboard__meta-card:hover::before {
+  opacity: 1;
 }
 
 .student-dashboard__meta-card span {
   font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(12, 41, 124, 0.55);
+  letter-spacing: 0.15em;
+  color: rgba(12, 41, 124, 0.6);
 }
 
 .student-dashboard__meta-card strong {
-  font-size: 1.1rem;
-  color: var(--cs-blue);
+  font-size: 1.4rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--cs-blue), var(--cs-blue-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .student-dashboard__class-card {
@@ -143,6 +173,7 @@
   position: relative;
   display: grid;
   place-items: center;
+  filter: drop-shadow(0 4px 12px rgba(12, 41, 124, 0.15));
 }
 
 .circular-progress__svg {
@@ -150,12 +181,25 @@
 }
 
 .circular-progress__track {
-  stroke: rgba(12, 41, 124, 0.18);
+  stroke: rgba(12, 41, 124, 0.12);
+  stroke-width: 8;
 }
 
 .circular-progress__indicator {
-  stroke: var(--cs-blue);
-  transition: stroke-dashoffset 0.4s ease;
+  stroke: url(#progressGradient);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 0 8px rgba(50, 117, 255, 0.5));
+}
+
+@keyframes progressPulse {
+  0%, 100% {
+    stroke-width: 8;
+  }
+  50% {
+    stroke-width: 10;
+  }
 }
 
 .circular-progress__label {

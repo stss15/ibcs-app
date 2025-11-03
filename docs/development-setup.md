@@ -53,9 +53,19 @@ Artifacts are produced in `frontend/dist/` and mirrored to the project root duri
 - Seed initial teacher: `node worker/seed-teacher.js`
 
 ## InstantDB Collections (current model)
-- `teachers`: `{ username, password, createdAt }`
-- `classes`: `{ className, description?, teacherUsername, createdAt, id }`
-- `students`: `{ displayName, username?, password, classId, teacherUsername, createdAt }`
+The schema is defined in `instant.schema.ts`. Key collections:
+
+- **`admins`**: `{ username, usernameLower, password, firstName, lastName, displayName, createdAt }`
+- **`teachers`**: `{ username, usernameLower, password, firstName, lastName, displayName, createdAt, archivedAt? }`
+- **`classes`**: `{ className, description?, teacherId, teacherUsername, yearGroup?, createdAt, archivedAt? }`
+- **`students`**: `{ username?, usernameLower?, password, firstName, lastName, displayName, yearGroup, curriculumTrack, classId, teacherId, teacherUsername, activeStage, status, archivedAt?, createdAt }`
+- **`classUnlocks`**: `{ classId, teacherId, teacherUsername, stageKey, unlockedBy, unlockedAt }`
+- **`studentUnlocks`**: `{ studentId, classId, teacherId, teacherUsername, stageKey, unlockedBy, unlockedAt, scope, targetId? }`
+- **`lessons`**: `{ slug, title, stageKey, order, createdAt, isActive? }`
+- **`studentProgress`**: `{ studentId, lessonSlug, classId, teacherId, teacherUsername, status, formativeAttempts?, summativeScore?, updatedAt }`
+- **`classPacing`**: `{ classId, track?, unitId, lessonId, updatedAt, updatedBy? }`
+
+Note: Username lookups are case-insensitive via `usernameLower` fields. Students have curriculum tracks (e.g., `ib-sl`, `ib-hl`, `igcse`, `ks3`) and active stage pointers for pacing.
 
 ## Verification Checklist
 1. Open `https://stss15.github.io/ibcs-app/` (or your Pages URL).
