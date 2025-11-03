@@ -20,7 +20,8 @@ frontend/src/
 ```
 
 ## Gamified Module Core
-- `components/GamifiedModulePage.jsx` is the shared engine for unit pages (B1, B2, future units).
+- `components/GamifiedModulePage.jsx` is the shared engine for unit pages (B1, B2, future units). It now handles rendering for both students and teachers, conditionally applying gamification and progress-locking logic based on the user's role.
+- **Teacher Mode:** When a teacher is viewing a module, gamification is disabled, and all content is unlocked. Teachers also have access to a "Presentation Mode" for classroom delivery and "Set Pace" controls to manage student progression. For more details, see `docs/teacher-mode.md`.
 - Segments are rendered via `components/segments/**`, each matching a `type` in the unit schema (`content`, `list`, `table`, `accordion`, `micro-quiz`, `activity`, `python-playground`, `reflection`, `demo`).
 - Activities live in `components/segments/activities/` with types: `matching`, `ordering`, `drag-drop`, `gap-fill`, `image-hotspot`, `planner`, `classification`, `diagram-label`, `code-completion`, `spot-error`. Use the utilities in `frontend/src/utils/array.js` where needed.
 - Gamification state (XP, streaks, sprites) is provided by `context/GamificationContext.jsx` and persisted to `localStorage`.

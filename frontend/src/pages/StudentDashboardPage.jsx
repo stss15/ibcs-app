@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getStudentDashboard, getStudentGamification } from "../lib/api.js";
+import { getStudentDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import { useCurriculumManifest } from "../hooks/useCurriculumManifest.js";
-import { getYear7LessonById } from "../../../shared/year7Curriculum.js";
 import { useGamification } from "../context/GamificationContext.jsx";
-import { progressStorageKey, readUnitProgress } from "../lib/progressStorage.js";
+import { writeUnitProgress }from "../lib/progressStorage.js";
 import b1Unit from "../content/b1ComputationalThinking.jsx";
 import b2Unit from "../content/b2ProgrammingFundamentals.jsx";
+
 import "./StudentDashboardPage.css";
 
 function normaliseStatus(status) {
@@ -586,13 +586,9 @@ function StudentDashboardPage() {
   const studentSession = session?.user?.role === "student" ? session.user : null;
   const { state: gamificationState, updateFromRemote } = useGamification();
 
-  const [payload, setPayload] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
   const [status, setStatus] = useState(null);
-  const [b1Insights, setB1Insights] = useState(null);
-  const [b2Insights, setB2Insights] = useState(null);
-
-  const { manifest } = useCurriculumManifest();
-
+  
   useEffect(() => {
     if (!ready) return;
     if (!studentSession) {
@@ -606,39 +602,33 @@ function StudentDashboardPage() {
     (async () => {
       try {
         if (!token) throw new Error("Session expired");
-        const [dashboardResponse, gamificationResponse] = await Promise.all([
-          getStudentDashboard(token),
-          getStudentGamification(token).catch(() => null), // Don't fail if gamification doesn't exist yet
-        ]);
+        const response = await getStudentDashboard(token);
         if (!active) return;
-        setPayload(dashboardResponse);
         
-        // Merge backend gamification data if available (from dedicated endpoint or dashboard)
-        const backendGamification = gamificationResponse || dashboardResponse?.gamification;
+        setDashboardData(response);
+
+        const backendGamification = response?.gamification;
         if (backendGamification) {
-          const backendData = {
-            xp: backendGamification.xp ?? 0,
-            level: backendGamification.level ?? 1,
-            streak: backendGamification.streak ?? 0,
-            totalCorrect: backendGamification.totalCorrect ?? 0,
-            totalAttempts: backendGamification.totalAttempts ?? 0,
-            lastUpdated: backendGamification.lastUpdated ? new Date(backendGamification.lastUpdated).getTime() : null,
-          };
-          
-          // Check current local state
-          const currentLocalXp = gamificationState.xp ?? 0;
-          const currentLocalLastUpdated = gamificationState.lastUpdated ?? 0;
-          const backendLastUpdated = backendData.lastUpdated ?? 0;
-          
-          // Prefer backend data if it's newer or if local data is missing/zero
-          if (backendLastUpdated > currentLocalLastUpdated || currentLocalXp === 0) {
-            updateFromRemote(backendData);
-          } else if (currentLocalXp > 0 && backendData.xp < currentLocalXp) {
-            // Local data is newer/higher, keep it (it will sync back to backend automatically)
-            // This handles the case where user earned XP but hasn't synced yet
-          }
+          updateFromRemote(backendGamification);
         }
         
+        const studentProgress = response?.progress ?? [];
+        const progressMap = new Map();
+        studentProgress.forEach(p => {
+            if(p.unitId && p.progress) {
+                progressMap.set(p.unitId, p.progress);
+            }
+        });
+
+        const progressOwner = studentSession?.username?.toLowerCase() || "guest";
+
+        if(progressMap.has(b1Unit.id)) {
+            writeUnitProgress(b1Unit.id, progressOwner, progressMap.get(b1Unit.id));
+        }
+        if(progressMap.has(b2Unit.id)) {
+            writeUnitProgress(b2Unit.id, progressOwner, progressMap.get(b2Unit.id));
+        }
+
         setStatus(null);
       } catch (error) {
         if (!active) return;
@@ -646,144 +636,140 @@ function StudentDashboardPage() {
       }
     })();
 
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, studentSession, token, navigate]);
+    return () => { active = false; };
+  }, [ready, studentSession, token, navigate, updateFromRemote]);
 
-  const progressOwner = studentSession?.username?.toLowerCase() || "guest";
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const b1 = readUnitProgress(b1Unit.id, progressOwner).data;
-    const b2 = readUnitProgress(b2Unit.id, progressOwner).data;
-    setB1Insights(b1 || null);
-    setB2Insights(b2 || null);
-  }, [progressOwner]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const keysToWatch = [progressStorageKey(b1Unit.id, progressOwner), progressStorageKey(b2Unit.id, progressOwner)];
-    const handleStorage = (event) => {
-      if (!event.key || !keysToWatch.includes(event.key)) return;
-      const b1 = readUnitProgress(b1Unit.id, progressOwner).data;
-      const b2 = readUnitProgress(b2Unit.id, progressOwner).data;
-      setB1Insights(b1 || null);
-      setB2Insights(b2 || null);
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, [progressOwner]);
-
-  const student = payload?.student ?? null;
-  const classInfo = payload?.class ?? null;
-  const classPacing = payload?.classPacing ?? null;
-  const progress = useMemo(() => payload?.progress ?? [], [payload?.progress]);
-
-  const pointerLesson = useMemo(() => {
-    if (!classPacing?.lessonId) return null;
-    return getYear7LessonById(classPacing.lessonId);
-  }, [classPacing]);
-
-  const pointerUpdatedAt = useMemo(() => {
-    if (!classPacing?.updatedAt) return null;
-    const date = new Date(classPacing.updatedAt);
-    return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
-  }, [classPacing?.updatedAt]);
-
-  const lessonStatusMap = useMemo(() => {
-    const map = new Map();
-    for (const record of progress) {
-      map.set(record.lessonSlug, normaliseStatus(record.status));
-    }
-    return map;
-  }, [progress]);
-
-  const track = (student?.curriculumTrack ?? studentSession?.curriculumTrack ?? "ib-sl").toLowerCase();
-  const isIBTrack = track.startsWith("ib");
-  const trackDisplayName = describeTrack(track);
-  const curriculumLink = isIBTrack ? "/curriculum/ib" : "/curriculum";
-  const curriculumCtaLabel = isIBTrack ? "View curriculum map" : "Open curriculum overview";
-
-  const totalXp = gamificationState.xp ?? 0;
-  const level = gamificationState.level ?? 1;
-  const streak = gamificationState.streak ?? 0;
-  const totalAttempts = gamificationState.totalAttempts ?? 0;
-  const totalCorrect = gamificationState.totalCorrect ?? 0;
-
-  const unitSummaries = useMemo(
-    () => createUnitSummaries(manifest, lessonStatusMap, track),
-    [manifest, lessonStatusMap, track],
-  );
-
-  const totalLessons = unitSummaries.reduce((sum, unit) => sum + unit.totalCount, 0);
-  const totalCompleted = unitSummaries.reduce((sum, unit) => sum + unit.completedCount, 0);
-  const overallPercentage = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0;
-
-  const recentUpdates = useMemo(() => createRecentUpdates(progress), [progress]);
-
-  const b1AttemptRows = useMemo(() => buildAttemptRows(b1Unit, b1Insights), [b1Insights]);
-  const b2AttemptRows = useMemo(() => buildAttemptRows(b2Unit, b2Insights), [b2Insights]);
-  const interactiveAttemptSections = useMemo(
-    () =>
-      [
-        {
-          id: "B1",
-          title: "B1 computational thinking insights",
-          description:
-            "Attempts recorded for interactive checkpoints in the B1 learning path. Data saves locally on this device.",
-          rows: b1AttemptRows,
-        },
-        {
-          id: "B2",
-          title: "B2 programming fundamentals insights",
-          description:
-            "Attempts recorded for checkpoints, activities, and Python playground runs in the B2 learning path.",
-          rows: b2AttemptRows,
-        },
-      ].filter((section) => section.rows.length > 0),
-    [b1AttemptRows, b2AttemptRows],
-  );
-
-  const gamificationSummary = {
-    level,
-    xp: totalXp,
-    streak,
-    totalAttempts,
-    totalCorrect,
-    accuracy: totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : null,
-  };
-
-  if (!ready || !studentSession) {
-    return null;
+  // Render a loading state or the new dashboard layout
+  if (!dashboardData) {
+    return <div className="page-shell">Loading...</div>; // Or a more styled loader
   }
 
+  return <DashboardLayout data={dashboardData} />;
+}
+
+
+function DashboardLayout({ data }) {
+  const { student, class: classInfo, gamification, progress } = data;
+  const { state: gamificationState } = useGamification();
+  const { manifest } = useCurriculumManifest();
+  const [activeUnit, setActiveUnit] = useState(null);
+
+  const studentName = student?.displayName ?? "Student";
+  const track = student?.curriculumTrack ?? "ib-sl";
+
+  const unitSummaries = useMemo(() => {
+    if (!manifest) return [];
+    return (manifest.units ?? [])
+      .filter(unit => !unit.availableFor || unit.availableFor.includes(track))
+      .map(unit => {
+        const unitProgress = progress.find(p => p.unitId === unit.id);
+        const completedPercentage = unitProgress?.completedPercentage ?? 0;
+        return { ...unit, completedPercentage, lessons: unitProgress?.lessons ?? [] };
+      });
+  }, [manifest, track, progress]);
+
+  const overallPercentage = unitSummaries.length > 0
+    ? Math.round(unitSummaries.reduce((acc, u) => acc + u.completedPercentage, 0) / unitSummaries.length)
+    : 0;
+
+  const handleUnitClick = (unit) => {
+    setActiveUnit(unit);
+  };
+
+  const handleCloseDetail = () => {
+    setActiveUnit(null);
+  };
+
   return (
-    <StudentDashboardLayout
-      studentName={studentSession.displayName ?? studentSession.username}
-      track={track}
-      trackDisplayName={trackDisplayName}
-      curriculumLink={curriculumLink}
-      curriculumCtaLabel={curriculumCtaLabel}
-      overallPercentage={overallPercentage}
-      totalCompleted={totalCompleted}
-      totalLessons={totalLessons}
-      classInfo={classInfo}
-      activeStage={student?.activeStage ?? null}
-      pointerLesson={pointerLesson}
-      pointerUpdatedAt={pointerUpdatedAt}
-      gamification={gamificationSummary}
-      unitSummaries={unitSummaries}
-      interactiveAttemptSections={interactiveAttemptSections}
-      recentUpdates={recentUpdates}
-      status={status}
-      isIBTrack={isIBTrack}
-    />
+    <div className="page-shell student-dashboard-new">
+      <header className="dashboard-header">
+        <div>
+          <span className="eyebrow">Student Dashboard</span>
+          <h1>Hi {studentName}</h1>
+        </div>
+        <div className="overall-progress-metric">
+          <strong>{overallPercentage}%</strong>
+          <span>Overall Progress</span>
+        </div>
+      </header>
+
+      <section className="dashboard-metrics">
+        <MetricCard label="Level" value={`Lv ${gamificationState.level ?? 1}`} />
+        <MetricCard label="XP" value={gamificationState.xp ?? 0} />
+        <MetricCard label="Streak" value={gamificationState.streak ?? 0} />
+        <MetricCard label="Accuracy" value={`${gamificationState.totalAttempts > 0 ? Math.round((gamificationState.totalCorrect / gamificationState.totalAttempts) * 100) : 100}%`} />
+      </section>
+
+      <section className="dashboard-curriculum">
+        <h2>Your Learning Path</h2>
+        <div className="unit-list">
+          {unitSummaries.map(unit => (
+            <UnitCard key={unit.id} unit={unit} onClick={() => handleUnitClick(unit)} />
+          ))}
+        </div>
+      </section>
+      {activeUnit && <UnitDetailView unit={activeUnit} onClose={handleCloseDetail} />}
+    </div>
   );
 }
+
+function UnitDetailView({ unit, onClose }) {
+  return (
+    <div className="unit-detail-overlay" onClick={onClose}>
+      <div className="unit-detail-panel" onClick={(e) => e.stopPropagation()}>
+        <button className="close-button" onClick={onClose}>×</button>
+        <div className="unit-detail-header">
+          <h2>{unit.title}</h2>
+          <div className="unit-card-progress">
+            <div className="progress-bar">
+              <div className="progress-bar-fill" style={{ width: `${unit.completedPercentage}%` }}></div>
+            </div>
+            <span>{unit.completedPercentage}%</span>
+          </div>
+        </div>
+        <div className="lesson-timeline">
+          <h3>Lesson Timeline</h3>
+          <ul>
+            {unit.lessons.map(lesson => (
+              <li key={lesson.id}>
+                <span>{lesson.title}</span>
+                <span className={`status-tag ${lesson.status}`}>{lesson.status}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UnitCard({ unit, onClick }) {
+  return (
+    <div className="unit-card" onClick={onClick}>
+      <div className="unit-card-header">
+        <h3>{unit.title}</h3>
+        <span>{unit.id}</span>
+      </div>
+      <p>{unit.summary}</p>
+      <div className="unit-card-progress">
+        <div className="progress-bar">
+          <div className="progress-bar-fill" style={{ width: `${unit.completedPercentage}%` }}></div>
+        </div>
+        <span>{unit.completedPercentage}%</span>
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value }) {
+  return (
+    <div className="metric-card">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
 
 export default StudentDashboardPage;
 export {

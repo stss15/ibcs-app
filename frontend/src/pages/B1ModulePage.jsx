@@ -1,8 +1,19 @@
+import { useLocation } from "react-router-dom";
 import GamifiedModulePage from "../components/GamifiedModulePage.jsx";
-import b1Unit from "../content/b1ComputationalThinking.jsx";
+import { GamificationProvider } from "../context/GamificationContext.jsx";
+import unit from "../content/b1ComputationalThinking.jsx";
+import "./B1ModulePage.css";
 
-export default function B1ModulePage() {
-  return <GamifiedModulePage unit={b1Unit} />;
+function B1ModulePage() {
+  const location = useLocation();
+  const classId = location.state?.classId;
+  return (
+    <GamificationProvider>
+      <GamifiedModulePage unit={unit} classId={classId} />
+    </GamificationProvider>
+  );
 }
+
+export default B1ModulePage;
 
 

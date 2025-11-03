@@ -171,6 +171,14 @@ export async function syncStudentGamification(token, gamificationData) {
   });
 }
 
+export async function syncStudentProgress(token, progressData) {
+  return request("/student/progress", {
+    method: "POST",
+    token,
+    body: progressData,
+  });
+}
+
 export async function getAdminDashboard(token) {
   return request("/admin/dashboard", {
     method: "GET",

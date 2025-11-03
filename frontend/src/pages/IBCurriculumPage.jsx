@@ -62,6 +62,7 @@ function IBCurriculumPage() {
   const staffBadgeLabel = isTeacher ? "Teacher view" : "Staff view";
   const [selectedUnitId, setSelectedUnitId] = useState(null);
   const trackOptions = useMemo(() => getTrackOptions(manifest), [manifest]);
+  const classId = location.state?.classId;
 
   const selectedTrack = useMemo(() => {
     if (!trackOptions.length) {
@@ -345,6 +346,8 @@ function IBCurriculumPage() {
 }
 
 function B1LearningPreview() {
+  const location = useLocation();
+  const classId = location.state?.classId;
   return (
     <section className="ib-b1-preview">
       <div className="ib-b1-preview__intro">
@@ -364,7 +367,7 @@ function B1LearningPreview() {
         ))}
       </div>
       <div className="ib-b1-preview__actions">
-        <Link to="/curriculum/ib/b1" className="pill pill--action">
+        <Link to="/curriculum/ib/b1" state={{ classId }} className="pill pill--action">
           Open B1 learning path
         </Link>
         <p className="muted">Formative assessments unlock sequentially—teachers can track attempts from the dashboard.</p>
@@ -374,6 +377,8 @@ function B1LearningPreview() {
 }
 
 function B2LearningPreview() {
+  const location = useLocation();
+  const classId = location.state?.classId;
   return (
     <section className="ib-b2-preview">
       <div className="ib-b2-preview__intro">
@@ -393,7 +398,7 @@ function B2LearningPreview() {
         ))}
       </div>
       <div className="ib-b2-preview__actions">
-        <Link to="/curriculum/ib/b2" className="pill pill--action">
+        <Link to="/curriculum/ib/b2" state={{ classId }} className="pill pill--action">
           Open B2 learning path
         </Link>
         <span className="muted">Python runs in-browser using Skulpt—no installation required.</span>

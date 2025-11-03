@@ -50,14 +50,14 @@ export function writeUnitProgress(unitId, username, state) {
     console.warn("Unable to persist progress", key, error);
   }
 
-  const legacyKey = legacyProgressKey(unitId);
-  if (legacyKey !== key) {
-    try {
-      window.localStorage.removeItem(legacyKey);
-    } catch {
-      // ignore removal failures
-    }
-  }
+  // const legacyKey = legacyProgressKey(unitId);
+  // if (legacyKey !== key) {
+  //   try {
+  //     window.localStorage.removeItem(legacyKey);
+  //   } catch {
+  //     // ignore removal failures
+  //   }
+  // }
 }
 
 export function clearUnitProgress(unitId, username) {

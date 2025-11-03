@@ -1017,6 +1017,9 @@ function TeacherDashboardPage() {
                   {selectedClassMeta && <p className="muted">{selectedClassMeta.yearGroupLabel}</p>}
                 </div>
                 <div className="teacher-dashboard__class-actions">
+                  <button type="button" className="pill" onClick={() => navigate('/curriculum/ib', { state: { classId: selectedClass.id } })}>
+                    View IB Curriculum
+                  </button>
                   <button type="button" className="pill" onClick={() => openStudentModal(selectedClass, "single")}>
                     Add student
                   </button>

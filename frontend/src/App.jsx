@@ -14,6 +14,7 @@ import B1ModulePage from "./pages/B1ModulePage.jsx";
 import B2ModulePage from "./pages/B2ModulePage.jsx";
 import Year7MapPage from "./pages/Year7MapPage.jsx";
 import { useSession } from "./hooks/useSession.js";
+import { TeacherModeProvider } from "./context/TeacherModeContext.jsx";
 
 function roleToHome(role) {
   if (role === "teacher") return "/dashboard";
@@ -58,107 +59,109 @@ function RequireAuth({ children, roles }) {
 function App() {
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<LandingRoute />} />
-        <Route
-          path="/dashboard"
-          element={
-            <RequireAuth roles={["teacher"]}>
-              <TeacherDashboardPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/dashboard/student/:studentId"
-          element={
-            <RequireAuth roles={["teacher"]}>
-              <TeacherStudentDashboardPage />
-            </RequireAuth>
-          }
-        />
-        <Route path="/teacher" element={<Navigate to="/dashboard" replace />} />
-        <Route
-          path="/student"
-          element={
-            <RequireAuth roles={["student"]}>
-              <StudentDashboardPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <RequireAuth roles={["admin"]}>
-              <AdminDashboardPage />
-            </RequireAuth>
-          }
-        />
-        <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
-        <Route
-          path="/account"
-          element={
-            <RequireAuth>
-              <AccountPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/curriculum"
-          element={
-            <RequireAuth>
-              <CurriculumMapPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/curriculum/ib"
-          element={
-            <RequireAuth>
-              <IBCurriculumPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/curriculum/year7"
-          element={
-            <RequireAuth>
-              <Year7MapPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/curriculum/ib/b1"
-          element={
-            <RequireAuth>
-              <B1ModulePage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/curriculum/ib/b2"
-          element={
-            <RequireAuth>
-              <B2ModulePage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/topic/:id"
-          element={
-            <RequireAuth>
-              <TopicPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/lesson/:lessonId"
-          element={
-            <RequireAuth>
-              <LessonPage />
-            </RequireAuth>
-          }
-        />
-      </Routes>
+      <TeacherModeProvider>
+        <Routes>
+          <Route path="/" element={<LandingRoute />} />
+          <Route
+            path="/dashboard"
+            element={
+              <RequireAuth roles={["teacher"]}>
+                <TeacherDashboardPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard/student/:studentId"
+            element={
+              <RequireAuth roles={["teacher"]}>
+                <TeacherStudentDashboardPage />
+              </RequireAuth>
+            }
+          />
+          <Route path="/teacher" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="/student"
+            element={
+              <RequireAuth roles={["student"]}>
+                <StudentDashboardPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <RequireAuth roles={["admin"]}>
+                <AdminDashboardPage />
+              </RequireAuth>
+            }
+          />
+          <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
+          <Route
+            path="/account"
+            element={
+              <RequireAuth>
+                <AccountPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/curriculum"
+            element={
+              <RequireAuth>
+                <CurriculumMapPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/curriculum/ib"
+            element={
+              <RequireAuth>
+                <IBCurriculumPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/curriculum/year7"
+            element={
+              <RequireAuth>
+                <Year7MapPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/curriculum/ib/b1"
+            element={
+              <RequireAuth>
+                <B1ModulePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/curriculum/ib/b2"
+            element={
+              <RequireAuth>
+                <B2ModulePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/topic/:id"
+            element={
+              <RequireAuth>
+                <TopicPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/lesson/:lessonId"
+            element={
+              <RequireAuth>
+                <LessonPage />
+              </RequireAuth>
+            }
+          />
+        </Routes>
+      </TeacherModeProvider>
     </Layout>
   );
 }

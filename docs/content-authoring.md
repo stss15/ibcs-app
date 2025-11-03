@@ -91,6 +91,15 @@ See `docs/ui-ux-design-system.md` for complete component documentation.
 - Assessment state includes `status`, `responses`, `marks`, `teacherNotes`, and `updatedAt`.
 - Teachers view aggregate data via `StudentDashboardPage.jsx` (local storage insights) and InstantDB for class-level data.
 
+## 6. Teacher Pacing System
+The application includes a teacher-led pacing system to control the flow of content for students.
+
+- **Teacher Controls:** On the module pages, teachers can "Set Pace" to any stage. This action designates the furthest point a student can progress to.
+- **Student Progression:** Students are unable to access stages beyond the one set by the teacher's pace. Within the allowed stages, they must still progress sequentially by completing each stage.
+- **Data Model:** The current pace for each class is stored in the `classPacing` collection in InstantDB.
+
+This system ensures that students work on the material currently being covered in class, while still allowing them to work at their own pace within that scope. For more technical details, see `docs/teacher-mode.md`.
+
 ## 5. Best Practices
 - Keep stage descriptions succinct (one or two sentences) for the sidebar.
 - Vary formative question phrasing so answers are not identical to exposition text.

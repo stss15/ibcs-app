@@ -10,8 +10,11 @@ import PythonPlaygroundSegment from "./segments/PythonPlaygroundSegment.jsx";
 import AssessmentResultsModal from "./segments/AssessmentResultsModal.jsx";
 import ReflectionSegment from "./segments/ReflectionSegment.jsx";
 import "./GamifiedModulePage.css";
+import { useTeacherMode } from "../context/TeacherModeContext.jsx";
+import { updateClassPacing, getClassPacing, syncStudentProgress } from "../lib/api.js";
 
 const STORAGE_VERSION = 2;
+const SYNC_DEBOUNCE_MS = 2500;
 
 function normalizeAssessment(raw = null) {
   if (!raw || typeof raw !== "object") {
@@ -189,17 +192,37 @@ function reducer(state, action) {
   }
 }
 
-export default function GamifiedModulePage({ unit }) {
+export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
   const { state: gamificationState, awardXp, resetStreak } = useGamification();
   const { session } = useSession();
+  const { isPresentationMode, togglePresentationMode, setCurrentPacing } = useTeacherMode();
   const isTeacher = session?.user?.role === "teacher" || session?.user?.role === "admin";
   const profileKey = session?.user?.username?.toLowerCase() || "guest";
+  const [paceStatus, setPaceStatus] = useState({});
+  const [classPacing, setClassPacing] = useState(null);
+  const classId = isTeacher ? teacherClassId : session?.user?.classId;
 
   const [progress, dispatch] = useReducer(
     reducer,
     { unit, profileKey },
     ({ unit: initialUnit, profileKey: initialProfile }) => buildInitialState(initialUnit, initialProfile),
   );
+
+  useEffect(() => {
+    if (isTeacher || !classId || !session?.token) return;
+
+    const fetchPacing = async () => {
+      try {
+        const pacingData = await getClassPacing(session.token, classId);
+        setClassPacing(pacingData);
+      } catch (error) {
+        console.error("Failed to fetch class pacing:", error);
+      }
+    };
+
+    fetchPacing();
+  }, [isTeacher, classId, session?.token]);
+
   const profileRef = useRef(profileKey);
   const unitRef = useRef(unit.id);
 
@@ -219,6 +242,7 @@ export default function GamifiedModulePage({ unit }) {
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
   const [levelUpModal, setLevelUpModal] = useState(null);
   const previousLevelRef = useRef(null);
+  const syncTimeoutRef = useRef(null);
 
   const activeStage = unit.stages[activeStageIndex];
 
@@ -228,7 +252,29 @@ export default function GamifiedModulePage({ unit }) {
       ...progress,
       version: STORAGE_VERSION,
     });
-  }, [progress, unit.id, profileKey]);
+    if (isTeacher) return;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        await syncStudentProgress(session.token, {
+          unitId: unit.id,
+          progress,
+        });
+      } catch (error) {
+        console.warn("Failed to sync student progress to backend", error);
+      }
+    }, SYNC_DEBOUNCE_MS);
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [progress, unit.id, profileKey, session?.token, isTeacher]);
 
   useEffect(() => {
     const firstIncomplete = unit.stages.findIndex((stage) => !progress.stages?.[stage.id]?.completed);
@@ -350,8 +396,22 @@ export default function GamifiedModulePage({ unit }) {
     [unit.stages, progress.stages],
   );
 
+  const handleSetPace = async (stageId) => {
+    if (!isTeacher || !classId) return;
+    setPaceStatus({ [stageId]: "setting" });
+    try {
+      await updateClassPacing(session.token, classId, { unitId: unit.id, lessonId: stageId });
+      setCurrentPacing({ unitId: unit.id, lessonId: stageId });
+      setPaceStatus({ [stageId]: "set" });
+      setTimeout(() => setPaceStatus({ [stageId]: null }), 2000);
+    } catch (error) {
+      setPaceStatus({ [stageId]: "error" });
+      setTimeout(() => setPaceStatus({ [stageId]: null }), 2000);
+    }
+  };
+
   return (
-    <div className={`gamified-page ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${headerCollapsed ? "header-collapsed" : ""}`}>
+    <div className={`gamified-page ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${headerCollapsed ? "header-collapsed" : ""} ${isTeacher && isPresentationMode ? "presentation-mode" : ""}`}>
       <header className={`gamified-header ${headerCollapsed ? "is-collapsed" : ""}`}>
         <div className="gamified-header__main">
           <div>
@@ -367,33 +427,41 @@ export default function GamifiedModulePage({ unit }) {
               </>
             )}
           </div>
-          <div className={`gamified-xp-card ${headerCollapsed ? "is-compact" : ""}`}>
-            <button
-              type="button"
-              className="gamified-header-toggle"
-              onClick={() => setHeaderCollapsed(!headerCollapsed)}
-              aria-label={headerCollapsed ? "Expand header" : "Collapse header"}
-            >
-              {headerCollapsed ? "▼" : "▲"}
-            </button>
-            <div className="gamified-xp-card__top">
-              <span className={`gamified-level-badge ${levelUpModal ? "level-up" : ""}`}>Lv {level}</span>
+          {isTeacher ? (
+            <div className="teacher-controls">
+              <button onClick={togglePresentationMode} className="btn">
+                {isPresentationMode ? "Exit Presentation" : "Enter Presentation"}
+              </button>
+            </div>
+          ) : (
+            <div className={`gamified-xp-card ${headerCollapsed ? "is-compact" : ""}`}>
+              <button
+                type="button"
+                className="gamified-header-toggle"
+                onClick={() => setHeaderCollapsed(!headerCollapsed)}
+                aria-label={headerCollapsed ? "Expand header" : "Collapse header"}
+              >
+                {headerCollapsed ? "▼" : "▲"}
+              </button>
+              <div className="gamified-xp-card__top">
+                <span className={`gamified-level-badge ${levelUpModal ? "level-up" : ""}`}>Lv {level}</span>
+                {!headerCollapsed && (
+                  <div className="gamified-xp-values">
+                    <strong>{overallXp} XP</strong>
+                    <span>Next level at {xpToNext} XP</span>
+                  </div>
+                )}
+              </div>
               {!headerCollapsed && (
-                <div className="gamified-xp-values">
-                  <strong>{overallXp} XP</strong>
-                  <span>Next level at {xpToNext} XP</span>
-                </div>
+                <>
+                  <div className="gamified-xp-bar">
+                    <div style={{ width: `${levelProgress * 100}%` }} />
+                  </div>
+                  <span className="gamified-progress-summary">{overallCompletion}% unit completion</span>
+                </>
               )}
             </div>
-            {!headerCollapsed && (
-              <>
-                <div className="gamified-xp-bar">
-                  <div style={{ width: `${levelProgress * 100}%` }} />
-                </div>
-                <span className="gamified-progress-summary">{overallCompletion}% unit completion</span>
-              </>
-            )}
-          </div>
+          )}
         </div>
       </header>
 
@@ -408,30 +476,49 @@ export default function GamifiedModulePage({ unit }) {
           >
             {sidebarCollapsed ? "▶" : "◀"}
           </button>
-          {!sidebarCollapsed && (
-            <ul>
-              {unit.stages.map((stage, index) => {
-                const state = progress.stages?.[stage.id];
-                const unlocked = isTeacher || index === 0 || progress.stages?.[unit.stages[index - 1].id]?.completed;
-                const isActive = index === activeStageIndex;
-                return (
-                  <li key={stage.id}>
+          <ul>
+            {unit.stages.map((stage, index) => {
+              const state = progress.stages?.[stage.id];
+
+              let unlocked;
+              if (isTeacher) {
+                unlocked = true;
+              } else if (classPacing) {
+                const paceIndex = unit.stages.findIndex(s => s.id === classPacing.lessonId);
+                const isWithinPace = index <= paceIndex;
+                unlocked = isWithinPace && (index === 0 || progress.stages?.[unit.stages[index - 1].id]?.completed);
+              } else {
+                unlocked = index === 0;
+              }
+
+              const isActive = index === activeStageIndex;
+              const currentPaceStatus = paceStatus[stage.id];
+              return (
+                <li key={stage.id} className="gamified-stage-item">
+                  <button
+                    type="button"
+                    className={`gamified-stage-link${isActive ? " is-active" : ""}${state?.completed ? " is-complete" : ""}${
+                      !unlocked ? " is-locked" : ""
+                    }`}
+                    disabled={!unlocked}
+                    onClick={() => unlocked && setActiveStageIndex(index)}
+                  >
+                    <span className="gamified-stage-title">{stage.title}</span>
+                    <span className="gamified-stage-duration">{stage.duration}</span>
+                  </button>
+                  {isTeacher && (
                     <button
-                      type="button"
-                      className={`gamified-stage-link${isActive ? " is-active" : ""}${state?.completed ? " is-complete" : ""}${
-                        !unlocked ? " is-locked" : ""
-                      }`}
-                      disabled={!unlocked}
-                      onClick={() => unlocked && setActiveStageIndex(index)}
+                      className={`set-pace-btn ${currentPaceStatus ? `set-pace-btn--${currentPaceStatus}` : ""}`}
+                      onClick={() => handleSetPace(stage.id)}
+                      disabled={currentPaceStatus === "setting"}
                     >
-                      <span className="gamified-stage-title">{stage.title}</span>
-                      <span className="gamified-stage-duration">{stage.duration}</span>
+                      {currentPaceStatus === "setting" ? "Setting..." : currentPaceStatus === "set" ? "Pace Set!" : currentPaceStatus === "error" ? "Error" : "Set Pace"}
                     </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </nav>
 
         <section className="gamified-stage-viewer">

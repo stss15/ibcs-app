@@ -1,8 +1,19 @@
+import { useLocation } from "react-router-dom";
 import GamifiedModulePage from "../components/GamifiedModulePage.jsx";
-import b2Unit from "../content/b2ProgrammingFundamentals.jsx";
+import { GamificationProvider } from "../context/GamificationContext.jsx";
+import unit from "../content/b2ProgrammingFundamentals.jsx";
+import "./B2ModulePage.css";
 
-export default function B2ModulePage() {
-  return <GamifiedModulePage unit={b2Unit} />;
+function B2ModulePage() {
+  const location = useLocation();
+  const classId = location.state?.classId;
+  return (
+    <GamificationProvider>
+      <GamifiedModulePage unit={unit} classId={classId} />
+    </GamificationProvider>
+  );
 }
+
+export default B2ModulePage;
 
 

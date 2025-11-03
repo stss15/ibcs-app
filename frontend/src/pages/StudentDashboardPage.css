@@ -706,6 +706,223 @@
   background: linear-gradient(135deg, rgba(12, 41, 124, 1), rgba(70, 135, 255, 1));
 }
 
+.student-dashboard-new {
+  padding: 2rem;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.dashboard-header .eyebrow {
+  font-size: 0.9rem;
+  color: var(--cs-gray);
+  text-transform: uppercase;
+}
+
+.dashboard-header h1 {
+  font-size: 2.5rem;
+  margin: 0;
+}
+
+.overall-progress-metric {
+  text-align: right;
+}
+
+.overall-progress-metric strong {
+  font-size: 2.5rem;
+  color: var(--cs-primary);
+}
+
+.overall-progress-metric span {
+  font-size: 0.9rem;
+  color: var(--cs-gray);
+}
+
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background-color: var(--cs-white);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.metric-card span {
+  font-size: 0.9rem;
+  color: var(--cs-gray);
+}
+
+.metric-card strong {
+  display: block;
+  font-size: 2rem;
+  margin-top: 0.5rem;
+}
+
+.dashboard-curriculum {
+  margin-top: 3rem;
+}
+
+.dashboard-curriculum h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.unit-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.unit-card {
+  background-color: var(--cs-white);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.unit-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.unit-card h3 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.unit-card-header span {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--cs-gray-light);
+  background-color: var(--cs-gray-xlight);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.unit-card p {
+  color: var(--cs-gray);
+  font-size: 0.9rem;
+  flex-grow: 1;
+}
+
+.unit-card-progress {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.progress-bar {
+  flex-grow: 1;
+  height: 8px;
+  background-color: var(--cs-gray-xlight);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--cs-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+.unit-card-progress span {
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: var(--cs-primary);
+}
+
+.unit-detail-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 1000;
+}
+
+.unit-detail-panel {
+  width: 500px;
+  background-color: var(--cs-white);
+  padding: 2rem;
+  box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+  animation: slideIn 0.3s forwards;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.close-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.unit-detail-header {
+  margin-bottom: 2rem;
+}
+
+.lesson-timeline h3 {
+  margin-bottom: 1rem;
+}
+
+.lesson-timeline ul {
+  list-style: none;
+  padding: 0;
+}
+
+.lesson-timeline li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--cs-gray-xlight);
+}
+
+.status-tag {
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.status-tag.completed {
+  background-color: var(--cs-success-light);
+  color: var(--cs-success);
+}
+
+.status-tag.in-progress {
+  background-color: var(--cs-warning-light);
+  color: var(--cs-warning);
+}
+
+.status-tag.locked {
+  background-color: var(--cs-gray-xlight);
+  color: var(--cs-gray);
+}
+
 @media (max-width: 960px) {
   .student-dashboard {
     padding-bottom: 2rem;
