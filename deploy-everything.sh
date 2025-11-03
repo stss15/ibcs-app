@@ -1,13 +1,22 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "🚀 IBCS App - Complete Deployment"
 echo "=================================="
 echo ""
 
-ROOT="/Users/StevenStewart/ibcs-app"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$SCRIPT_DIR"
 FRONTEND="$ROOT/frontend"
 WORKER="$ROOT/worker"
+
+maybe_install() {
+  local target_dir="$1"
+  if [ ! -d "$target_dir/node_modules" ]; then
+    echo "📦 Installing dependencies in ${target_dir##*/}..."
+    (cd "$target_dir" && npm install --silent)
+  fi
+}
 
 # Step 1: Push schema via helper script
 echo "📊 Step 1: Pushing schema to InstantDB..."
@@ -18,7 +27,7 @@ echo ""
 # Step 2: Build frontend
 echo "🔨 Step 2: Building frontend..."
 cd "$FRONTEND"
-npm install --silent
+maybe_install "$FRONTEND"
 npm run build
 echo ""
 
@@ -42,7 +51,7 @@ echo ""
 # Step 3: Deploy Worker
 echo "☁️  Step 3: Deploying Cloudflare Worker..."
 cd "$WORKER"
-npm install --silent
+maybe_install "$WORKER"
 npx wrangler deploy
 echo ""
 
@@ -60,7 +69,9 @@ echo "📦 Step 5: Deploying to GitHub Pages..."
 cd "$ROOT"
 git add -A
 git commit -m "Deploy working app" || echo "Nothing to commit"
-git push origin main
+if ! git push origin main; then
+  echo "⚠️  Git push failed. Please check your network connection or credentials and push manually when ready."
+fi
 echo ""
 
 echo "✅ DEPLOYMENT COMPLETE!"
