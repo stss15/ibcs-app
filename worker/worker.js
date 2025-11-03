@@ -8,6 +8,7 @@ import {
   createClass as createClassRecord,
   createStudent as createStudentRecord,
   bulkCreateStudents,
+  bulkUpdateStudentPasswords,
   createClassUnlock,
   createStudentUnlock,
   getTeacherDashboardData,
@@ -19,6 +20,7 @@ import {
   archiveStudent,
   setStudentActiveStage,
   findClassById,
+  listStudentsByClass,
   getClassPacing,
   setClassPacing,
 } from './src/repositories.js';
@@ -31,6 +33,7 @@ import {
   getYear7NextLesson,
   getYear7DefaultPointer,
 } from '../shared/year7Curriculum.js';
+import { generatePassword } from '../shared/passwords.js';
 
 const BCRYPT_ROUNDS = 8;
 const CSV_HEADER = [
@@ -134,6 +137,14 @@ export default {
         const classId = decodeURIComponent(segments[3] || '');
         return requireRole(request, env, 'teacher', (req, env, session) =>
           handleClassExport(req, env, session, classId),
+        );
+      }
+
+      if (pathname.startsWith('/teacher/classes/') && pathname.endsWith('/credentials') && request.method === 'POST') {
+        const segments = pathname.split('/');
+        const classId = decodeURIComponent(segments[3] || '');
+        return requireRole(request, env, 'teacher', (req, env, session) =>
+          handleGenerateClassCredentials(req, env, session, classId),
         );
       }
 
@@ -630,6 +641,71 @@ async function handleBulkCreateStudentsHandler(request, env, session) {
     created: created.map(stripPassword),
     count: created.length,
   }, 201);
+}
+
+async function handleGenerateClassCredentials(request, env, session, classId) {
+  if (!classId) {
+    return json({ error: 'Class id is required.' }, 400);
+  }
+
+  const body = await readJson(request);
+  const requestedIds = Array.isArray(body.studentIds)
+    ? body.studentIds
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+    : [];
+  const requestedIdSet = new Set(requestedIds);
+
+  const db = getDb(env);
+  const teacher = await findTeacherByUsername(db, session.username);
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const classDoc = await findClassById(db, classId);
+  if (!classDoc || classDoc.teacherId !== teacher.id) {
+    return json({ error: 'Class not found' }, 404);
+  }
+
+  const students = await listStudentsByClass(db, classId);
+  const filteredStudents = students
+    .filter((student) => student.teacherId === teacher.id)
+    .filter((student) => (requestedIdSet.size === 0 ? true : requestedIdSet.has(student.id)));
+
+  if (filteredStudents.length === 0) {
+    return json({ error: 'No matching students found for this class.' }, 404);
+  }
+
+  const timestamp = new Date().toISOString();
+  const updates = [];
+  const credentials = [];
+
+  for (const student of filteredStudents) {
+    const passwordPlain = generatePassword();
+    const passwordHash = await bcrypt.hash(passwordPlain, BCRYPT_ROUNDS);
+    updates.push({
+      studentId: student.id,
+      passwordHash,
+      passwordResetAt: timestamp,
+    });
+    credentials.push({
+      id: student.id,
+      username: student.username,
+      firstName: student.firstName,
+      lastName: student.lastName,
+      displayName: student.displayName,
+      password: passwordPlain,
+    });
+  }
+
+  await bulkUpdateStudentPasswords(db, updates);
+
+  return json({
+    classId,
+    generatedAt: timestamp,
+    count: credentials.length,
+    credentials,
+  });
 }
 
 async function handleClassUnlock(request, env, session) {

@@ -115,6 +115,18 @@ export async function getClassPacing(token, classId) {
   });
 }
 
+export async function regenerateClassCredentials(token, classId, options = {}) {
+  const payload = {};
+  if (Array.isArray(options.studentIds) && options.studentIds.length > 0) {
+    payload.studentIds = options.studentIds;
+  }
+  return request(`/teacher/classes/${encodeURIComponent(classId)}/credentials`, {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
 export async function getTeacherStudentDashboard(token, studentId) {
   return request(`/teacher/students/${encodeURIComponent(studentId)}/dashboard`, {
     method: "GET",

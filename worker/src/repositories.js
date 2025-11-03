@@ -590,6 +590,31 @@ export async function bulkCreateStudents(db, students) {
   return created;
 }
 
+export async function bulkUpdateStudentPasswords(db, updates) {
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return;
+  }
+
+  const timestamp = new Date().toISOString();
+  const mutations = [];
+
+  for (const update of updates) {
+    if (!update?.studentId || !update?.passwordHash) continue;
+    mutations.push(
+      tx.students[update.studentId].update({
+        password: update.passwordHash,
+        passwordResetAt: update.passwordResetAt ?? timestamp,
+      }),
+    );
+  }
+
+  if (mutations.length === 0) {
+    return;
+  }
+
+  await db.transact(mutations);
+}
+
 export async function createClassUnlock(db, { classId, stageKey, unlockedBy, teacherId, teacherUsername }) {
   const unlockId = id();
   const unlockedAt = new Date().toISOString();
@@ -890,4 +915,19 @@ export async function findClassById(db, classId) {
     },
   });
   return sanitizeClass(result?.classes?.[0]);
+}
+
+export async function listStudentsByClass(db, classId) {
+  if (!classId) return [];
+  const result = await db.query({
+    students: {
+      $: {
+        where: { classId },
+      },
+    },
+  });
+
+  return (result?.students ?? [])
+    .map(sanitizeStudent)
+    .filter((student) => student.status !== 'archived');
 }

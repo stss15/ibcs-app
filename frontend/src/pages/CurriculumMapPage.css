@@ -74,6 +74,23 @@
   opacity: 0.75;
 }
 
+.pill--live {
+  background: rgba(12, 41, 124, 0.12);
+  border-color: rgba(12, 41, 124, 0.28);
+  color: var(--cs-blue);
+  text-decoration: none;
+}
+
+.pill--live small {
+  color: rgba(12, 41, 124, 0.72);
+}
+
+.pill--live:hover,
+.pill--live:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(12, 41, 124, 0.18);
+}
+
 .pill--action {
   background: linear-gradient(135deg, var(--cs-blue), #2647a8);
   color: #f1f3ff;

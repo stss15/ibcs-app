@@ -6,8 +6,10 @@ import {
   createClass,
   createStudent,
   getTeacherDashboard,
+  regenerateClassCredentials,
   updateClassPacing,
 } from "../lib/api.js";
+import { generatePassword } from "../../../shared/passwords.js";
 import { useSession } from "../hooks/useSession.js";
 import "./TeacherDashboardPage.css";
 import { getYear7LessonById } from "../../../shared/year7Curriculum.js";
@@ -61,34 +63,6 @@ const STAGE_CONFIG = [
 ];
 
 const CSV_TEMPLATE = "firstName,lastName,username\n";
-const PASSWORD_WORDS = [
-  "Aero",
-  "Blaze",
-  "Comet",
-  "Delta",
-  "Echo",
-  "Frost",
-  "Glimmer",
-  "Helio",
-  "Iris",
-  "Jade",
-  "Kite",
-  "Lumen",
-  "Nova",
-  "Orion",
-  "Pip",
-  "Quill",
-  "Rune",
-  "Sol",
-  "Terra",
-  "Vivid",
-  "Wisp",
-  "Xeno",
-  "Yarrow",
-  "Zephyr",
-];
-const PASSWORD_SYMBOLS = ["!", "?", "@", "#", "$"];
-
 const PASSWORD_STORAGE_KEY = "ibcs.teacherPasswords";
 
 function upsertClassPacingRecords(list = [], pacing) {
@@ -225,13 +199,6 @@ function parseClassMeta(classItem) {
     programme,
     yearGroupLabel,
   };
-}
-
-function generatePassword() {
-  const word = PASSWORD_WORDS[Math.floor(Math.random() * PASSWORD_WORDS.length)];
-  const number = Math.floor(Math.random() * 90) + 10;
-  const symbol = PASSWORD_SYMBOLS[Math.floor(Math.random() * PASSWORD_SYMBOLS.length)];
-  return `${word}${number}${symbol}`;
 }
 
 function extractPlainPassword(student) {
@@ -854,37 +821,106 @@ function TeacherDashboardPage() {
 
   const handleCopyCredentials = useCallback(async () => {
     if (!selectedClass || selectedStudents.length === 0) {
-      setStatus({ tone: "error", message: "Select a class with stored passwords first." });
+      setStatus({ tone: "error", message: "Select a class with students first." });
       return;
     }
 
-    const lines = selectedStudents
-      .map((student) => {
-        const password = resolveStoredPassword(passwordLookup, student);
-        if (!password || password.startsWith("$2")) return null;
-        const fallbackName = `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim();
-        const name = student.displayName ?? (fallbackName || student.username || "Student");
-        const username = student.username ?? "—";
-        return `${name}\t${username}\t${password}`;
-      })
-      .filter(Boolean);
+    const storedEntries = [];
+    const missingStudents = [];
 
-    if (lines.length === 0) {
+    for (const student of selectedStudents) {
+      const password = resolveStoredPassword(passwordLookup, student);
+      const username = student.username ?? "—";
+      const fallbackName = `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim();
+      const name = student.displayName ?? (fallbackName || username || "Student");
+
+      if (password && !password.startsWith("$2")) {
+        storedEntries.push({ id: student.id, name, username, password });
+      } else {
+        missingStudents.push({ id: student.id, name, username });
+      }
+    }
+
+    let credentialEntries = [...storedEntries];
+    let generatedCount = 0;
+
+    if (missingStudents.length > 0) {
+      if (!token) {
+        setStatus({ tone: "error", message: "Session expired. Sign in again to generate new passwords." });
+        return;
+      }
+
+      const confirmReset = window.confirm(
+        `No stored passwords for ${missingStudents.length} student${missingStudents.length === 1 ? "" : "s"}. Generate new passwords now?`,
+      );
+      if (!confirmReset) {
+        setStatus({ tone: "error", message: "Password copy cancelled." });
+        return;
+      }
+
+      setStatus({ tone: "info", message: "Generating fresh passwords…" });
+
+      try {
+        const response = await regenerateClassCredentials(token, selectedClass.id, {
+          studentIds: missingStudents.map((student) => student.id),
+        });
+        const generated = (response?.credentials ?? [])
+          .filter((entry) => entry?.password)
+          .map((entry) => {
+            const fallbackName = `${entry.firstName ?? ""} ${entry.lastName ?? ""}`.trim();
+            const username = entry.username ?? "—";
+            const name = entry.displayName ?? (fallbackName || username || "Student");
+            return {
+              id: entry.id,
+              name,
+              username,
+              password: entry.password,
+            };
+          });
+
+        if (generated.length === 0) {
+          setStatus({ tone: "error", message: "Unable to generate passwords for the selected students." });
+          return;
+        }
+
+        generatedCount = generated.length;
+        credentialEntries = [...credentialEntries, ...generated];
+        updatePasswordLookup((prev) =>
+          rememberPasswords(prev, generated.map((entry) => ({ id: entry.id, username: entry.username, password: entry.password }))),
+        );
+        setVisiblePasswords((prev) => ({ ...prev, ...Object.fromEntries(generated.map((entry) => [entry.id, true])) }));
+      } catch (error) {
+        console.warn("Credential regeneration failed", error);
+        setStatus({ tone: "error", message: error?.message || "Unable to generate new passwords." });
+        return;
+      }
+    }
+
+    if (credentialEntries.length === 0) {
       setStatus({ tone: "error", message: "No stored passwords available for this class." });
       return;
     }
 
+    credentialEntries.sort((a, b) => a.name.localeCompare(b.name));
+
     const header = "Name\tUsername\tPassword";
+    const lines = credentialEntries.map((entry) => `${entry.name}\t${entry.username || "—"}\t${entry.password}`);
     const payload = [header, ...lines].join("\n");
 
     try {
       await navigator.clipboard.writeText(payload);
-      setStatus({ tone: "success", message: "Credentials copied to clipboard." });
+      setStatus({
+        tone: "success",
+        message:
+          generatedCount > 0
+            ? `Credentials copied. ${generatedCount} password${generatedCount === 1 ? "" : "s"} refreshed.`
+            : "Credentials copied to clipboard.",
+      });
     } catch (error) {
       console.warn("Clipboard copy failed", error);
       setStatus({ tone: "error", message: "Unable to copy credentials. Try again." });
     }
-  }, [passwordLookup, selectedClass, selectedStudents]);
+  }, [passwordLookup, selectedClass, selectedStudents, token, updatePasswordLookup]);
 
   const handleViewStudentDashboard = useCallback(
     (studentId) => {

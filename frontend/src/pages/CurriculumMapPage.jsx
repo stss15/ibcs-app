@@ -3,11 +3,11 @@ import "./CurriculumMapPage.css";
 
 const tracks = {
   ks3: [
-    { label: "Year 7", state: "locked" },
-    { label: "Year 8", state: "locked" },
-    { label: "Year 9", state: "locked" },
+    { label: "Year 7", state: "live", href: "/curriculum/year7" },
+    { label: "Year 8", state: "preview" },
+    { label: "Year 9", state: "preview" },
   ],
-  igcse: [{ label: "IGCSE Computer Science", state: "locked" }],
+  igcse: [{ label: "IGCSE Computer Science", state: "preview" }],
 };
 
 function CurriculumMapPage() {
@@ -34,21 +34,28 @@ function CurriculumMapPage() {
           <header className="curriculum-panel__header">
             <div>
               <h2>Key Stage 3</h2>
-              <p className="muted">Module prototypes, robotics, and systems thinking foundations.</p>
+              <p className="muted">Start with the Year 7 Computing Adventure. Years 8 &amp; 9 unlock as the sequence ships.</p>
             </div>
-            <span className="status-pill status-pill--muted">In development</span>
+            <span className="status-pill status-pill--info">Rolling release</span>
           </header>
           <div className="curriculum-panel__body">
             <p>
-              Our middle years experience is being rebuilt to align with the IB philosophy earlier in the student
-              journey. You will see phased releases during the academic year.
+              Our middle years pathway is being rebuilt to mirror the IB learning experience. Year 7 is ready to run
+              today with live pacing pointers. Subsequent years follow later in the academic year.
             </p>
             <div className="curriculum-buttons">
               {tracks.ks3.map((item) => (
-                <button key={item.label} type="button" disabled className="pill pill--locked">
-                  {item.label}
-                  <small>Preview coming soon</small>
-                </button>
+                item.state === "live" && item.href ? (
+                  <Link key={item.label} to={item.href} className="pill pill--live">
+                    {item.label}
+                    <small>Available now</small>
+                  </Link>
+                ) : (
+                  <button key={item.label} type="button" disabled className="pill pill--locked">
+                    {item.label}
+                    <small>Preview coming soon</small>
+                  </button>
+                )
               ))}
             </div>
           </div>

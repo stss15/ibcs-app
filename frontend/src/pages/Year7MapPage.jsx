@@ -10,6 +10,15 @@ import {
 } from "../../../shared/year7Curriculum.js";
 import "./Year7MapPage.css";
 
+const STATUS_LABELS = {
+  complete: "Complete",
+  current: "Current focus",
+  ready: "Ready",
+  locked: "Locked",
+};
+
+const PREVIEW_LESSON_COUNT = 6;
+
 function isYear7ClassRecord(classRecord) {
   return (classRecord?.yearGroup ?? "").toLowerCase().includes("year 7");
 }
@@ -36,6 +45,7 @@ export default function Year7MapPage() {
   const [error, setError] = useState(null);
   const [selectedClassId, setSelectedClassId] = useState(searchParams.get("classId") || "");
   const [pacingState, setPacingState] = useState({});
+  const [expandedUnits, setExpandedUnits] = useState({});
 
   useEffect(() => {
     if (!ready || !token) return;
@@ -112,6 +122,8 @@ export default function Year7MapPage() {
     return getYear7LessonById(activePacing.lessonId);
   }, [activePacing]);
 
+  const pointerUnitId = pointerLesson?.unitId ?? null;
+
   const pointerUpdatedAt = useMemo(() => {
     if (!activePacing?.updatedAt) return null;
     const timestamp = new Date(activePacing.updatedAt);
@@ -126,6 +138,14 @@ export default function Year7MapPage() {
   const accessibleLessonCount = pointerIndex >= 0 ? pointerIndex + 1 : 0;
 
   const pacingInfo = selectedClassId ? pacingState[selectedClassId] : null;
+
+  const toggleUnitExpansion = useCallback((unitId) => {
+    if (!unitId) return;
+    setExpandedUnits((prev) => ({
+      ...prev,
+      [unitId]: !prev[unitId],
+    }));
+  }, []);
 
   const clearPacingMessage = useCallback((classId) => {
     setTimeout(() => {
@@ -383,33 +403,56 @@ export default function Year7MapPage() {
       </section>
 
       <section className="y7-map__grid">
-        {unitSummaries.map((unit) => (
-          <article key={unit.id} className="y7-unit" style={{ borderColor: unit.accent }}>
-            <header className="y7-unit__header">
-              <span className="y7-unit__icon" aria-hidden="true">
-                {unit.icon}
-              </span>
-              <div>
-                <h2>{unit.title}</h2>
-                <p className="muted">{unit.summary}</p>
-                <span className="y7-unit__progress">
-                  {unit.completed}/{unit.lessons.length} lessons explored
+        {unitSummaries.map((unit) => {
+          const isExpanded = expandedUnits[unit.id] ?? unit.id === pointerUnitId;
+          const displayedLessons = isExpanded ? unit.lessons : unit.lessons.slice(0, PREVIEW_LESSON_COUNT);
+          const hasMoreLessons = unit.lessons.length > displayedLessons.length;
+          const progressPercent = unit.lessons.length
+            ? Math.round((unit.completed / unit.lessons.length) * 100)
+            : 0;
+
+          return (
+            <article key={unit.id} className="y7-unit" style={{ borderColor: unit.accent }}>
+              <header className="y7-unit__header">
+                <span className="y7-unit__icon" aria-hidden="true">
+                  {unit.icon}
                 </span>
-              </div>
-            </header>
-            <ul className="y7-lessons">
-              {unit.lessons.map((lesson) => (
-                <li key={lesson.id} className={`y7-lesson y7-lesson--${lesson.status}`}>
-                  <span className="y7-lesson__index">{lesson.order}</span>
-                  <div>
-                    <strong>{lesson.title}</strong>
-                    <span className="muted">{lesson.duration}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </article>
-        ))}
+                <div>
+                  <h2>{unit.title}</h2>
+                  <p className="muted">{unit.summary}</p>
+                  <span className="y7-unit__progress">
+                    {progressPercent}% unlocked · {unit.completed} complete
+                  </span>
+                </div>
+              </header>
+              <ul className="y7-lessons">
+                {displayedLessons.map((lesson) => {
+                  const statusLabel = STATUS_LABELS[lesson.status] ?? STATUS_LABELS.locked;
+                  const isPointerLesson = lesson.status === "current";
+                  return (
+                    <li
+                      key={lesson.id}
+                      className={`y7-lesson y7-lesson--${lesson.status}`}
+                      aria-current={isPointerLesson ? "true" : undefined}
+                    >
+                      <span className="y7-lesson__index">{lesson.order}</span>
+                      <div className="y7-lesson__content">
+                        <strong>{lesson.title}</strong>
+                        <span className="muted">{lesson.duration}</span>
+                      </div>
+                      <span className={`y7-lesson__status y7-lesson__status--${lesson.status}`}>{statusLabel}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {hasMoreLessons && (
+                <button type="button" className="y7-unit__toggle" onClick={() => toggleUnitExpansion(unit.id)}>
+                  {isExpanded ? "Show fewer lessons" : `View all ${unit.lessons.length} lessons`}
+                </button>
+              )}
+            </article>
+          );
+        })}
       </section>
 
       <section className="y7-notes">
