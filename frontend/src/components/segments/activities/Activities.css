@@ -1,0 +1,188 @@
+.activity-matching {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.activity-matching__row {
+  display: grid;
+  gap: 0.4rem;
+  background: rgba(18, 46, 132, 0.04);
+  border-radius: 16px;
+  border: 1px solid rgba(18, 46, 132, 0.1);
+  padding: 0.75rem 1rem;
+}
+
+.activity-matching__term {
+  font-weight: 600;
+  color: rgba(18, 46, 132, 0.85);
+}
+
+.activity-matching__row select {
+  border-radius: 12px;
+  border: 1px solid rgba(18, 46, 132, 0.25);
+  padding: 0.6rem 0.8rem;
+  font: inherit;
+}
+
+.activity-ordering {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.activity-ordering__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 0.6rem;
+  align-items: center;
+  background: rgba(18, 46, 132, 0.04);
+  border-radius: 16px;
+  border: 1px solid rgba(18, 46, 132, 0.1);
+  padding: 0.75rem 1rem;
+}
+
+.activity-ordering__item select {
+  border-radius: 12px;
+  border: 1px solid rgba(18, 46, 132, 0.25);
+  padding: 0.5rem 0.8rem;
+  font: inherit;
+}
+
+.activity-dragdrop {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.activity-dragdrop__bank,
+.activity-dragdrop__targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.activity-dragdrop__token {
+  padding: 0.55rem 0.85rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(18, 46, 132, 0.18);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.activity-dragdrop__token.is-picked {
+  opacity: 0.45;
+}
+
+.activity-dragdrop__target {
+  min-width: 160px;
+  min-height: 60px;
+  border-radius: 14px;
+  border: 2px dashed rgba(18, 46, 132, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem;
+  background: rgba(18, 46, 132, 0.04);
+  text-align: center;
+}
+
+.activity-dragdrop__target.is-filled {
+  border-style: solid;
+  border-color: rgba(24, 164, 109, 0.6);
+  background: rgba(24, 164, 109, 0.12);
+}
+
+.activity-dragdrop__target.is-incorrect {
+  border-color: rgba(195, 45, 63, 0.6);
+  background: rgba(195, 45, 63, 0.12);
+}
+
+.activity-gapfill {
+  display: grid;
+  gap: 1rem;
+}
+
+.activity-gapfill__text {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.activity-gapfill__blank {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(18, 46, 132, 0.05);
+  border-radius: 12px;
+  border: 1px dashed rgba(18, 46, 132, 0.3);
+  padding: 0.2rem 0.5rem;
+  margin: 0 0.25rem;
+}
+
+.activity-gapfill__blank select {
+  border: none;
+  background: transparent;
+  font: inherit;
+}
+
+.activity-gapfill__blank.is-correct {
+  background: rgba(24, 164, 109, 0.18);
+  border-color: rgba(24, 164, 109, 0.6);
+}
+
+.activity-gapfill__blank.is-incorrect {
+  background: rgba(195, 45, 63, 0.18);
+  border-color: rgba(195, 45, 63, 0.6);
+}
+
+.activity-planner {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.activity-planner__panel {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.activity-planner__panel textarea {
+  border-radius: 14px;
+  border: 1px solid rgba(18, 46, 132, 0.22);
+  padding: 0.75rem 1rem;
+  font: inherit;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.activity-hotspot {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(18, 46, 132, 0.12);
+}
+
+.activity-hotspot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.activity-hotspot__point {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(50, 117, 255, 0.9);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.activity-hotspot__point.is-selected {
+  background: rgba(24, 164, 109, 0.92);
+}
+
+.activity-hotspot__point.is-incorrect {
+  background: rgba(195, 45, 63, 0.92);
+}

@@ -67,6 +67,11 @@ const keyVocabulary = [
   },
 ];
 
+const keyVocabularyList = keyVocabulary.map(({ term, definition }) => ({
+  title: term,
+  body: definition,
+}));
+
 const overviewAim = (
   <Fragment>
     <p>
@@ -245,13 +250,13 @@ export const b2Unit = {
           body: learningOutcomes,
         },
         {
-          type: "vocabulary",
+          type: "list",
           id: "b2-overview-vocab",
           heading: "Key Vocabulary",
-          entries: keyVocabulary,
+          items: keyVocabularyList,
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "b2-overview-check",
           heading: "Ready to Start?",
           questions: [
@@ -419,7 +424,7 @@ print("After swap:", a, b)
           ],
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "b2-211-quiz",
           heading: "Mini Checkpoint",
           questions: [
@@ -609,7 +614,7 @@ if len(base) < 4:
           ],
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "b2-212-quiz",
           heading: "String Skills Pulse Check",
           questions: [
@@ -719,7 +724,7 @@ if len(base) < 4:
           ],
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "b2-213-quiz",
           heading: "Exception Handling Pulse Check",
           questions: [
@@ -869,7 +874,7 @@ print("Sorted:", sorted_values)
           ],
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "b2-214-quiz",
           heading: "Debugging Pulse Check",
           questions: [
@@ -950,7 +955,7 @@ print("Sorted:", sorted_values)
           ],
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "b2-summary-exit",
           heading: "Exit Ticket",
           questions: [

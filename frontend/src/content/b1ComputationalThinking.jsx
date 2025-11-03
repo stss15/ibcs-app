@@ -61,6 +61,11 @@ const keyVocabulary = [
   },
 ];
 
+const keyVocabularyList = keyVocabulary.map(({ term, definition }) => ({
+  title: term,
+  body: definition,
+}));
+
 const flowchartSymbols = [
   { symbol: "⭘", name: "Start / End", function: "Begin or end of process" },
   { symbol: "⬒", name: "Input / Output", function: "Data entry or display" },
@@ -112,13 +117,13 @@ export const b1Unit = {
           body: overviewAim,
         },
         {
-          type: "vocabulary",
+          type: "list",
           id: "overview-vocab",
           heading: "Key Vocabulary",
-          entries: keyVocabulary,
+          items: keyVocabularyList,
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "overview-check",
           heading: "Vocabulary Pulse Check",
           questions: [
@@ -243,9 +248,10 @@ export const b1Unit = {
           ],
         },
         {
-          type: "worked-example",
+          type: "table",
           id: "spec-example",
           heading: "Worked Example – Customer Service Chatbot",
+          columns: ["Component", "Details"],
           rows: [
             ["Problem statement", "Customers abandon 15 % of chats because agents are unavailable."],
             ["Constraint", "Budget €10 000; must integrate with existing CRM."],
@@ -257,7 +263,7 @@ export const b1Unit = {
           ],
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "spec-quiz",
           heading: "Mini Checkpoint",
           questions: [
@@ -445,7 +451,7 @@ export const b1Unit = {
           ],
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "ct-quiz",
           heading: "Concept Checkpoint",
           questions: [
@@ -537,7 +543,7 @@ export const b1Unit = {
           })),
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "flow-quiz",
           heading: "Mini Checkpoint",
           questions: [
@@ -673,7 +679,7 @@ export const b1Unit = {
           ),
         },
         {
-          type: "checkpoint",
+          type: "micro-quiz",
           id: "summary-quiz",
           heading: "Exit Ticket",
           questions: [

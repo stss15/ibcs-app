@@ -36,7 +36,7 @@ function buildAttemptRows(unit, insights) {
   const attempts = insights.attempts;
   unit.stages.forEach((stage) => {
     (stage.segments ?? []).forEach((segment) => {
-      if (["activity", "checkpoint", "python-playground"].includes(segment.type)) {
+      if (["activity", "micro-quiz", "python-playground"].includes(segment.type)) {
         const stats = attempts?.[segment.id];
         if (!stats) return;
         const count = stats.count ?? 0;
