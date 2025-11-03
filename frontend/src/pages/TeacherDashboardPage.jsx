@@ -862,7 +862,8 @@ function TeacherDashboardPage() {
       .map((student) => {
         const password = resolveStoredPassword(passwordLookup, student);
         if (!password || password.startsWith("$2")) return null;
-        const name = student.displayName ?? `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim() || student.username || "Student";
+        const fallbackName = `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim();
+        const name = student.displayName ?? (fallbackName || student.username || "Student");
         const username = student.username ?? "—";
         return `${name}\t${username}\t${password}`;
       })
