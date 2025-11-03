@@ -227,6 +227,20 @@ function IBCurriculumPage() {
                 {trackBadgeText && <span className="ib-badge ib-badge--outline">{trackBadgeText}</span>}
               </div>
             </header>
+            {selectedUnit.id === "B1" && (
+              <div className="ib-unit-launch">
+                <div>
+                  <h3>Interactive pathway available</h3>
+                  <p className="muted">
+                    Dive into the full B1 Computational Thinking learning experience complete with staged activities and
+                    assessment.
+                  </p>
+                </div>
+                <Link to="/curriculum/ib/b1" className="pill pill--action">
+                  Open B1 learning path
+                </Link>
+              </div>
+            )}
 
             <div className="ib-chapters">
               {selectedUnit.subtopics?.map((subtopic) => {

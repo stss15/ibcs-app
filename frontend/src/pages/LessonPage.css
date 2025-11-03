@@ -37,11 +37,11 @@
 /* Main Container */
 .lesson-container {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 1.5rem;
-  max-width: 1400px;
+  grid-template-columns: minmax(300px, 22%) minmax(0, 1fr);
+  gap: clamp(1.5rem, 3vw, 2.4rem);
+  max-width: min(1680px, 96vw);
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem) clamp(1.5rem, 4vw, 3rem);
   flex: 1;
 }
 
@@ -549,4 +549,3 @@
     padding: 0.5rem;
   }
 }
-

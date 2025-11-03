@@ -161,6 +161,38 @@
   font-weight: 600;
 }
 
+.student-insights {
+  border: 1px solid rgba(12, 41, 124, 0.08);
+  border-radius: 22px;
+  padding: clamp(1.6rem, 4vw, 2.3rem);
+  background: rgba(246, 248, 255, 0.85);
+  display: grid;
+  gap: 1.2rem;
+}
+
+.student-insights__header h2 {
+  margin: 0 0 0.35rem;
+  color: var(--cs-blue);
+}
+
+.student-insights__table {
+  overflow-x: auto;
+}
+
+.student-insights__table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+}
+
+.student-insights__table th,
+.student-insights__table td {
+  border: 1px solid rgba(12, 41, 124, 0.12);
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
 .student-unit-card a {
   align-self: start;
   font-weight: 600;
@@ -269,4 +301,3 @@
     align-items: flex-start;
   }
 }
-

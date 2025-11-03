@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { getStudentDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import { useCurriculumManifest } from "../hooks/useCurriculumManifest.js";
+import b1Unit from "../content/b1ComputationalThinking.jsx";
 import "./StudentDashboardPage.css";
 
 function normaliseStatus(status) {
@@ -50,6 +51,7 @@ function StudentDashboardPage() {
 
   const [payload, setPayload] = useState(null);
   const [status, setStatus] = useState(null);
+  const [b1Insights, setB1Insights] = useState(null);
 
   const { manifest } = useCurriculumManifest();
 
@@ -80,6 +82,18 @@ function StudentDashboardPage() {
       active = false;
     };
   }, [ready, studentSession, token, navigate]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem("ibcs.b1.progress");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      setB1Insights(parsed);
+    } catch (error) {
+      console.warn("Unable to load B1 insights", error);
+    }
+  }, []);
 
   const student = payload?.student ?? null;
   const classInfo = payload?.class ?? null;
@@ -138,6 +152,30 @@ function StudentDashboardPage() {
   const totalLessons = unitSummaries.reduce((sum, unit) => sum + unit.total, 0);
   const totalCompleted = unitSummaries.reduce((sum, unit) => sum + unit.completed, 0);
   const overallPercentage = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0;
+
+  const b1AttemptRows = useMemo(() => {
+    if (!b1Insights?.attempts) return [];
+    const rows = [];
+    const attempts = b1Insights.attempts;
+    b1Unit.stages.forEach((stage) => {
+      (stage.segments ?? []).forEach((segment) => {
+        if (segment.type === "activity" || segment.type === "checkpoint") {
+          const stats = attempts[segment.id];
+          if (stats) {
+            rows.push({
+              stage: stage.title,
+              segment: segment.heading ?? segment.title ?? segment.id,
+              attempts: stats.count,
+              correct: stats.correct,
+              successRate: stats.count > 0 ? Math.round((stats.correct / stats.count) * 100) : null,
+            });
+          }
+        }
+      });
+    });
+    rows.sort((a, b) => b.attempts - a.attempts);
+    return rows;
+  }, [b1Insights]);
 
   if (!ready) {
     return null;
@@ -237,6 +275,41 @@ function StudentDashboardPage() {
           )}
         </div>
       </section>
+
+      {b1AttemptRows.length > 0 && (
+        <section className="student-insights">
+          <header className="student-insights__header">
+            <h2>B1 computational thinking insights</h2>
+            <p className="muted">
+              Attempts recorded for interactive checkpoints in the B1 learning path. Data saves locally on this device.
+            </p>
+          </header>
+          <div className="student-insights__table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Stage</th>
+                  <th>Activity</th>
+                  <th>Attempts</th>
+                  <th>Correct</th>
+                  <th>Success rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {b1AttemptRows.map((row, index) => (
+                  <tr key={`${row.segment}-${index}`}>
+                    <td>{row.stage}</td>
+                    <td>{row.segment}</td>
+                    <td>{row.attempts}</td>
+                    <td>{row.correct}</td>
+                    <td>{row.successRate != null ? `${row.successRate}%` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="student-lesson-feed">
         <header>
