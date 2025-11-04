@@ -115,6 +115,13 @@ export async function getClassPacing(token, classId) {
   });
 }
 
+export async function getStudentClassPacing(token, classId) {
+  return request(`/student/classes/${encodeURIComponent(classId)}/pacing`, {
+    method: "GET",
+    token,
+  });
+}
+
 export async function regenerateClassCredentials(token, classId, options = {}) {
   const payload = {};
   if (Array.isArray(options.studentIds) && options.studentIds.length > 0) {

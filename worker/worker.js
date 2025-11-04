@@ -164,6 +164,14 @@ export default {
         return requireRole(request, env, 'student', handleStudentDashboard);
       }
 
+      if (pathname.startsWith('/student/classes/') && pathname.endsWith('/pacing') && request.method === 'GET') {
+        const segments = pathname.split('/');
+        const classId = decodeURIComponent(segments[3] || '');
+        return requireRole(request, env, 'student', (req, env, session) =>
+          handleStudentClassPacing(req, env, session, classId),
+        );
+      }
+
       if (pathname === '/student/gamification' && request.method === 'GET') {
         return requireRole(request, env, 'student', handleGetStudentGamification);
       }
@@ -410,6 +418,23 @@ async function handleTeacherDashboard(_request, env, session) {
   });
 }
 
+function buildPacingMetadata(pacing) {
+  if (!pacing || !pacing.lessonId) {
+    return { lesson: null, sequenceIndex: null };
+  }
+
+  const lesson = getYear7LessonById(pacing.lessonId);
+  if (!lesson) {
+    return { lesson: null, sequenceIndex: null };
+  }
+
+  const sequenceIndex = getYear7LessonIndex(lesson.id);
+  return {
+    lesson,
+    sequenceIndex,
+  };
+}
+
 async function handleGetClassPacing(_request, env, session, classId) {
   if (!classId) {
     return json({ error: 'Class id is required' }, 400);
@@ -427,10 +452,12 @@ async function handleGetClassPacing(_request, env, session, classId) {
   }
 
   const pacing = await getClassPacing(db, classId);
+  const metadata = buildPacingMetadata(pacing);
 
   return json({
     class: classDoc,
     pacing,
+    ...metadata,
   });
 }
 
@@ -582,6 +609,32 @@ async function handleUpdateClassPacing(request, env, session, classId) {
       sequenceIndex,
     });
   }
+
+async function handleStudentClassPacing(_request, env, session, classId) {
+  if (!classId) {
+    return json({ error: 'Class id is required' }, 400);
+  }
+
+  const db = getDb(env);
+  const student = await findStudentByUsername(db, session.username);
+  if (!student || student.archivedAt || student.classId !== classId) {
+    return json({ error: 'Class not found' }, 404);
+  }
+
+  const classDoc = await findClassById(db, classId);
+  if (!classDoc) {
+    return json({ error: 'Class not found' }, 404);
+  }
+
+  const pacing = await getClassPacing(db, classId);
+  const metadata = buildPacingMetadata(pacing);
+
+  return json({
+    class: classDoc,
+    pacing,
+    ...metadata,
+  });
+}
 
   if (requestedLessonId) {
     const year7Lesson = getYear7LessonById(requestedLessonId);

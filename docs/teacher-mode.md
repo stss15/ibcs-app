@@ -32,7 +32,7 @@ The pacing system, also known as the "teacher pointer," allows teachers to contr
     - Learners can always revisit previous material for revision but can never move forward past the teacher's pointer.
 
 3.  **Saving progress at the end of a lesson:**
-    - Use the "Stop teaching" controls on the Year 7 map or the teacher dashboard when wrapping up a session. This records the current pointer (stage and time) so the same position is restored the next time the class returns.
+    - Use the "Stop teaching" controls on the Year 7 map, the module page toolbar, or the teacher dashboard when wrapping up a session. This records the current pointer (stage and time) so the same position is restored the next time the class returns.
 
 4.  **Teacher preview mode:**
     - Opening a module without selecting a class keeps you out of live pacing. You can scroll freely, skip formative or summative assessments, and plan future lessons without affecting what students see.

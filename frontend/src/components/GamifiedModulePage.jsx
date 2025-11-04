@@ -12,7 +12,13 @@ import ReflectionSegment from "./segments/ReflectionSegment.jsx";
 import LiveAssessmentDashboard from "./segments/LiveAssessmentDashboard.jsx";
 import "./GamifiedModulePage.css";
 import { useTeacherMode } from "../context/TeacherModeContext.jsx";
-import { updateClassPacing, getClassPacing, syncStudentProgress, updateLiveAssessmentStatus } from "../lib/api.js";
+import {
+  updateClassPacing,
+  getClassPacing,
+  getStudentClassPacing,
+  syncStudentProgress,
+  updateLiveAssessmentStatus,
+} from "../lib/api.js";
 
 const STORAGE_VERSION = 2;
 const SYNC_DEBOUNCE_MS = 2500;
@@ -589,19 +595,41 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
   const programmeLabel = unit.programmeLabel ?? "IB Computer Science";
 
   useEffect(() => {
-    if (isTeacher || !classId || !session?.token) return;
+    if (!classId || !session?.token) {
+      setClassPacing(null);
+      return;
+    }
 
+    let active = true;
     const fetchPacing = async () => {
       try {
-        const pacingData = await getClassPacing(session.token, classId);
+        const pacingData = isTeacher
+          ? await getClassPacing(session.token, classId)
+          : await getStudentClassPacing(session.token, classId);
+        if (!active) return;
         setClassPacing(pacingData?.pacing ?? null);
       } catch (error) {
-        console.error("Failed to fetch class pacing:", error);
+        if (!active) return;
+        if (!isTeacher) {
+          console.warn("Failed to fetch class pacing", error);
+        }
       }
     };
 
     fetchPacing();
-  }, [isTeacher, classId, session?.token]);
+
+    if (!isTeacher) {
+      const interval = setInterval(fetchPacing, 5000);
+      return () => {
+        active = false;
+        clearInterval(interval);
+      };
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [isTeacher, classId, session?.token, unit.id]);
 
   const profileRef = useRef(profileKey);
   const unitRef = useRef(unit.id);
@@ -623,6 +651,7 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
   const [levelUpModal, setLevelUpModal] = useState(null);
   const previousLevelRef = useRef(null);
   const syncTimeoutRef = useRef(null);
+  const pointerIndexRef = useRef(null);
 
   const activeStage = stages[activeStageIndex];
 
@@ -811,6 +840,23 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
     return stages.findIndex((entry) => entry.id === pointerForUnit.lessonId);
   }, [pointerForUnit, stages]);
 
+  useEffect(() => {
+    if (isTeacher) return;
+    if (pointerIndex < 0 || pointerIndex >= stages.length) {
+      pointerIndexRef.current = null;
+      return;
+    }
+
+    const previousPointer = pointerIndexRef.current;
+    pointerIndexRef.current = pointerIndex;
+
+    if (previousPointer === pointerIndex) {
+      return;
+    }
+
+    setActiveStageIndex(pointerIndex);
+  }, [pointerIndex, stages.length, isTeacher]);
+
   const pointerUnlocksAssessment = pointerForUnit?.lessonId === ASSESSMENT_STAGE_ID;
   const assessmentUnlocked = pointerUnlocksAssessment || !hasAssessment || regularStagesComplete;
 
@@ -863,6 +909,38 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
       }
     }
     return ok;
+  };
+
+  const handleStopClassPace = async () => {
+    if (!isTeacher || !classId || !session?.token) return false;
+    setPaceStatus((prev) => ({ ...prev, __stop: "setting" }));
+    try {
+      const response = await updateClassPacing(session.token, classId, { command: "stop" });
+      if (response?.pacing) {
+        setClassPacing(response.pacing);
+        setCurrentPacing({ unitId: response.pacing.unitId, lessonId: response.pacing.lessonId });
+      }
+      setPaceStatus((prev) => ({ ...prev, __stop: "set" }));
+      setTimeout(() => {
+        setPaceStatus((prev) => {
+          if (!prev || prev.__stop !== "set") return prev;
+          const { __stop, ...rest } = prev;
+          return rest;
+        });
+      }, 2000);
+      return true;
+    } catch (error) {
+      console.warn("Failed to save pacing pointer", error);
+      setPaceStatus((prev) => ({ ...prev, __stop: "error" }));
+      setTimeout(() => {
+        setPaceStatus((prev) => {
+          if (!prev || prev.__stop !== "error") return prev;
+          const { __stop, ...rest } = prev;
+          return rest;
+        });
+      }, 2000);
+      return false;
+    }
   };
 
   return (
@@ -959,12 +1037,12 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
                 }
               } else if (pointerForUnit) {
                 if (pointerIndex === -1) {
-                  unlocked = index === 0;
+                  unlocked = index === 0 || (index > 0 && progress.stages?.[stages[index - 1].id]?.completed);
                 } else {
                   unlocked = index <= pointerIndex;
                 }
               } else {
-                unlocked = index === 0;
+                unlocked = index === 0 || (index > 0 && progress.stages?.[stages[index - 1].id]?.completed);
               }
 
               const isActive = index === activeStageIndex;
@@ -1020,6 +1098,8 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
             isTeacher={isTeacher}
             classId={classId}
             onAdvanceClassPace={handleTeacherAdvancePacingToStage}
+            onStopClassPace={classId ? handleStopClassPace : null}
+            stopStatus={paceStatus.__stop ?? null}
           />
         </section>
       </main>
@@ -1069,6 +1149,8 @@ function StagePlayer({
   isTeacher,
   classId,
   onAdvanceClassPace,
+  onStopClassPace,
+  stopStatus,
 }) {
   const isAssessmentStage = stage?.id === ASSESSMENT_STAGE_ID;
   const segments = useMemo(() => {
@@ -1151,6 +1233,7 @@ function StagePlayer({
   const isFormativeAssessment = currentSegment && (currentSegment.type === 'micro-quiz' || currentSegment.type === 'activity');
   const currentStageIndex = stages?.findIndex((item) => item.id === stageId) ?? -1;
   const nextStage = currentStageIndex >= 0 ? stages[currentStageIndex + 1] : null;
+  const stopButtonDisabled = stopStatus === "setting";
 
   const handleComplete = () => {
     const nextIndex = Math.min(currentIndex + 1, segments.length);
@@ -1251,15 +1334,30 @@ function StagePlayer({
           <h2>{stage.title}</h2>
           <p>{stage.description}</p>
         </div>
-        {isTeacher && isFormativeAssessment && teacherAssessmentView && (
-          <button onClick={() => setTeacherAssessmentView(false)} className="btn btn--ghost">
-            Back to Live Dashboard
-          </button>
-        )}
+        <div className="gamified-stage-header__actions">
+          {isTeacher && onStopClassPace && (
+            <button
+              type="button"
+              className="btn btn--outline"
+              onClick={onStopClassPace}
+              disabled={stopButtonDisabled}
+            >
+              {stopButtonDisabled ? "Saving…" : "Stop teaching"}
+            </button>
+          )}
+          {isTeacher && isFormativeAssessment && teacherAssessmentView && (
+            <button onClick={() => setTeacherAssessmentView(false)} className="btn btn--ghost">
+              Back to Live Dashboard
+            </button>
+          )}
+        </div>
         <span className="gamified-stage-progress">
           {Math.min(currentIndex + 1, segments.length)} / {segments.length}
         </span>
       </header>
+      {stopStatus === "error" && (
+        <p className="gamified-feedback is-error">Unable to save the teaching pointer. Please try again.</p>
+      )}
       <div key={panelKey} className={panelClassName}>
         <SegmentRenderer
           unit={unit}

@@ -679,19 +679,50 @@ export async function setStudentProgress(
   db,
   { studentId, classId, teacherId, teacherUsername, lessonSlug, status, formativeAttempts, summativeScore },
 ) {
-  const recordId = id();
+  if (!studentId || !lessonSlug) {
+    throw new Error('studentId and lessonSlug are required to record progress');
+  }
+
+  const queryResult = await db.query({
+    studentProgress: {
+      $: {
+        where: { studentId, lessonSlug },
+        limit: 1,
+      },
+    },
+  });
+
+  const existing = queryResult?.studentProgress?.[0] ?? null;
+  const recordId = existing ? extractId(existing) : id();
   const updatedAt = new Date().toISOString();
+
+  const resolvedClassId = classId ?? existing?.classId ?? null;
+  const resolvedTeacherId = teacherId ?? existing?.teacherId ?? null;
+  const resolvedTeacherUsername = teacherUsername ?? existing?.teacherUsername ?? null;
+  const resolvedStatus = status ?? existing?.status ?? 'locked';
+  const resolvedFormativeAttempts =
+    typeof formativeAttempts === 'number'
+      ? formativeAttempts
+      : typeof existing?.formativeAttempts === 'number'
+      ? existing.formativeAttempts
+      : null;
+  const resolvedSummativeScore =
+    typeof summativeScore === 'number'
+      ? summativeScore
+      : typeof existing?.summativeScore === 'number'
+      ? existing.summativeScore
+      : null;
 
   await db.transact([
     tx.studentProgress[recordId].update({
       studentId,
       lessonSlug,
-      classId,
-      teacherId,
-      teacherUsername,
-      status,
-      formativeAttempts: typeof formativeAttempts === 'number' ? formativeAttempts : null,
-      summativeScore: typeof summativeScore === 'number' ? summativeScore : null,
+      classId: resolvedClassId,
+      teacherId: resolvedTeacherId,
+      teacherUsername: resolvedTeacherUsername,
+      status: resolvedStatus,
+      formativeAttempts: resolvedFormativeAttempts,
+      summativeScore: resolvedSummativeScore,
       updatedAt,
     }),
   ]);
@@ -699,13 +730,13 @@ export async function setStudentProgress(
   return {
     id: recordId,
     studentId,
-    classId,
-    teacherId,
-    teacherUsername,
+    classId: resolvedClassId,
+    teacherId: resolvedTeacherId,
+    teacherUsername: resolvedTeacherUsername,
     lessonSlug,
-    status,
-    formativeAttempts: typeof formativeAttempts === 'number' ? formativeAttempts : null,
-    summativeScore: typeof summativeScore === 'number' ? summativeScore : null,
+    status: resolvedStatus,
+    formativeAttempts: resolvedFormativeAttempts,
+    summativeScore: resolvedSummativeScore,
     updatedAt,
   };
 }

@@ -451,6 +451,14 @@
   flex-wrap: wrap;
 }
 
+.gamified-stage-header__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .gamified-stage-eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.08em;

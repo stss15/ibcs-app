@@ -634,38 +634,38 @@ function StudentDashboardPage() {
       navigate("/", { replace: true });
       return;
     }
+    if (!token) return;
 
     let active = true;
-    setError(null);
+    let intervalId;
 
-    (async () => {
+    const loadDashboard = async () => {
       try {
-        if (!token) throw new Error("Session expired");
         const response = await getStudentDashboard(token);
         if (!active) return;
-        
+
         setDashboardData(response);
 
         const backendGamification = response?.gamification;
         if (backendGamification) {
           updateFromRemote(backendGamification);
         }
-        
+
         const studentProgress = response?.progress ?? [];
         const progressMap = new Map();
-        studentProgress.forEach(p => {
-            if(p.unitId && p.progress) {
-                progressMap.set(p.unitId, p.progress);
-            }
+        studentProgress.forEach((p) => {
+          if (p.unitId && p.progress) {
+            progressMap.set(p.unitId, p.progress);
+          }
         });
 
         const progressOwner = studentSession?.username?.toLowerCase() || "guest";
 
-        if(progressMap.has(b1Unit.id)) {
-            writeUnitProgress(b1Unit.id, progressOwner, progressMap.get(b1Unit.id));
+        if (progressMap.has(b1Unit.id)) {
+          writeUnitProgress(b1Unit.id, progressOwner, progressMap.get(b1Unit.id));
         }
-        if(progressMap.has(b2Unit.id)) {
-            writeUnitProgress(b2Unit.id, progressOwner, progressMap.get(b2Unit.id));
+        if (progressMap.has(b2Unit.id)) {
+          writeUnitProgress(b2Unit.id, progressOwner, progressMap.get(b2Unit.id));
         }
 
         setError(null);
@@ -673,9 +673,20 @@ function StudentDashboardPage() {
         if (!active) return;
         setError(error.message || "Unable to load dashboard");
       }
-    })();
+    };
 
-    return () => { active = false; };
+    setError(null);
+    loadDashboard();
+    const createInterval = typeof window !== "undefined" ? window.setInterval : setInterval;
+    const clearIntervalFn = typeof window !== "undefined" ? window.clearInterval : clearInterval;
+    intervalId = createInterval(loadDashboard, 5000);
+
+    return () => {
+      active = false;
+      if (intervalId) {
+        clearIntervalFn(intervalId);
+      }
+    };
   }, [ready, studentSession, token, navigate, updateFromRemote]);
 
   useEffect(() => {
