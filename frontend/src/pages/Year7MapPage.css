@@ -109,28 +109,24 @@
 .y7-board {
   display: grid;
   gap: clamp(1.2rem, 3vw, 2.2rem);
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  align-items: start;
 }
 
-.y7-board__list {
+.y7-board__grid {
   display: grid;
-  gap: 0.75rem;
-  max-height: 32rem;
-  overflow-y: auto;
-  padding-right: 0.4rem;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .y7-unit-chip {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 0.75rem;
+  gap: 0.65rem;
   align-items: center;
-  padding: 0.85rem 1rem;
-  border-radius: 18px;
-  border: 1px solid transparent;
+  padding: 0.8rem 0.95rem;
+  border-radius: 16px;
+  border: 1px solid rgba(37, 99, 235, 0.08);
   background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
   text-align: left;
   cursor: pointer;
   transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
@@ -143,9 +139,9 @@
 }
 
 .y7-unit-chip.is-active {
-  border-color: rgba(37, 99, 235, 0.6);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(255, 255, 255, 0.95));
-  box-shadow: 0 24px 50px rgba(37, 99, 235, 0.18);
+  border-color: rgba(37, 99, 235, 0.4);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 20px 40px rgba(37, 99, 235, 0.16);
 }
 
 .y7-unit-chip__icon {
@@ -180,11 +176,13 @@
 
 .y7-board__detail {
   background: rgba(255, 255, 255, 0.94);
-  border-radius: 24px;
-  padding: clamp(1.4rem, 4vw, 2.2rem);
-  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.15);
+  border-radius: 22px;
+  padding: clamp(1.3rem, 3.2vw, 2rem);
+  box-shadow: 0 20px 52px rgba(15, 23, 42, 0.12);
   display: grid;
-  gap: 1.4rem;
+  gap: 1.2rem;
+  max-height: 32rem;
+  overflow: hidden;
 }
 
 .y7-detail__header {
@@ -232,19 +230,21 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.9rem;
+  gap: 0.75rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
 }
 
 .y7-timeline__item {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.9rem;
+  gap: 0.75rem;
   align-items: start;
-  border-radius: 18px;
-  padding: 0.85rem 1rem;
-  background: rgba(248, 250, 255, 0.9);
-  border: 1px solid rgba(37, 99, 235, 0.16);
-  box-shadow: 0 14px 24px rgba(15, 23, 42, 0.1);
+  border-radius: 16px;
+  padding: 0.75rem 0.95rem;
+  background: rgba(248, 250, 255, 0.92);
+  border: 1px solid rgba(37, 99, 235, 0.12);
   position: relative;
 }
 
@@ -259,7 +259,7 @@
 
 .y7-timeline__item:hover::after,
 .y7-timeline__item:focus-within::after {
-  box-shadow: 0 18px 40px rgba(37, 99, 235, 0.16);
+  box-shadow: 0 16px 32px rgba(37, 99, 235, 0.12);
   transform: translateY(-2px);
 }
 
@@ -376,22 +376,8 @@
     align-items: flex-start;
   }
 
-  .y7-board {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .y7-board__list {
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(200px, 1fr);
-    overflow-x: auto;
-    overflow-y: visible;
-    max-height: none;
-    padding-bottom: 0.5rem;
-  }
-
-  .y7-unit-chip {
-    min-width: 200px;
+  .y7-board__grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 }
 

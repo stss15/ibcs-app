@@ -100,30 +100,32 @@
 
 .gamified-header-toggle {
   position: absolute;
-  top: 0.5rem;
-  right: 0.75rem;
-  top: 0.75rem;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.05);
-  transition: all 0.2s;
-  border: 1px solid rgba(18, 46, 132, 0.2);
-  border-radius: var(--radius-sm);
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  top: 0.8rem;
+  right: 0.9rem;
+  min-width: 72px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  padding: 0 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--cs-blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   z-index: 10;
   transition: all var(--transition-base);
 }
 
 .header-collapsed .gamified-header-toggle {
-  transform: rotate(180deg);
+  background: rgba(37, 99, 235, 0.18);
 }
 
 .gamified-header-toggle:hover {
-  background: rgba(255, 255, 255, 1);
-  border-color: rgba(18, 46, 132, 0.4);
+  background: rgba(37, 99, 235, 0.22);
+  border-color: rgba(37, 99, 235, 0.45);
 }
 
 .gamified-xp-card::before {
@@ -853,6 +855,31 @@
 
 .gamified-page.presentation-mode .gamified-stage-header h2 {
   font-size: 3rem;
+}
+
+.presentation-exit-button {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1.2rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.22);
+  cursor: pointer;
+  transition: background var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.presentation-exit-button:hover,
+.presentation-exit-button:focus-visible {
+  background: rgba(37, 99, 235, 0.92);
+  box-shadow: 0 18px 40px rgba(37, 99, 235, 0.28);
+  transform: translateY(-1px);
 }
 
 .teacher-controls {

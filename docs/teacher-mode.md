@@ -8,7 +8,7 @@ When a user is authenticated as a teacher, the UI is adjusted to better suit a c
 
 - **No Gamification:** Teachers do not earn XP, have levels, or streaks. All gamification-related UI elements are hidden.
 - **Full Content Access:** Teachers are not restricted by content locks. All units, stages, and segments are immediately accessible, allowing for easy planning and classroom presentation.
-- **Presentation Mode:** A dedicated "Presentation Mode" is available on module pages. This mode provides a full-screen, distraction-free view of the content, ideal for displaying on a projector or smartboard.
+- **Presentation Mode:** A dedicated "Presentation Mode" is available on module pages. This mode provides a full-screen, distraction-free view of the content, ideal for displaying on a projector or smartboard. A floating "Exit presentation" control remains visible so you can leave projector view without refreshing the page.
 - **Teacher-only segments:** Lesson authors can mark any segment with `audience: "teacher"`. These presenter notes appear exclusively in Teacher Mode, giving you a scripted launch without revealing it to learners.
 - **Pacing Controls:** Teachers have controls to set the learning pace for their classes.
 - **Live Assessment Dashboard:** When students are working on a formative assessment, teachers see a live dashboard of class progress instead of the assessment itself.
@@ -17,6 +17,8 @@ When a user is authenticated as a teacher, the UI is adjusted to better suit a c
 ## Pacing System
 
 The pacing system, also known as the "teacher pointer," allows teachers to control the flow of content for their students. A teacher can set a specific stage as the current "pace," and students in their class will only be able to access content up to and including that stage.
+
+> **KS3 parity** – Year 7/KS3 modules now use the same pacing controls and presentation tooling as the IB units. The revamped Year 7 map surfaces the live pointer and arranges units in a compact grid so the entire pathway fits on screen.
 
 ### How it Works
 

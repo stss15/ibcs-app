@@ -831,6 +831,15 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
 
   return (
     <div className={`gamified-page ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${headerCollapsed ? "header-collapsed" : ""} ${isTeacher && isPresentationMode ? "presentation-mode" : ""}`}>
+      {isTeacher && isPresentationMode && (
+        <button
+          type="button"
+          className="presentation-exit-button"
+          onClick={togglePresentationMode}
+        >
+          Exit presentation
+        </button>
+      )}
       <header className={`gamified-header ${headerCollapsed ? "is-collapsed" : ""}`}>
         <div className="gamified-header__main">
           <div>
@@ -860,7 +869,7 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
                 onClick={() => setHeaderCollapsed(!headerCollapsed)}
                 aria-label={headerCollapsed ? "Expand header" : "Collapse header"}
               >
-                {headerCollapsed ? "▼" : "▲"}
+                {headerCollapsed ? "Show stats" : "Hide stats"}
               </button>
               <div className="gamified-xp-card__top">
                 <span className={`gamified-level-badge ${levelUpModal ? "level-up" : ""}`}>Lv {level}</span>

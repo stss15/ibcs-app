@@ -4,9 +4,16 @@ import { getStudentDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
 import { useCurriculumManifest } from "../hooks/useCurriculumManifest.js";
 import { useGamification } from "../context/GamificationContext.jsx";
-import { writeUnitProgress }from "../lib/progressStorage.js";
+import { readUnitProgress, writeUnitProgress } from "../lib/progressStorage.js";
 import b1Unit from "../content/b1ComputationalThinking.jsx";
 import b2Unit from "../content/b2ProgrammingFundamentals.jsx";
+import y7IntroUnit from "../content/y7IntroductionComputing.jsx";
+import {
+  YEAR7_CURRICULUM,
+  YEAR7_LESSON_SEQUENCE,
+  getYear7LessonById,
+  getYear7LessonIndex,
+} from "../../../shared/year7Curriculum.js";
 
 import "./StudentDashboardPage.css";
 
@@ -604,6 +611,7 @@ function StudentDashboardPage() {
   const { updateFromRemote } = useGamification();
 
   const [dashboardData, setDashboardData] = useState(null);
+  const [localUnitProgress, setLocalUnitProgress] = useState({});
   const [error, setError] = useState(null);
   
   useEffect(() => {
@@ -656,6 +664,22 @@ function StudentDashboardPage() {
     return () => { active = false; };
   }, [ready, studentSession, token, navigate, updateFromRemote]);
 
+  useEffect(() => {
+    if (!studentSession?.username) return;
+    if (typeof window === "undefined") return;
+
+    const profileKey = studentSession.username.toLowerCase();
+    const next = {};
+    [y7IntroUnit, b1Unit, b2Unit].forEach((unit) => {
+      if (!unit?.id) return;
+      const { data } = readUnitProgress(unit.id, profileKey);
+      if (data && typeof data === "object") {
+        next[unit.id] = data;
+      }
+    });
+    setLocalUnitProgress(next);
+  }, [studentSession?.username]);
+
   if (error && !dashboardData) {
     return (
       <div className="page-shell">
@@ -668,132 +692,222 @@ function StudentDashboardPage() {
     return <div className="page-shell">Loading...</div>;
   }
 
-  return <DashboardLayout data={dashboardData} />;
+  return <StudentDashboardRenderer data={dashboardData} localProgress={localUnitProgress} />;
 }
 
-
-function DashboardLayout({ data }) {
-  const { student, progress } = data;
+function StudentDashboardRenderer({ data, localProgress }) {
   const { state: gamificationState } = useGamification();
   const { manifest } = useCurriculumManifest();
-  const [activeUnit, setActiveUnit] = useState(null);
 
-  const studentName = student?.displayName ?? "Student";
-  const track = student?.curriculumTrack ?? "ib-sl";
+  const student = data?.student ?? {};
+  const classInfo = data?.class ?? null;
+  const classPacing = data?.classPacing ?? null;
+  const trackRaw = student.curriculumTrack ?? "ib-sl";
+  const track = trackRaw.toLowerCase();
+
+  const lessonStatusMap = useMemo(
+    () => buildLessonStatusMap(data?.unlocks ?? [], data?.progress ?? []),
+    [data?.unlocks, data?.progress],
+  );
 
   const unitSummaries = useMemo(() => {
-    if (!manifest) return [];
-    return (manifest.units ?? [])
-      .filter(unit => !unit.availableFor || unit.availableFor.includes(track))
-      .map(unit => {
-        const unitProgress = progress.find(p => p.unitId === unit.id);
-        const completedPercentage = unitProgress?.completedPercentage ?? 0;
-        return { ...unit, completedPercentage, lessons: unitProgress?.lessons ?? [] };
-      });
-  }, [manifest, track, progress]);
+    if (track.startsWith("ks3")) {
+      const pointerLessonId = classPacing?.lessonId ?? null;
+      return createYear7Summaries(pointerLessonId);
+    }
+    return createUnitSummaries(manifest, lessonStatusMap, track);
+  }, [track, classPacing?.lessonId, manifest, lessonStatusMap]);
 
-  const overallPercentage = unitSummaries.length > 0
-    ? Math.round(unitSummaries.reduce((acc, u) => acc + u.completedPercentage, 0) / unitSummaries.length)
+  const totals = useMemo(() => computeOverallTotals(unitSummaries), [unitSummaries]);
+
+  const pointerLesson = useMemo(() => {
+    if (!track.startsWith("ks3")) return null;
+    if (!classPacing?.lessonId) return null;
+    return getYear7LessonById(classPacing.lessonId);
+  }, [track, classPacing?.lessonId]);
+
+  const pointerUpdatedAt = useMemo(() => {
+    if (!track.startsWith("ks3")) return null;
+    return formatTimestamp(classPacing?.updatedAt);
+  }, [track, classPacing?.updatedAt]);
+
+  const curriculumCta = useMemo(() => createCurriculumLink(track, classInfo), [track, classInfo]);
+
+  const interactiveAttemptSections = useMemo(
+    () => buildInteractiveSections(track, localProgress),
+    [track, localProgress],
+  );
+
+  const recentUpdates = useMemo(() => createRecentUpdates(data?.progress ?? []), [data?.progress]);
+
+  const gamification = useMemo(
+    () => ({ ...gamificationState, ...(data?.gamification ?? {}) }),
+    [gamificationState, data?.gamification],
+  );
+
+  const studentName = useMemo(() => {
+    if (student.displayName) return student.displayName;
+    const fallback = [student.firstName, student.lastName].filter(Boolean).join(" ");
+    if (fallback.trim()) return fallback.trim();
+    if (student.username) return student.username;
+    return "Student";
+  }, [student.displayName, student.firstName, student.lastName, student.username]);
+
+  return (
+    <StudentDashboardLayout
+      studentName={studentName}
+      track={track}
+      trackDisplayName={describeTrack(trackRaw)}
+      curriculumLink={curriculumCta.link}
+      curriculumCtaLabel={curriculumCta.label}
+      overallPercentage={totals.overallPercentage}
+      totalCompleted={totals.totalCompleted}
+      totalLessons={totals.totalLessons}
+      classInfo={classInfo}
+      activeStage={student.activeStage ?? null}
+      pointerLesson={pointerLesson}
+      pointerUpdatedAt={pointerUpdatedAt}
+      gamification={gamification}
+      unitSummaries={unitSummaries}
+      interactiveAttemptSections={interactiveAttemptSections}
+      recentUpdates={recentUpdates}
+      status={data?.status ?? null}
+      isIBTrack={track.startsWith("ib")}
+    />
+  );
+}
+
+function buildLessonStatusMap(unlocks = [], progress = []) {
+  const map = new Map();
+
+  (progress ?? []).forEach((record) => {
+    if (!record?.lessonSlug) return;
+    map.set(record.lessonSlug, record.status ?? "locked");
+  });
+
+  (unlocks ?? []).forEach((unlock) => {
+    if (unlock?.scope !== "lesson") return;
+    if (!unlock?.stageKey) return;
+    const existing = map.get(unlock.stageKey);
+    if (!existing || existing === "locked") {
+      map.set(unlock.stageKey, "available");
+    }
+  });
+
+  return map;
+}
+
+function createYear7Summaries(pointerLessonId) {
+  const pointerIndex = pointerLessonId ? getYear7LessonIndex(pointerLessonId) : -1;
+
+  return YEAR7_CURRICULUM.map((unit) => {
+    const lessons = unit.lessons.map((lesson) => {
+      const lessonIndex = getYear7LessonIndex(lesson.id);
+      let status = "locked";
+
+      if (pointerIndex === -1) {
+        status = lessonIndex === 0 ? "available" : "locked";
+      } else if (lessonIndex < pointerIndex) {
+        status = "formative-complete";
+      } else if (lessonIndex === pointerIndex) {
+        status = "available";
+      } else if (lessonIndex === pointerIndex + 1) {
+        status = "available";
+      }
+
+      return {
+        ...lesson,
+        chapterTitle: null,
+        status,
+      };
+    });
+
+    const totalCount = lessons.length;
+    const completedCount = lessons.filter((lesson) => isLessonComplete(lesson.status)).length;
+    const unlockedCount = lessons.filter((lesson) => lesson.status !== "locked").length;
+    const inProgressCount = Math.max(unlockedCount - completedCount, 0);
+    const lockedCount = Math.max(totalCount - unlockedCount, 0);
+    const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    return {
+      id: unit.id,
+      title: unit.title,
+      description: unit.summary,
+      lessons,
+      completedCount,
+      unlockedCount,
+      inProgressCount,
+      lockedCount,
+      totalCount,
+      percentage,
+    };
+  });
+}
+
+function computeOverallTotals(units = []) {
+  const totals = units.reduce(
+    (acc, unit) => {
+      const total = unit.totalCount ?? unit.lessons?.length ?? 0;
+      const completed = unit.completedCount ?? 0;
+      return {
+        totalLessons: acc.totalLessons + total,
+        totalCompleted: acc.totalCompleted + completed,
+      };
+    },
+    { totalLessons: 0, totalCompleted: 0 },
+  );
+
+  const overallPercentage = totals.totalLessons > 0
+    ? Math.round((totals.totalCompleted / totals.totalLessons) * 100)
     : 0;
 
-  const handleUnitClick = (unit) => {
-    setActiveUnit(unit);
-  };
-
-  const handleCloseDetail = () => {
-    setActiveUnit(null);
-  };
-
-  return (
-    <div className="page-shell student-dashboard-new">
-      <header className="dashboard-header">
-        <div>
-          <span className="eyebrow">Student Dashboard</span>
-          <h1>Hi {studentName}</h1>
-        </div>
-        <div className="overall-progress-metric">
-          <strong>{overallPercentage}%</strong>
-          <span>Overall Progress</span>
-        </div>
-      </header>
-
-      <section className="dashboard-metrics">
-        <MetricCard label="Level" value={`Lv ${gamificationState.level ?? 1}`} />
-        <MetricCard label="XP" value={gamificationState.xp ?? 0} />
-        <MetricCard label="Streak" value={gamificationState.streak ?? 0} />
-        <MetricCard label="Accuracy" value={`${gamificationState.totalAttempts > 0 ? Math.round((gamificationState.totalCorrect / gamificationState.totalAttempts) * 100) : 100}%`} />
-      </section>
-
-      <section className="dashboard-curriculum">
-        <h2>Your Learning Path</h2>
-        <div className="unit-list">
-          {unitSummaries.map(unit => (
-            <UnitCard key={unit.id} unit={unit} onClick={() => handleUnitClick(unit)} />
-          ))}
-        </div>
-      </section>
-      {activeUnit && <UnitDetailView unit={activeUnit} onClose={handleCloseDetail} />}
-    </div>
-  );
+  return { ...totals, overallPercentage };
 }
 
-function UnitDetailView({ unit, onClose }) {
-  return (
-    <div className="unit-detail-overlay" onClick={onClose}>
-      <div className="unit-detail-panel" onClick={(e) => e.stopPropagation()}>
-        <button className="close-button" onClick={onClose}>×</button>
-        <div className="unit-detail-header">
-          <h2>{unit.title}</h2>
-          <div className="unit-card-progress">
-            <div className="progress-bar">
-              <div className="progress-bar-fill" style={{ width: `${unit.completedPercentage}%` }}></div>
-            </div>
-            <span>{unit.completedPercentage}%</span>
-          </div>
-        </div>
-        <div className="lesson-timeline">
-          <h3>Lesson Timeline</h3>
-          <ul>
-            {unit.lessons.map(lesson => (
-              <li key={lesson.id}>
-                <span>{lesson.title}</span>
-                <span className={`status-tag ${lesson.status}`}>{lesson.status}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
+function formatTimestamp(value) {
+  if (!value) return null;
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) return null;
+  return timestamp.toLocaleString();
 }
 
-function UnitCard({ unit, onClick }) {
-  return (
-    <div className="unit-card" onClick={onClick}>
-      <div className="unit-card-header">
-        <h3>{unit.title}</h3>
-        <span>{unit.id}</span>
-      </div>
-      <p>{unit.summary}</p>
-      <div className="unit-card-progress">
-        <div className="progress-bar">
-          <div className="progress-bar-fill" style={{ width: `${unit.completedPercentage}%` }}></div>
-        </div>
-        <span>{unit.completedPercentage}%</span>
-      </div>
-    </div>
-  );
+function createCurriculumLink(track, classInfo) {
+  if (track.startsWith("ks3")) {
+    if (classInfo?.id) {
+      return {
+        link: { pathname: "/curriculum/year7", state: { classId: classInfo.id } },
+        label: "Open Year 7 map",
+      };
+    }
+    return { link: "/curriculum/year7", label: "Explore Year 7 map" };
+  }
+
+  if (track === "igcse") {
+    return { link: "/curriculum", label: "Explore curriculum map" };
+  }
+
+  return { link: "/curriculum/ib", label: "Browse IB curriculum" };
 }
 
-function MetricCard({ label, value }) {
-  return (
-    <div className="metric-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
+function buildInteractiveSections(track, localProgress) {
+  const sequence = [];
+  if (track.startsWith("ks3")) {
+    sequence.push(y7IntroUnit);
+  }
+  sequence.push(b1Unit, b2Unit);
 
+  const seen = new Set();
+  return sequence
+    .filter((unit) => unit && !seen.has(unit.id) && seen.add(unit.id))
+    .map((unit) => {
+      const insights = localProgress?.[unit.id] ?? null;
+      return {
+        id: unit.title,
+        rows: buildAttemptRows(unit, insights),
+      };
+    })
+    .filter((section) => section.rows.length > 0);
+}
 
 export default StudentDashboardPage;
 export {

@@ -425,7 +425,7 @@ export default function Year7MapPage() {
       </section>
 
       <section className="y7-board">
-        <aside className="y7-board__list" aria-label="Year 7 units">
+        <div className="y7-board__grid" aria-label="Year 7 units">
           {unitSummaries.map((unit) => {
             const isActive = selectedUnit?.id === unit.id;
             const isPointerUnit = pointerUnitId === unit.id;
@@ -448,7 +448,7 @@ export default function Year7MapPage() {
               </button>
             );
           })}
-        </aside>
+        </div>
 
         {selectedUnit && (
           <article className="y7-board__detail" aria-live="polite">

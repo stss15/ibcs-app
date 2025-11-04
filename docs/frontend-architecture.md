@@ -27,6 +27,11 @@ frontend/src/
 - Gamification state (XP, streaks, sprites) is provided by `context/GamificationContext.jsx` and persisted to `localStorage`.
 - **Enhanced Components** (`components/segments/EnhancedComponents.jsx`) provide modern, reusable UI elements: `KeywordCard`, `Callout`, `EnhancedTable`, `ProgressIndicator`, `AchievementBadge`, `XPNotification`, `StreakIndicator`, `SkeletonLoader`. These components feature modern animations, gradients, and hover effects aligned with the design system.
 
+## Dashboards
+- `pages/StudentDashboardPage.jsx` now renders the shared `StudentDashboardLayout`, so every curriculum track (KS3, IGCSE, IB) shares the same template. The layout pulls lesson availability from InstantDB pacing and the manifest, surfaces KS3 (Year 7) pointers, and aggregates segment attempts from local storage for the “Checkpoint insights” table.
+- `pages/Year7MapPage.jsx` has been consolidated into a compact grid so the full KS3 pathway fits on screen. The selected unit timeline scrolls within the detail panel, and the live teacher pointer is highlighted in both the grid card and the lesson timeline.
+- Teacher dashboards reuse the same pacing primitives; the presentation toggle now exposes a persistent “Exit presentation” control, ensuring teachers can leave projector view without refreshing the page.
+
 ## CSS Conventions
 - Global tokens and resets reside in `styles/global.css`.
 - **Design System**: A comprehensive set of CSS variables for colors, spacing, shadows, transitions, and animations. Use `var(--cs-blue)`, `var(--space-lg)`, `var(--radius-xl)`, `var(--shadow-md)`, `var(--transition-base)` instead of hard-coded values.
