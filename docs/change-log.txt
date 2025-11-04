@@ -13,6 +13,7 @@ IBCS APP — OPERATIONS CHANGE LOG
 - Deployment script now calls `worker/reset-db.js` before seeding so InstantDB starts from a clean slate on every `fix-and-deploy` run.
 - Unified the student dashboard behind a shared template that reads InstantDB pacing, manifest metadata, and local checkpoint analytics for every curriculum track.
 - Reflowed the Year 7 map into a responsive grid with a scrolling lesson timeline so the entire KS3 pathway is visible at once, and added a persistent “Exit presentation” control for projector view.
+- Added a live “Join lesson” CTA to the student dashboard, wired timeline links to respect the teacher pointer, and expanded KS3 lesson content with teacher objectives and task facilitation notes.
 
 2025-11-03  Major UI/UX modernization & design system
 ---------------------------------

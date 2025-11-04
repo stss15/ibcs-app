@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useSession } from "../hooks/useSession.js";
 import { getTeacherDashboard, getStudentDashboard, updateClassPacing } from "../lib/api.js";
 import {
@@ -32,11 +32,13 @@ const TOTAL_YEAR7_LESSONS = YEAR7_LESSON_SEQUENCE.length;
 export default function Year7MapPage() {
   const { session, ready } = useSession();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const token = session?.token ?? null;
   const role = session?.user?.role ?? null;
   const isTeacher = role === "teacher";
   const isStudent = role === "student";
 
+  const focusUnitFromLocation = location.state?.focusUnit ?? null;
   const defaultUnitId = YEAR7_CURRICULUM[0]?.id ?? null;
   const [teacherData, setTeacherData] = useState(null);
   const [studentData, setStudentData] = useState(null);
@@ -89,6 +91,13 @@ export default function Year7MapPage() {
       setSearchParams({});
     }
   }, [selectedClassId, setSearchParams]);
+
+  useEffect(() => {
+    if (!focusUnitFromLocation) return;
+    if (YEAR7_CURRICULUM.some((unit) => unit.id === focusUnitFromLocation)) {
+      setSelectedUnitId(focusUnitFromLocation);
+    }
+  }, [focusUnitFromLocation]);
 
   const teacherClasses = useMemo(() => {
     if (!teacherData?.classes) return [];

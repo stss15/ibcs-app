@@ -94,6 +94,7 @@ function createUnitSummaries(manifest, lessonStatusMap, track) {
             lessons.push({
               id: lesson.id,
               title: lesson.title,
+              unitId: unit.id,
               chapterTitle: chapter.title,
               status: lessonStatusMap.get(lesson.id) ?? "locked",
             });
@@ -147,6 +148,8 @@ function StudentDashboardLayout({
   activeStage,
   pointerLesson,
   pointerUpdatedAt,
+  pointerHeadline,
+  pointerCta,
   gamification,
   unitSummaries,
   interactiveAttemptSections,
@@ -276,14 +279,10 @@ function StudentDashboardLayout({
                   ? classInfo.description || classInfo.yearGroup || "Connected to your class"
                   : "Your teacher will place you into a class soon."}
               </p>
-              {track.startsWith("ks3") && (
+              {(pointerLesson || pointerCta) && (
                 <div className="student-dashboard__pointer">
-                  <span>Teacher pointer</span>
-                  <strong>
-                    {pointerLesson
-                      ? `${pointerLesson.unitTitle}: ${pointerLesson.title}`
-                      : "Your teacher will set the next lesson in class"}
-                  </strong>
+                  <span>Live lesson</span>
+                  <strong>{pointerHeadline ?? "Your teacher will start the next lesson soon"}</strong>
                   {pointerUpdatedAt && <small>Updated {pointerUpdatedAt}</small>}
                 </div>
               )}
@@ -301,6 +300,11 @@ function StudentDashboardLayout({
             <Link to={curriculumLink} className="pill">
               {curriculumCtaLabel}
             </Link>
+            {pointerCta && (
+              <Link to={pointerCta.link} className="pill pill--action pill--live">
+                {pointerCta.label}
+              </Link>
+            )}
           </div>
         </div>
 
@@ -444,17 +448,27 @@ function StudentDashboardLayout({
                   </span>
                 </div>
                 <ul className="student-dashboard__lesson-items">
-                  {selectedUnit.lessons.slice(0, 6).map((lesson) => (
-                    <li key={lesson.id}>
-                      <div>
-                        <strong>{lesson.title}</strong>
-                        {lesson.chapterTitle && <span className="muted">{lesson.chapterTitle}</span>}
-                      </div>
-                      <span className={`student-tag student-tag--${normaliseStatus(lesson.status)}`}>
-                        {progressLabel(lesson.status)}
-                      </span>
-                    </li>
-                  ))}
+                  {selectedUnit.lessons.slice(0, 6).map((lesson) => {
+                    const lessonLink = resolveLessonLink(track, selectedUnit, lesson, classInfo);
+                    const statusClass = `student-tag student-tag--${normaliseStatus(lesson.status)}`;
+                    const actionLabel = lesson.status === "formative-complete" ? "Review" : "Open lesson";
+                    return (
+                      <li key={lesson.id}>
+                        <div className="student-dashboard__lesson-info">
+                          <strong>{lesson.title}</strong>
+                          {lesson.chapterTitle && <span className="muted">{lesson.chapterTitle}</span>}
+                        </div>
+                        <div className="student-dashboard__lesson-actions">
+                          <span className={statusClass}>{progressLabel(lesson.status)}</span>
+                          {lessonLink && lesson.status !== "locked" && (
+                            <Link to={lessonLink} className="pill pill--ghost">
+                              {actionLabel}
+                            </Link>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
                   {selectedUnit.lessons.length === 0 && (
                     <li className="muted">Lessons will appear once unlocked.</li>
                   )}
@@ -731,6 +745,24 @@ function StudentDashboardRenderer({ data, localProgress }) {
     return formatTimestamp(classPacing?.updatedAt);
   }, [track, classPacing?.updatedAt]);
 
+  const pointerHeadline = useMemo(() => {
+    if (pointerLesson) {
+      return `${pointerLesson.unitTitle}: ${pointerLesson.title}`;
+    }
+    if (classPacing?.lessonId) {
+      return classPacing.lessonId;
+    }
+    if (classPacing?.unitId) {
+      return classPacing.unitId;
+    }
+    return null;
+  }, [pointerLesson, classPacing?.lessonId, classPacing?.unitId]);
+
+  const pointerCta = useMemo(
+    () => resolvePointerAction(track, pointerLesson, classPacing, classInfo),
+    [track, pointerLesson, classPacing, classInfo],
+  );
+
   const curriculumCta = useMemo(() => createCurriculumLink(track, classInfo), [track, classInfo]);
 
   const interactiveAttemptSections = useMemo(
@@ -767,6 +799,8 @@ function StudentDashboardRenderer({ data, localProgress }) {
       activeStage={student.activeStage ?? null}
       pointerLesson={pointerLesson}
       pointerUpdatedAt={pointerUpdatedAt}
+      pointerHeadline={pointerHeadline}
+      pointerCta={pointerCta}
       gamification={gamification}
       unitSummaries={unitSummaries}
       interactiveAttemptSections={interactiveAttemptSections}
@@ -811,12 +845,11 @@ function createYear7Summaries(pointerLessonId) {
         status = "formative-complete";
       } else if (lessonIndex === pointerIndex) {
         status = "available";
-      } else if (lessonIndex === pointerIndex + 1) {
-        status = "available";
       }
 
       return {
         ...lesson,
+        unitId: unit.id,
         chapterTitle: null,
         status,
       };
@@ -828,6 +861,10 @@ function createYear7Summaries(pointerLessonId) {
     const inProgressCount = Math.max(unlockedCount - completedCount, 0);
     const lockedCount = Math.max(totalCount - unlockedCount, 0);
     const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    const nextLesson =
+      lessons.find((lesson) => lesson.status === "available") ??
+      lessons.find((lesson) => lesson.status === "formative-complete") ??
+      lessons[0] ?? null;
 
     return {
       id: unit.id,
@@ -840,6 +877,7 @@ function createYear7Summaries(pointerLessonId) {
       lockedCount,
       totalCount,
       percentage,
+      nextLesson,
     };
   });
 }
@@ -887,6 +925,91 @@ function createCurriculumLink(track, classInfo) {
   }
 
   return { link: "/curriculum/ib", label: "Browse IB curriculum" };
+}
+
+function resolvePointerAction(track, pointerLesson, classPacing, classInfo) {
+  if (track.startsWith("ks3")) {
+    if (!pointerLesson) return null;
+    const state = {};
+    if (classInfo?.id) state.classId = classInfo.id;
+
+    if (pointerLesson.unitId === "Y7-INTRO") {
+      const hasState = Object.keys(state).length > 0;
+      return {
+        link: {
+          pathname: "/curriculum/year7/intro",
+          ...(hasState ? { state } : {}),
+        },
+        label: `Join ${pointerLesson.title}`,
+      };
+    }
+
+    const mapState = {
+      ...state,
+      ...(pointerLesson.unitId ? { focusUnit: pointerLesson.unitId } : {}),
+    };
+    const hasMapState = Object.keys(mapState).length > 0;
+    return {
+      link: {
+        pathname: "/curriculum/year7",
+        ...(hasMapState ? { state: mapState } : {}),
+      },
+      label: `View ${pointerLesson.title}`,
+    };
+  }
+
+  if (track.startsWith("ib")) {
+    if (!classPacing?.unitId) return null;
+    const unitSlug = String(classPacing.unitId).toLowerCase();
+    const link = { pathname: `/curriculum/ib/${unitSlug}` };
+    if (classPacing.lessonId) {
+      link.state = { focusStage: classPacing.lessonId };
+    }
+    return {
+      link,
+      label: "Join live lesson",
+    };
+  }
+
+  if (track === "igcse") {
+    return { link: "/curriculum", label: "View unlocked topic" };
+  }
+
+  return null;
+}
+
+function resolveLessonLink(track, unit, lesson, classInfo) {
+  if (!lesson || lesson.status === "locked") return null;
+
+  if (track.startsWith("ks3")) {
+    const baseState = {};
+    if (classInfo?.id) baseState.classId = classInfo.id;
+
+    if (lesson.unitId === "Y7-INTRO") {
+      const hasState = Object.keys(baseState).length > 0;
+      return {
+        pathname: "/curriculum/year7/intro",
+        ...(hasState ? { state: baseState } : {}),
+      };
+    }
+
+    const mapState = {
+      ...baseState,
+      ...(lesson.unitId ? { focusUnit: lesson.unitId } : {}),
+    };
+    if (!mapState.focusUnit && unit?.id) {
+      mapState.focusUnit = unit.id;
+    }
+    const hasMapState = Object.keys(mapState).length > 0;
+
+    return {
+      pathname: "/curriculum/year7",
+      ...(hasMapState ? { state: mapState } : {}),
+    };
+  }
+
+  if (!lesson.id) return null;
+  return `/lesson/${lesson.id}`;
 }
 
 function buildInteractiveSections(track, localProgress) {
