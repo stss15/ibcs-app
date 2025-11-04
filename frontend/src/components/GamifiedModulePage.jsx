@@ -594,7 +594,7 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
     const fetchPacing = async () => {
       try {
         const pacingData = await getClassPacing(session.token, classId);
-        setClassPacing(pacingData);
+        setClassPacing(pacingData?.pacing ?? null);
       } catch (error) {
         console.error("Failed to fetch class pacing:", error);
       }
@@ -799,29 +799,65 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
     () => unit.stages.every((stage) => progress.stages?.[stage.id]?.completed),
     [unit.stages, progress.stages],
   );
-  const assessmentUnlocked = !hasAssessment || regularStagesComplete;
+  const pointerForUnit = useMemo(() => {
+    if (!classPacing) return null;
+    if (classPacing.unitId && classPacing.unitId !== unit.id) return null;
+    if (!classPacing.lessonId) return null;
+    return classPacing;
+  }, [classPacing, unit.id]);
 
-  const handleSetPace = async (stageId) => {
-    if (!isTeacher || !classId) return false;
-    setPaceStatus({ [stageId]: "setting" });
+  const pointerIndex = useMemo(() => {
+    if (!pointerForUnit) return -1;
+    return stages.findIndex((entry) => entry.id === pointerForUnit.lessonId);
+  }, [pointerForUnit, stages]);
+
+  const pointerUnlocksAssessment = pointerForUnit?.lessonId === ASSESSMENT_STAGE_ID;
+  const assessmentUnlocked = pointerUnlocksAssessment || !hasAssessment || regularStagesComplete;
+
+  const handleSetPace = async (stage) => {
+    if (!isTeacher || !classId || !session?.token || !stage) return false;
+    const stageId = stage.id;
+    setPaceStatus((prev) => ({ ...prev, [stageId]: "setting" }));
     try {
-      await updateClassPacing(session.token, classId, { unitId: unit.id, lessonId: stageId });
-      setCurrentPacing({ unitId: unit.id, lessonId: stageId });
-      setPaceStatus({ [stageId]: "set" });
-      setTimeout(() => setPaceStatus({ [stageId]: null }), 2000);
+      const response = await updateClassPacing(session.token, classId, {
+        unitId: unit.id,
+        lessonId: stageId,
+        lessonTitle: stage.title,
+      });
+      if (response?.pacing) {
+        setClassPacing(response.pacing);
+        setCurrentPacing({ unitId: response.pacing.unitId, lessonId: response.pacing.lessonId });
+      } else {
+        setCurrentPacing({ unitId: unit.id, lessonId: stageId });
+      }
+      setPaceStatus((prev) => ({ ...prev, [stageId]: "set" }));
+      setTimeout(() => {
+        setPaceStatus((prev) => {
+          if (!prev || prev[stageId] !== "set") return prev;
+          const { [stageId]: _removed, ...rest } = prev;
+          return rest;
+        });
+      }, 2000);
       return true;
-    } catch {
-      setPaceStatus({ [stageId]: "error" });
-      setTimeout(() => setPaceStatus({ [stageId]: null }), 2000);
+    } catch (error) {
+      console.warn("Failed to update class pacing", error);
+      setPaceStatus((prev) => ({ ...prev, [stageId]: "error" }));
+      setTimeout(() => {
+        setPaceStatus((prev) => {
+          if (!prev || prev[stageId] !== "error") return prev;
+          const { [stageId]: _removed, ...rest } = prev;
+          return rest;
+        });
+      }, 2000);
       return false;
     }
   };
 
-  const handleTeacherAdvancePacingToStage = async (targetStageId) => {
-    if (!targetStageId) return false;
-    const ok = await handleSetPace(targetStageId);
+  const handleTeacherAdvancePacingToStage = async (targetStage) => {
+    if (!targetStage) return false;
+    const ok = await handleSetPace(targetStage);
     if (ok) {
-      const targetIndex = unit.stages.findIndex((stage) => stage.id === targetStageId);
+      const targetIndex = stages.findIndex((entry) => entry.id === targetStage.id);
       if (targetIndex !== -1) {
         setActiveStageIndex(targetIndex);
       }
@@ -912,16 +948,27 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
               if (isTeacher) {
                 unlocked = true;
               } else if (stage.id === ASSESSMENT_STAGE_ID) {
-                unlocked = assessmentUnlocked;
-              } else if (classPacing) {
-                const paceIndex = stages.findIndex((entry) => entry.id === classPacing.lessonId);
-                const isWithinPace = paceIndex === -1 ? index === 0 : index <= paceIndex;
-                unlocked = isWithinPace && (index === 0 || progress.stages?.[stages[index - 1].id]?.completed);
+                if (pointerForUnit) {
+                  if (pointerIndex === -1) {
+                    unlocked = index === 0;
+                  } else {
+                    unlocked = index <= pointerIndex;
+                  }
+                } else {
+                  unlocked = assessmentUnlocked;
+                }
+              } else if (pointerForUnit) {
+                if (pointerIndex === -1) {
+                  unlocked = index === 0;
+                } else {
+                  unlocked = index <= pointerIndex;
+                }
               } else {
                 unlocked = index === 0;
               }
 
               const isActive = index === activeStageIndex;
+              const isPointerStage = Boolean(pointerForUnit) && pointerForUnit.lessonId === stage.id;
               const currentPaceStatus = paceStatus[stage.id];
               return (
                 <li key={stage.id} className="gamified-stage-item">
@@ -929,7 +976,7 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
                     type="button"
                     className={`gamified-stage-link${isActive ? " is-active" : ""}${state?.completed ? " is-complete" : ""}${
                       !unlocked ? " is-locked" : ""
-                    }`}
+                    }${isPointerStage ? " is-pointer" : ""}`}
                     disabled={!unlocked}
                     onClick={() => unlocked && setActiveStageIndex(index)}
                   >
@@ -939,7 +986,7 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
                   {isTeacher && (
                     <button
                       className={`set-pace-btn ${currentPaceStatus ? `set-pace-btn--${currentPaceStatus}` : ""}`}
-                      onClick={() => handleSetPace(stage.id)}
+                      onClick={() => handleSetPace(stage)}
                       disabled={currentPaceStatus === "setting"}
                     >
                       {currentPaceStatus === "setting" ? "Setting..." : currentPaceStatus === "set" ? "Pace Set!" : currentPaceStatus === "error" ? "Error" : "Set Pace"}
@@ -1120,11 +1167,11 @@ function StagePlayer({
 
   const handleAdvancePacingForClass = async () => {
     if (!onAdvanceClassPace || !stageId) return;
-    const targetStageId = nextStage?.id ?? stageId;
+    const targetStage = nextStage ?? stage;
     setAdvanceState("pending");
     setAdvanceError(null);
     try {
-      const ok = await onAdvanceClassPace(targetStageId, { fromStageId: stageId, isLastStage: !nextStage });
+      const ok = await onAdvanceClassPace(targetStage, { fromStageId: stageId, isLastStage: !nextStage });
       if (!ok) {
         throw new Error("Unable to update class pacing");
       }
@@ -1165,7 +1212,7 @@ function StagePlayer({
     );
   }
 
-  if (isTeacher && isFormativeAssessment && !teacherAssessmentView) {
+  if (isTeacher && classId && isFormativeAssessment && !teacherAssessmentView) {
     return (
       <div className="gamified-stage" ref={stageContainerRef}>
         <LiveAssessmentDashboard

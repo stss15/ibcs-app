@@ -24,12 +24,18 @@ The pacing system, also known as the "teacher pointer," allows teachers to contr
 
 1.  **Setting the Pace:**
     - On the module page, teachers will see a "Set Pace" button next to each stage in the navigation sidebar.
-    - Clicking this button sets that stage as the current pace for the selected class. This is saved to the backend in the `classPacing` collection.
+    - Clicking this button sets that stage as the current pace for the selected class. This is saved to the backend in the `classPacing` collection and immediately reflected on dashboards and curriculum maps.
 
 2.  **Student Experience:**
     - When a student loads a module page, the application fetches the pacing information for their class.
-    - The student's progress is gated by the teacher's pace. They can only access stages up to the one set by the teacher.
-    - Within the paced limit, students must still complete stages sequentially. For example, if the pace is set to Stage 3, a student must complete Stage 1 before they can access Stage 2.
+    - Students can open any stage at or before the live pointer, even if they have not finished the earlier stages in that window. Everything beyond the pointer remains locked.
+    - Learners can always revisit previous material for revision but can never move forward past the teacher's pointer.
+
+3.  **Saving progress at the end of a lesson:**
+    - Use the "Stop teaching" controls on the Year 7 map or the teacher dashboard when wrapping up a session. This records the current pointer (stage and time) so the same position is restored the next time the class returns.
+
+4.  **Teacher preview mode:**
+    - Opening a module without selecting a class keeps you out of live pacing. You can scroll freely, skip formative or summative assessments, and plan future lessons without affecting what students see.
 
 ## Live Assessment Dashboard
 

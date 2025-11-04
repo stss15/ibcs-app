@@ -508,6 +508,52 @@ function TeacherDashboardPage() {
     [token, clearPacingMessage],
   );
 
+  const handleStopPacing = useCallback(
+    async (classId) => {
+      if (!token || !classId) return;
+      setPacingState((prev) => ({
+        ...prev,
+        [classId]: {
+          ...(prev[classId] ?? {}),
+          busy: true,
+          message: "Saving pointer…",
+          tone: "info",
+        },
+      }));
+
+      try {
+        const response = await updateClassPacing(token, classId, { command: "stop" });
+        if (response?.pacing) {
+          setDashboard((prev) => ({
+            ...prev,
+            classPacing: upsertClassPacingRecords(prev?.classPacing, response.pacing),
+          }));
+        }
+        const lessonTitle = response?.lesson?.title ?? "current lesson";
+        setPacingState((prev) => ({
+          ...prev,
+          [classId]: {
+            busy: false,
+            message: `Pointer saved at ${lessonTitle}`,
+            tone: "success",
+          },
+        }));
+      } catch (error) {
+        setPacingState((prev) => ({
+          ...prev,
+          [classId]: {
+            busy: false,
+            message: error?.message || "Unable to save the teaching pointer.",
+            tone: "error",
+          },
+        }));
+      } finally {
+        clearPacingMessage(classId);
+      }
+    },
+    [token, clearPacingMessage],
+  );
+
   const handleOpenYear7Map = useCallback(
     (classId) => {
       navigate(`/curriculum/year7?classId=${encodeURIComponent(classId)}`);
@@ -1079,6 +1125,14 @@ function TeacherDashboardPage() {
                       disabled={Boolean(selectedPacingInfo?.busy) || !selectedPacing}
                     >
                       Advance lesson
+                    </button>
+                    <button
+                      type="button"
+                      className="pill"
+                      onClick={() => handleStopPacing(selectedClass.id)}
+                      disabled={Boolean(selectedPacingInfo?.busy) || !selectedPacing}
+                    >
+                      Stop teaching
                     </button>
                   </div>
                   {selectedPacingInfo?.message && (

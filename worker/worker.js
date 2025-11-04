@@ -443,6 +443,8 @@ async function handleUpdateClassPacing(request, env, session, classId) {
   const command = String(body.command || '').toLowerCase();
   const requestedLessonId = body.lessonId ? String(body.lessonId).trim() : '';
   const requestedUnitId = body.unitId ? String(body.unitId).trim() : '';
+  const requestedLessonTitle = body.lessonTitle ? String(body.lessonTitle).trim() : '';
+  const requestedTrack = body.track ? String(body.track).trim() : '';
 
   const db = getDb(env);
   const teacher = await findTeacherByUsername(db, session.username);
@@ -456,57 +458,163 @@ async function handleUpdateClassPacing(request, env, session, classId) {
   }
 
   const currentPacing = await getClassPacing(db, classId);
-  let nextLesson = null;
+
+  const inferTrack = () => {
+    if (requestedTrack) return requestedTrack;
+    if (currentPacing?.track) return currentPacing.track;
+    const label = String(classDoc?.yearGroup || '').toLowerCase();
+    if (label.includes('year 7') || label.includes('ks3')) return 'ks3';
+    if (label.includes('igcse')) return 'igcse';
+    if (label.includes('ib') || label.includes('dp')) return 'ib';
+    return null;
+  };
+
+  const resolveLessonInfo = (lessonId, unitId, titleHint = '') => {
+    if (!lessonId) return null;
+    const year7Lesson = getYear7LessonById(lessonId);
+    if (year7Lesson) {
+      return year7Lesson;
+    }
+    if (!unitId) {
+      return {
+        id: lessonId,
+        title: titleHint || lessonId,
+        unitId: null,
+      };
+    }
+    return {
+      id: lessonId,
+      unitId,
+      title: titleHint || lessonId,
+    };
+  };
 
   if (command === 'advance') {
-    nextLesson = getYear7NextLesson(currentPacing?.lessonId ?? '');
+    if (!currentPacing?.lessonId) {
+      const defaultPointer = getYear7DefaultPointer();
+      const firstLesson = defaultPointer ? getYear7LessonById(defaultPointer.lessonId) : null;
+      if (!firstLesson) {
+        return json({ error: 'Year 7 curriculum data is not configured.' }, 500);
+      }
+      const track = inferTrack() || 'ks3';
+      const updated = await setClassPacing(db, {
+        classId,
+        track,
+        unitId: firstLesson.unitId,
+        lessonId: firstLesson.id,
+        updatedBy: teacher.username,
+      });
+
+      return json({
+        pacing: updated,
+        lesson: firstLesson,
+        sequenceIndex: getYear7LessonIndex(updated.lessonId),
+      });
+    }
+
+    const nextLesson = getYear7NextLesson(currentPacing.lessonId);
     if (!nextLesson) {
       return json({ error: 'Already at the final lesson in the sequence.' }, 400);
     }
-  } else if (command === 'start') {
+
+    const track = inferTrack() || 'ks3';
+    const updated = await setClassPacing(db, {
+      classId,
+      track,
+      unitId: nextLesson.unitId,
+      lessonId: nextLesson.id,
+      updatedBy: teacher.username,
+    });
+
+    return json({
+      pacing: updated,
+      lesson: nextLesson,
+      sequenceIndex: getYear7LessonIndex(updated.lessonId),
+    });
+  }
+
+  if (command === 'start') {
     const defaultPointer = getYear7DefaultPointer();
     if (!defaultPointer) {
       return json({ error: 'Year 7 curriculum data is not configured.' }, 500);
     }
-    nextLesson = getYear7LessonById(defaultPointer.lessonId);
-  } else if (requestedLessonId) {
-    const resolvedLesson = getYear7LessonById(requestedLessonId);
-    if (!resolvedLesson) {
-      return json({ error: 'Unknown lesson id.' }, 400);
+    const nextLesson = getYear7LessonById(defaultPointer.lessonId);
+    if (!nextLesson) {
+      return json({ error: 'Unable to resolve the starting lesson.' }, 500);
     }
-    if (requestedUnitId && requestedUnitId !== resolvedLesson.unitId) {
+
+    const track = inferTrack() || 'ks3';
+    const updated = await setClassPacing(db, {
+      classId,
+      track,
+      unitId: nextLesson.unitId,
+      lessonId: nextLesson.id,
+      updatedBy: teacher.username,
+    });
+
+    return json({
+      pacing: updated,
+      lesson: nextLesson,
+      sequenceIndex: getYear7LessonIndex(updated.lessonId),
+    });
+  }
+
+  if (command === 'stop') {
+    if (!currentPacing?.lessonId || !currentPacing?.unitId) {
+      return json({ error: 'No pacing pointer to save yet.' }, 400);
+    }
+
+    const track = inferTrack();
+    const updated = await setClassPacing(db, {
+      classId,
+      track,
+      unitId: currentPacing.unitId,
+      lessonId: currentPacing.lessonId,
+      updatedBy: teacher.username,
+    });
+
+    const lessonPayload = resolveLessonInfo(updated.lessonId, updated.unitId, requestedLessonTitle);
+    const sequenceIndex = updated.track === 'ks3' ? getYear7LessonIndex(updated.lessonId) : null;
+
+    return json({
+      pacing: updated,
+      lesson: lessonPayload,
+      sequenceIndex,
+    });
+  }
+
+  if (requestedLessonId) {
+    const year7Lesson = getYear7LessonById(requestedLessonId);
+    const resolvedUnitId = requestedUnitId || year7Lesson?.unitId || currentPacing?.unitId;
+
+    if (!resolvedUnitId) {
+      return json({ error: 'unitId is required when setting a lesson pacing pointer.' }, 400);
+    }
+
+    if (requestedUnitId && year7Lesson && requestedUnitId !== year7Lesson.unitId) {
       return json({ error: 'Lesson does not belong to the specified unit.' }, 400);
     }
-    nextLesson = resolvedLesson;
-  } else {
-    return json({ error: 'Provide lessonId or a command (start, advance).' }, 400);
+
+    const track = year7Lesson ? 'ks3' : inferTrack();
+    const updated = await setClassPacing(db, {
+      classId,
+      track,
+      unitId: resolvedUnitId,
+      lessonId: requestedLessonId,
+      updatedBy: teacher.username,
+    });
+
+    const lessonPayload = year7Lesson || resolveLessonInfo(updated.lessonId, updated.unitId, requestedLessonTitle);
+    const sequenceIndex = updated.track === 'ks3' ? getYear7LessonIndex(updated.lessonId) : null;
+
+    return json({
+      pacing: updated,
+      lesson: lessonPayload,
+      sequenceIndex,
+    });
   }
 
-  if (!nextLesson) {
-    return json({ error: 'Unable to resolve next lesson.' }, 400);
-  }
-
-  const track = body.track
-    ? String(body.track).trim() || null
-    : (classDoc.yearGroup || '').toLowerCase().includes('year 7')
-    ? 'ks3'
-    : null;
-
-  const updated = await setClassPacing(db, {
-    classId,
-    track,
-    unitId: nextLesson.unitId,
-    lessonId: nextLesson.id,
-    updatedBy: teacher.username,
-  });
-
-  const sequenceIndex = getYear7LessonIndex(updated.lessonId);
-
-  return json({
-    pacing: updated,
-    lesson: nextLesson,
-    sequenceIndex,
-  });
+  return json({ error: 'Provide lessonId or a command (start, advance, stop).' }, 400);
 }
 
 async function handleCreateClass(request, env, session) {

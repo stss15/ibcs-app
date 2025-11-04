@@ -261,6 +261,52 @@ export default function Year7MapPage() {
     }
   }, [token, selectedClassId, clearPacingMessage]);
 
+  const handleStopTeaching = useCallback(async () => {
+    if (!token || !selectedClassId || !activePacing) return;
+    setPacingState((prev) => ({
+      ...prev,
+      [selectedClassId]: {
+        ...(prev[selectedClassId] ?? {}),
+        busy: true,
+        message: "Saving pointer…",
+        tone: "info",
+      },
+    }));
+
+    try {
+      const response = await updateClassPacing(token, selectedClassId, { command: "stop" });
+      if (response?.pacing) {
+        setTeacherData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            classPacing: upsertClassPacingRecords(prev.classPacing, response.pacing),
+          };
+        });
+      }
+      const lessonTitle = response?.lesson?.title || "current lesson";
+      setPacingState((prev) => ({
+        ...prev,
+        [selectedClassId]: {
+          busy: false,
+          message: `Pointer saved at ${lessonTitle}`,
+          tone: "success",
+        },
+      }));
+    } catch (apiError) {
+      setPacingState((prev) => ({
+        ...prev,
+        [selectedClassId]: {
+          busy: false,
+          message: apiError?.message || "Unable to save the teaching pointer.",
+          tone: "error",
+        },
+      }));
+    } finally {
+      clearPacingMessage(selectedClassId);
+    }
+  }, [token, selectedClassId, activePacing, clearPacingMessage]);
+
   const unitSummaries = useMemo(() => {
     return YEAR7_CURRICULUM.map((unit) => {
       const lessons = unit.lessons.map((lesson) => {
@@ -371,6 +417,14 @@ export default function Year7MapPage() {
                 disabled={!selectedClassId || !activePacing || Boolean(pacingInfo?.busy)}
               >
                 Advance lesson
+              </button>
+              <button
+                type="button"
+                className="pill"
+                onClick={handleStopTeaching}
+                disabled={!selectedClassId || !activePacing || Boolean(pacingInfo?.busy)}
+              >
+                Stop teaching
               </button>
             </div>
 
