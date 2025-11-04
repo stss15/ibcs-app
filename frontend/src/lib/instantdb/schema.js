@@ -1,6 +1,11 @@
 import { init, tx, id } from "@instantdb/react";
 
-const APP_ID = import.meta.env?.VITE_INSTANTDB_APP_ID || process.env?.NEXT_PUBLIC_INSTANTDB_APP_ID || process.env?.VITE_INSTANTDB_APP_ID;
+const processEnv = typeof globalThis !== "undefined" && globalThis.process ? globalThis.process.env ?? {} : {};
+
+const APP_ID =
+  import.meta.env?.VITE_INSTANTDB_APP_ID ??
+  processEnv.NEXT_PUBLIC_INSTANTDB_APP_ID ??
+  processEnv.VITE_INSTANTDB_APP_ID;
 
 const db = APP_ID
   ? init({

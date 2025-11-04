@@ -80,7 +80,7 @@ function MultipleChoice({ question, onSubmit, allowRetry, disabled }) {
   );
 }
 
-function OrderingAssessment({ question, sessionId, studentId, onComplete, disabled }) {
+function OrderingAssessment({ question, onComplete, disabled }) {
   const [items, setItems] = useState(() => question.items ?? []);
   const [feedback, setFeedback] = useState(null);
   const [attempts, setAttempts] = useState(0);
@@ -221,7 +221,7 @@ function ClassificationAssessment({ question, onComplete }) {
   );
 }
 
-export default function FormativeAssessment({ question, variant, sessionId, studentId, onComplete, allowRetry = true, disabled }) {
+export default function FormativeAssessment({ question, variant, onComplete, allowRetry = true, disabled }) {
   const resolvedVariant = useMemo(() => {
     if (variant) return variant;
     if (Array.isArray(question?.options) && typeof question?.answer !== "undefined") return "multiple-choice";
@@ -237,6 +237,6 @@ export default function FormativeAssessment({ question, variant, sessionId, stud
     return <ClassificationAssessment question={question} onComplete={onComplete} />;
   }
 
-  return <OrderingAssessment question={question} sessionId={sessionId} studentId={studentId} onComplete={onComplete} disabled={disabled} />;
+  return <OrderingAssessment question={question} onComplete={onComplete} disabled={disabled} />;
 }
 

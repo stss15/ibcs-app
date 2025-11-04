@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { DndContext } from "@dnd-kit/core";
+import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Sandpack } from "@codesandbox/sandpack-react";
 
 export function BinaryLightBulbs({ levels = [], onComplete }) {
@@ -70,19 +69,18 @@ export function RobotMaze({ config, onComplete }) {
   const [commands, setCommands] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [direction, setDirection] = useState("RIGHT");
 
-  const findStart = () => {
+  const findStart = useCallback(() => {
     for (let y = 0; y < config.maze.length; y += 1) {
       const x = config.maze[y].indexOf("S");
       if (x !== -1) return { x, y };
     }
     return { x: 0, y: 0 };
-  };
+  }, [config]);
 
   useEffect(() => {
     setPosition(findStart());
-  }, [config]);
+  }, [config, findStart]);
 
   const turnRight = (current) => {
     switch (current) {
@@ -136,7 +134,6 @@ export function RobotMaze({ config, onComplete }) {
         dir = turnRight(dir);
       }
       setPosition(pos);
-      setDirection(dir);
       const cell = config.maze[pos.y]?.[pos.x];
       if (cell === "G") {
         onComplete?.({ success: true });

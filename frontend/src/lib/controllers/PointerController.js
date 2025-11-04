@@ -1,4 +1,4 @@
-import { db, tx, id } from "../instantdb/schema.js";
+import { db, tx } from "../instantdb/schema.js";
 import { getClassPacing, updateClassPacing } from "../api.js";
 
 export default class PointerController {

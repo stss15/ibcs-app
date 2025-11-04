@@ -812,7 +812,6 @@ export default function Year7LiveSessionPage() {
   );
 
   const deckTitle = deckSummary?.title || "Live deck";
-  const stageAudience = isTeacher ? "teacher" : "student";
 
   return (
     <div className="y7-live-shell">

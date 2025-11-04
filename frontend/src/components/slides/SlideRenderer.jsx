@@ -100,7 +100,7 @@ function InteractiveComponent({ component, props }) {
 
 function renderBlock(block, context) {
   if (!block) return null;
-  const { isTeacher, sessionId, studentId, onAssessmentComplete } = context ?? {};
+  const { sessionId, studentId, onAssessmentComplete } = context ?? {};
   const handleCompletion = (result) => {
     if (!onAssessmentComplete) return;
     if (typeof result === "boolean") {
@@ -142,7 +142,7 @@ function renderBlock(block, context) {
         </div>
       );
     case "formative":
-      return <FormativeAssessment question={block.question} sessionId={sessionId} studentId={studentId} onComplete={handleCompletion} />;
+      return <FormativeAssessment question={block.question} onComplete={handleCompletion} />;
     default:
       if (typeof block.text === "string") {
         return <ParagraphBlock text={block.text} />;
@@ -222,18 +222,16 @@ function InteractiveSlide({ slide, context }) {
 
   if (activity.type === "sortingActivity") {
     return (
-      <FormativeAssessment
-        variant="classification"
-        question={{
-          id: activity.assessmentId || slide.assessmentId,
-          prompt: activity.instruction,
-          items: activity.items,
-          categories: activity.categories,
-        }}
-        sessionId={context.sessionId}
-        studentId={context.studentId}
-        onComplete={normalise}
-      />
+        <FormativeAssessment
+          variant="classification"
+          question={{
+            id: activity.assessmentId || slide.assessmentId,
+            prompt: activity.instruction,
+            items: activity.items,
+            categories: activity.categories,
+          }}
+          onComplete={normalise}
+        />
     );
   }
 
@@ -241,7 +239,7 @@ function InteractiveSlide({ slide, context }) {
 }
 
 function AssessmentSlide({ slide, context }) {
-  const { sessionId, studentId, onAssessmentComplete } = context;
+  const { onAssessmentComplete } = context;
   const payload = slide?.content;
   const handleComplete = (result) => {
     if (!onAssessmentComplete) return;
@@ -268,8 +266,6 @@ function AssessmentSlide({ slide, context }) {
                     items: part.items.map((item) => ({ id: item.id, content: item.text })),
                     correctOrder: part.correctOrder,
                   }}
-                  sessionId={sessionId}
-                  studentId={studentId}
                   onComplete={handleComplete}
                 />
               );
@@ -285,8 +281,6 @@ function AssessmentSlide({ slide, context }) {
                     options: part.options.map((option) => ({ id: option, label: option })),
                     answer: part.correct,
                   }}
-                  sessionId={sessionId}
-                  studentId={studentId}
                   onComplete={handleComplete}
                 />
               );
@@ -297,9 +291,7 @@ function AssessmentSlide({ slide, context }) {
     );
   }
 
-  return (
-    <FormativeAssessment question={payload} sessionId={sessionId} studentId={studentId} onComplete={handleComplete} />
-  );
+  return <FormativeAssessment question={payload} onComplete={handleComplete} />;
 }
 
 export default function SlideRenderer({ slideData, isTeacher, sessionId, studentId, canProgress, onAssessmentComplete }) {
