@@ -14,6 +14,7 @@ import Layout from "./components/Layout.jsx";
 import B1ModulePage from "./pages/B1ModulePage.jsx";
 import B2ModulePage from "./pages/B2ModulePage.jsx";
 import Year7MapPage from "./pages/Year7MapPage.jsx";
+import Year7LiveSessionPage from "./pages/Year7LiveSessionPage.jsx";
 import { useSession } from "./hooks/useSession.js";
 import { TeacherModeProvider } from "./context/TeacherModeContext.jsx";
 
@@ -134,6 +135,14 @@ function App() {
             element={
               <RequireAuth>
                 <Year7MapPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/curriculum/year7/live"
+            element={
+              <RequireAuth>
+                <Year7LiveSessionPage />
               </RequireAuth>
             }
           />

@@ -10,6 +10,8 @@ IBCS APP — OPERATIONS CHANGE LOG
 - Added student join endpoint (`POST /student/live-sessions/join`) so late arrivals can synchronise with the teacher pointer via code.
 - Replaced `/curriculum/year7` with a new projector-friendly teacher view and gated student experience that renders content, checkpoints, and summatives.
 
+- Replaced the Year 7 curriculum map with a polished dual experience: a full unit overview plus a reveal-style live deck page with join codes, teacher pacing tools, student backward navigation, and live formative monitoring.
+
 2025-11-04  Year 7 Unit 1 interactive proof-of-concept
 ---------------------------------
 - Authored `frontend/src/content/y7IntroductionComputing.jsx` with two teacher-paced lessons, teacher-only presenter notes, formative checks, and an auto-marking summative quiz.

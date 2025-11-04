@@ -613,4 +613,74 @@ export function listYear7Decks() {
 
 export { LIVE_DECKS };
 
+export const YEAR7_UNITS = [
+  {
+    id: "y7-unit-1",
+    title: "Unit 1 · Introduction to Computing",
+    summary:
+      "Launch the course with live, teacher-paced slides that introduce digital systems, the IPO model, and collaborative routines.",
+    focus: "Teacher-paced live deck",
+    estimatedHours: "5–6 lessons",
+    deckId: LIVE_DECKS[0]?.id ?? null,
+    status: "available",
+    icon: "🧭",
+    colour: "#2563eb",
+  },
+  {
+    id: "y7-unit-2",
+    title: "Unit 2 · Digital Systems in Context",
+    summary: "Investigate real-world systems, sensors, and control loops through guided case studies.",
+    focus: "Project-based",
+    estimatedHours: "6 lessons",
+    deckId: null,
+    status: "upcoming",
+    icon: "🛠️",
+    colour: "#0ea5e9",
+  },
+  {
+    id: "y7-unit-3",
+    title: "Unit 3 · Computational Thinking",
+    summary: "Build decomposition, pattern recognition, abstraction, and algorithm skills with unplugged challenges.",
+    focus: "Unplugged + micro-tasks",
+    estimatedHours: "5 lessons",
+    deckId: null,
+    status: "upcoming",
+    icon: "🧩",
+    colour: "#6366f1",
+  },
+  {
+    id: "y7-unit-4",
+    title: "Unit 4 · Python Foundations",
+    summary: "Move from blocks to Python with short, confidence-building coding sprints.",
+    focus: "Coding labs",
+    estimatedHours: "6 lessons",
+    deckId: null,
+    status: "upcoming",
+    icon: "🐍",
+    colour: "#22c55e",
+  },
+  {
+    id: "y7-unit-5",
+    title: "Unit 5 · Data, Media & Representation",
+    summary: "Explore how computers store numbers, text, and media through interactive demos.",
+    focus: "Interactive media",
+    estimatedHours: "4 lessons",
+    deckId: null,
+    status: "upcoming",
+    icon: "🎨",
+    colour: "#f59e0b",
+  },
+  {
+    id: "y7-unit-6",
+    title: "Unit 6 · Create & Reflect",
+    summary: "Wrap the year with a mini project that blends research, making, and reflection.",
+    focus: "Capstone",
+    estimatedHours: "5 lessons",
+    deckId: null,
+    status: "upcoming",
+    icon: "🚀",
+    colour: "#ef4444",
+  },
+];
+
 
