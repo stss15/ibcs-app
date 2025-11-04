@@ -1,5 +1,6 @@
 import { id, tx } from './instant.js';
 import manifest from './manifest.js';
+import { getYear7DefaultPointer } from '../../shared/year7Curriculum.js';
 
 /* ------------------------------------------------------------------ *
  * Sanitizers ensure we never leak password hashes back to callers.
@@ -404,6 +405,10 @@ const TRACKS = manifest?.tracks ?? {};
 const TRACK_KEYS = Object.keys(TRACKS);
 const DEFAULT_TRACK = 'igcse';
 
+const YEAR7_TRACK_ID = 'ks3';
+const YEAR7_DEFAULT_POINTER = getYear7DefaultPointer();
+const YEAR7_DEFAULT_STAGE = YEAR7_DEFAULT_POINTER?.lessonId ?? null;
+
 function normalizeTrackInput(programme) {
   const raw = String(programme ?? '').trim().toLowerCase();
   if (!raw) return null;
@@ -440,7 +445,20 @@ function resolveTrack({ programme, yearGroup }) {
 }
 
 function getDefaultLessonsForTrack(track) {
+  if (track === YEAR7_TRACK_ID) {
+    return YEAR7_DEFAULT_STAGE ? [YEAR7_DEFAULT_STAGE] : [];
+  }
   return TRACKS[track]?.defaultLessons ?? TRACKS[DEFAULT_TRACK]?.defaultLessons ?? [];
+}
+
+function resolveInitialStage(track, defaultLessons) {
+  if (defaultLessons.length > 0) {
+    return defaultLessons[0];
+  }
+  if (track === YEAR7_TRACK_ID && YEAR7_DEFAULT_STAGE) {
+    return YEAR7_DEFAULT_STAGE;
+  }
+  return 'A1.1.1';
 }
 
 export async function createStudent(
@@ -452,7 +470,7 @@ export async function createStudent(
   const { username: normalizedUsername, usernameLower } = prepareUsername(username);
   const track = resolveTrack({ programme, yearGroup });
   const defaultLessons = getDefaultLessonsForTrack(track);
-  const initialStage = defaultLessons.length > 0 ? defaultLessons[0] : 'A1.1.1';
+  const initialStage = resolveInitialStage(track, defaultLessons);
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || normalizedUsername || 'Student';
 
   await db.transact([
@@ -531,7 +549,7 @@ export async function bulkCreateStudents(db, students) {
     const studentId = id();
     const track = resolveTrack({ programme: student.programme, yearGroup: student.yearGroup });
     const defaultLessons = getDefaultLessonsForTrack(track);
-    const initialStage = defaultLessons.length > 0 ? defaultLessons[0] : 'A1.1.1';
+    const initialStage = resolveInitialStage(track, defaultLessons);
     const { username: normalizedUsername, usernameLower } = prepareUsername(student.username);
     const displayName = [student.firstName, student.lastName].filter(Boolean).join(' ') || normalizedUsername || 'Student';
 

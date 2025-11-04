@@ -12,6 +12,41 @@ const logDir = path.join(projectRoot, 'logs', 'worker');
 
 await fs.promises.mkdir(logDir, { recursive: true });
 
+function parseArgs(argv) {
+  const args = {};
+  for (const arg of argv) {
+    if (!arg.startsWith('--')) continue;
+    const [key, value] = arg.slice(2).split('=');
+    args[key] = value ?? true;
+  }
+  return args;
+}
+
+async function detectWorkerName(explicitName) {
+  if (explicitName) return explicitName;
+
+  const wranglerPath = path.join(projectRoot, 'worker', 'wrangler.toml');
+  try {
+    const contents = await fs.promises.readFile(wranglerPath, 'utf8');
+    const match = contents.match(/^name\s*=\s*"([^"]+)"/m);
+    if (match) {
+      return match[1];
+    }
+  } catch (error) {
+    console.warn('⚠️  Unable to read worker/wrangler.toml:', error.message);
+  }
+
+  return null;
+}
+
+const cliArgs = parseArgs(process.argv.slice(2));
+const workerName = await detectWorkerName(cliArgs.name);
+
+if (!workerName) {
+  console.error('❌ Could not determine Worker name. Pass --name=<worker-name> or ensure worker/wrangler.toml has name = "...".');
+  process.exit(1);
+}
+
 const timestamp = new Date()
   .toISOString()
   .replace(/[:.]/g, '-')
@@ -20,11 +55,11 @@ const timestamp = new Date()
 const logFilePath = path.join(logDir, `worker-tail-${timestamp}.ndjson`);
 const logFile = fs.createWriteStream(logFilePath, { flags: 'a' });
 
-console.log(`📡 Tailing worker logs (writing raw output to ${logFilePath})`);
+console.log(`📡 Tailing worker logs for "${workerName}" (writing raw output to ${logFilePath})`);
 console.log('🔐 Make sure you are logged in: npx wrangler whoami');
 console.log('───────────────────────────────────────────────────────────────');
 
-const tail = spawn('npx', ['wrangler', 'tail', '--format=json'], {
+const tail = spawn('npx', ['wrangler', 'tail', workerName, '--format=json'], {
   cwd: projectRoot,
   stdio: ['inherit', 'pipe', 'pipe'],
 });
