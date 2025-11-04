@@ -122,6 +122,14 @@ export async function getStudentClassPacing(token, classId) {
   });
 }
 
+export async function joinLiveSession(token, joinCode) {
+  return request("/student/live-sessions/join", {
+    method: "POST",
+    token,
+    body: { joinCode },
+  });
+}
+
 export async function regenerateClassCredentials(token, classId, options = {}) {
   const payload = {};
   if (Array.isArray(options.studentIds) && options.studentIds.length > 0) {

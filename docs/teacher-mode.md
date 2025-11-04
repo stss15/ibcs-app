@@ -10,32 +10,38 @@ When a user is authenticated as a teacher, the UI is adjusted to better suit a c
 - **Full Content Access:** Teachers are not restricted by content locks. All units, stages, and segments are immediately accessible, allowing for easy planning and classroom presentation.
 - **Presentation Mode:** A dedicated "Presentation Mode" is available on module pages. This mode provides a full-screen, distraction-free view of the content, ideal for displaying on a projector or smartboard. A floating "Exit presentation" control remains visible so you can leave projector view without refreshing the page.
 - **Teacher-only segments:** Lesson authors can mark any segment with `audience: "teacher"`. These presenter notes appear exclusively in Teacher Mode, giving you a scripted launch without revealing it to learners.
-- **Pacing Controls:** Teachers have controls to set the learning pace for their classes.
+- **Live Deck Controls:** Teachers can start, pause, reset, or advance a live deck. Each live session generates a short join code so late arrivals can synchronise their view instantly.
 - **Live Assessment Dashboard:** When students are working on a formative assessment, teachers see a live dashboard of class progress instead of the assessment itself.
 - **Integrated assessments:** The end-of-unit summative now lives in the final stage slot and unlocks automatically once every prior stage reports `completed`, keeping the pacing pointer consistent for both teachers and students.
 
 ## Pacing System
 
-The pacing system, also known as the "teacher pointer," allows teachers to control the flow of content for their students. A teacher can set a specific stage as the current "pace," and students in their class will only be able to access content up to and including that stage.
-
-> **KS3 parity** – Year 7/KS3 modules now use the same pacing controls and presentation tooling as the IB units. The revamped Year 7 map surfaces the live pointer and arranges units in a compact grid so the entire pathway fits on screen.
+The pacing system, also known as the "teacher pointer," allows teachers to control the flow of content for their students. A teacher can set a specific slide in the live deck as the current "pace," and students in their class will only be able to access content up to and including that slide.
 
 ### How it Works
 
-1.  **Setting the Pace:**
-    - On the module page, teachers will see a "Set Pace" button next to each stage in the navigation sidebar.
-    - Clicking this button sets that stage as the current pace for the selected class. This is saved to the backend in the `classPacing` collection and immediately reflected on dashboards and curriculum maps.
+1.  **Launch a session:**
+    - Use the "Start / resume" control on the Year 7 live deck page. This sets the pointer to the first slide (or last saved position) and creates a five-character join code.
+    - The session status turns to `LIVE`, and the join code appears in the control panel. Students can join automatically if they belong to the class or manually by entering the join code.
 
-2.  **Student Experience:**
-    - When a student loads a module page, the application fetches the pacing information for their class.
-    - Students can open any stage at or before the live pointer, even if they have not finished the earlier stages in that window. Everything beyond the pointer remains locked.
-    - Learners can always revisit previous material for revision but can never move forward past the teacher's pointer.
+2.  **Advance the pointer:**
+    - The "Advance pointer" control moves the class to the next slide in the deck. The worker records slide history so teachers can resume later and students can revisit earlier slides.
+    - Teachers can also click any slide in the timeline to move the pointer instantly (useful for reteaching or skipping).
 
-3.  **Saving progress at the end of a lesson:**
-    - Use the "Stop teaching" controls on the Year 7 map, the module page toolbar, or the teacher dashboard when wrapping up a session. This records the current pointer (stage and time) so the same position is restored the next time the class returns.
+3.  **Student Experience:**
+    - A student’s view is locked to the current pointer. Slides already visited stay available for revision, but students cannot progress past the live pointer.
+    - Checkpoints and summative tasks are gated: they only unlock once the pointer lands on those slides.
 
-4.  **Teacher preview mode:**
+4.  **Saving progress at the end of a lesson:**
+    - Use the "Pause session" control to clear the join code while saving the pointer position. History remains intact so the next "Start" resumes exactly where the class finished.
+
+5.  **Join codes for late arrivals:**
+    - Students can enter the join code via `POST /student/live-sessions/join`. The worker resolves the class, pointer, and accessible slide history so they instantly match the rest of the class.
+
+6.  **Teacher preview mode:**
     - Opening a module without selecting a class keeps you out of live pacing. You can scroll freely, skip formative or summative assessments, and plan future lessons without affecting what students see.
+
+The pacing state is stored in the `classPacing` collection with the following important fields: `deckId`, `slideId`, `sessionCode`, `sessionStatus`, `history[]`, and `accessibleSlides[]`. These fields keep the experience backward compatible even if students are added to a class after the session started.
 
 ## Live Assessment Dashboard
 
@@ -56,7 +62,7 @@ When a teacher navigates to a stage that contains a formative assessment (such a
 From the dashboard, teachers have two important controls:
 
 1.  **Show Assessment View:** This button allows the teacher to switch from the live dashboard to the actual assessment content. This is useful for when the teacher wants to review the questions with the class, discuss common mistakes, and clarify concepts. The teacher can toggle back to the dashboard at any time.
-2.  **Unlock Next Stage:** This button functions as an override for the normal content pacing. It allows the teacher to unlock the next stage for all students in the class, even if some students have not yet completed the current assessment. This is useful for managing classroom time and accommodating absent students.
+2.  **Unlock Next Slide:** This button functions as an override for the normal content pacing. It allows the teacher to jump to the next slide for all students, even if some students have not yet completed the current assessment. This is useful for managing classroom time and accommodating absent students.
 
 ### How it Works
 
@@ -66,8 +72,8 @@ From the dashboard, teachers have two important controls:
 
 ## Implementation Details
 
-- **`GamifiedModulePage.jsx`:** This component now handles both student and teacher views. It uses an `isTeacher` flag to conditionally render UI elements and apply different logic.
-- **`TeacherModeContext.jsx`:** This context provides the `isPresentationMode` state and the `currentPacing` information for the UI.
-- **`classPacing` Schema:** The `instant.schema.ts` defines the `classPacing` entity, which stores the `classId`, `unitId`, and `lessonId` (which corresponds to a stage ID).
-- **`liveAssessmentStatus` Schema:** A new schema has been added to `instant.schema.ts` to store real-time assessment data.
-- **API:** The `updateClassPacing` function in `lib/api.js` is used to persist the teacher's pacing selection to the backend. The `getClassPacing` function retrieves it for the students. The `updateLiveAssessmentStatus` endpoint lets students report their progress, and `getLiveAssessmentStatus` streams the current class snapshot for teachers.
+- **`liveDecks.js`:** Defines the default Year 7 live deck with slide metadata for both teacher and student views.
+- **`classPacing` Schema:** Now stores `deckId`, `slideId`, `sessionCode`, `sessionStatus`, `history`, and `accessibleSlides` so the pointer persists across sessions and late joiners.
+- **`updateClassPacing` endpoint:** Accepts commands `start`, `advance`, `stop`, and `reset`, plus manual `lessonId` overrides. The worker generates unique join codes and keeps history deduplicated.
+- **Student join endpoint:** `POST /student/live-sessions/join` lets a student supply a join code and receive the same pacing payload as classmates.
+- **Frontend Year 7 view:** `/curriculum/year7` renders a projector-friendly teacher console alongside the student-facing slide experience with checkpoints, matching tasks, and summative quizzes.

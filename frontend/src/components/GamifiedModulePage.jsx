@@ -876,23 +876,35 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
       } else {
         setCurrentPacing({ unitId: unit.id, lessonId: stageId });
       }
-      setPaceStatus((prev) => ({ ...prev, [stageId]: "set" }));
+      setPaceStatus((prev) => {
+        if (!prev || prev[stageId] !== "set") return prev;
+        const updated = { ...prev };
+        delete updated[stageId];
+        return updated;
+      });
       setTimeout(() => {
         setPaceStatus((prev) => {
           if (!prev || prev[stageId] !== "set") return prev;
-          const { [stageId]: _removed, ...rest } = prev;
-          return rest;
+          const updated = { ...prev };
+          delete updated[stageId];
+          return updated;
         });
       }, 2000);
       return true;
     } catch (error) {
       console.warn("Failed to update class pacing", error);
-      setPaceStatus((prev) => ({ ...prev, [stageId]: "error" }));
+      setPaceStatus((prev) => {
+        if (!prev || prev[stageId] !== "error") return prev;
+        const updated = { ...prev };
+        delete updated[stageId];
+        return updated;
+      });
       setTimeout(() => {
         setPaceStatus((prev) => {
           if (!prev || prev[stageId] !== "error") return prev;
-          const { [stageId]: _removed, ...rest } = prev;
-          return rest;
+          const updated = { ...prev };
+          delete updated[stageId];
+          return updated;
         });
       }, 2000);
       return false;
@@ -920,23 +932,35 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
         setClassPacing(response.pacing);
         setCurrentPacing({ unitId: response.pacing.unitId, lessonId: response.pacing.lessonId });
       }
-      setPaceStatus((prev) => ({ ...prev, __stop: "set" }));
+      setPaceStatus((prev) => {
+        if (!prev || prev.__stop !== "set") return prev;
+        const updated = { ...prev };
+        delete updated.__stop;
+        return updated;
+      });
       setTimeout(() => {
         setPaceStatus((prev) => {
           if (!prev || prev.__stop !== "set") return prev;
-          const { __stop, ...rest } = prev;
-          return rest;
+          const updated = { ...prev };
+          delete updated.__stop;
+          return updated;
         });
       }, 2000);
       return true;
     } catch (error) {
       console.warn("Failed to save pacing pointer", error);
-      setPaceStatus((prev) => ({ ...prev, __stop: "error" }));
+      setPaceStatus((prev) => {
+        if (!prev || prev.__stop !== "error") return prev;
+        const updated = { ...prev };
+        delete updated.__stop;
+        return updated;
+      });
       setTimeout(() => {
         setPaceStatus((prev) => {
           if (!prev || prev.__stop !== "error") return prev;
-          const { __stop, ...rest } = prev;
-          return rest;
+          const updated = { ...prev };
+          delete updated.__stop;
+          return updated;
         });
       }, 2000);
       return false;

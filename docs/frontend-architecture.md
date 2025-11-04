@@ -29,7 +29,7 @@ frontend/src/
 
 ## Dashboards
 - `pages/StudentDashboardPage.jsx` now renders the shared `StudentDashboardLayout`, so every curriculum track (KS3, IGCSE, IB) shares the same template. The layout pulls lesson availability from InstantDB pacing and the manifest, surfaces KS3 (Year 7) pointers, and aggregates segment attempts from local storage for the “Checkpoint insights” table.
-- `pages/Year7MapPage.jsx` has been consolidated into a compact grid so the full KS3 pathway fits on screen. The selected unit timeline scrolls within the detail panel, and the live teacher pointer is highlighted in both the grid card and the lesson timeline.
+- `pages/Year7MapPage.jsx` now powers the live deck experience. Teachers get class controls, join codes, and a projector-friendly slide preview; students see the same slides gated by the teacher pointer with inline checkpoints.
 - Teacher dashboards reuse the same pacing primitives; the presentation toggle now exposes a persistent “Exit presentation” control, ensuring teachers can leave projector view without refreshing the page.
 
 ## CSS Conventions

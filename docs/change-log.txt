@@ -1,6 +1,15 @@
 IBCS APP — OPERATIONS CHANGE LOG
 ================================
 
+2025-11-04  Year 7 live deck refactor
+---------------------------------
+- Removed the legacy Year 7 introduction unit and map UI in favour of a reusable live deck experience.
+- Added shared live deck registry (`shared/liveDecks.js`) with slide-level metadata for both frontend and worker.
+- Extended class pacing records to store deck/slide IDs, join codes, session status, and history for backward-compatible resumes.
+- Reworked `/teacher/classes/:id/pacing` endpoints to manage session lifecycle (start, advance, stop, reset) and generate unique join codes.
+- Added student join endpoint (`POST /student/live-sessions/join`) so late arrivals can synchronise with the teacher pointer via code.
+- Replaced `/curriculum/year7` with a new projector-friendly teacher view and gated student experience that renders content, checkpoints, and summatives.
+
 2025-11-04  Year 7 Unit 1 interactive proof-of-concept
 ---------------------------------
 - Authored `frontend/src/content/y7IntroductionComputing.jsx` with two teacher-paced lessons, teacher-only presenter notes, formative checks, and an auto-marking summative quiz.

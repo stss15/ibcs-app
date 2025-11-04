@@ -27,6 +27,7 @@ Use this guide when creating or updating IB units inside `frontend/src/content/`
 - Use `audience: "teacher"` on any segment to make it visible only when a teacher or admin is in the module. This is ideal for presenter notes and recall questions.
 - `audience: "student"` hides the segment in teacher view while keeping it for learners. Teachers can still enable previews by setting `allowTeacherPreview: true`.
 - Legacy flags `teacherOnly` / `studentOnly` map to the same behaviour.
+- The new Year 7 live deck prototype is defined in `shared/liveDecks.js`. It follows the same content conventions but stores slide metadata for both the frontend and worker pacing logic.
 
 Add new segment types by adding a component under `components/segments/` and extending the switch in `GamifiedModulePage.jsx`.
 

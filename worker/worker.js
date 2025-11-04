@@ -23,6 +23,7 @@ import {
   listStudentsByClass,
   getClassPacing,
   setClassPacing,
+  findClassPacingBySessionCode,
   getStudentGamification,
   syncStudentGamification,
   listLiveAssessmentStatus,
@@ -36,7 +37,10 @@ import {
   getYear7LessonIndex,
   getYear7NextLesson,
   getYear7DefaultPointer,
-} from '../shared/year7Curriculum.js';
+  deriveAccessibleSlides,
+  getDeckSummary,
+  getLiveDeckById,
+} from '../shared/liveDecks.js';
 import { generatePassword } from '../shared/passwords.js';
 import {
   createRequestContext,
@@ -63,6 +67,30 @@ const CSV_HEADER = [
   'Formative attempts',
   'Latest summative score',
 ];
+
+const SESSION_CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const SESSION_CODE_LENGTH = 5;
+
+function randomSessionCode() {
+  let code = '';
+  for (let index = 0; index < SESSION_CODE_LENGTH; index += 1) {
+    const charIndex = Math.floor(Math.random() * SESSION_CODE_ALPHABET.length);
+    code += SESSION_CODE_ALPHABET[charIndex];
+  }
+  return code;
+}
+
+async function generateUniqueSessionCode(db) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const code = randomSessionCode();
+    const record = await findClassPacingBySessionCode(db, code);
+    if (!record) {
+      return code;
+    }
+  }
+  const fallback = Date.now().toString(36).toUpperCase();
+  return fallback.slice(-SESSION_CODE_LENGTH).padStart(SESSION_CODE_LENGTH, '0');
+}
 
 export default {
   async fetch(request, env) {
@@ -277,6 +305,17 @@ export default {
           env,
           ctx,
           requireRole(request, env, 'student', handleStudentLiveAssessmentStatus, ctx),
+        );
+      }
+
+      if (pathname === '/student/live-sessions/join' && request.method === 'POST') {
+        updateRoute(ctx, 'student.liveSessions.join');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'student', handleStudentJoinLiveSession, ctx),
         );
       }
 
@@ -638,19 +677,22 @@ async function handleTeacherDashboard(_request, env, session, ctx) {
 }
 
 function buildPacingMetadata(pacing) {
-  if (!pacing || !pacing.lessonId) {
-    return { lesson: null, sequenceIndex: null };
+  if (!pacing || !(pacing.lessonId || pacing.slideId)) {
+    return { lesson: null, sequenceIndex: null, accessibleSlides: [], deck: null };
   }
 
-  const lesson = getYear7LessonById(pacing.lessonId);
-  if (!lesson) {
-    return { lesson: null, sequenceIndex: null };
-  }
+  const lessonId = pacing.lessonId ?? pacing.slideId;
+  const deckId = pacing.deckId ?? pacing.unitId ?? null;
+  const lesson = getYear7LessonById(lessonId);
+  const sequenceIndex = lesson ? getYear7LessonIndex(lesson.id) : null;
+  const deck = deckId ? getDeckSummary(deckId) : null;
+  const accessibleSlides = deckId ? deriveAccessibleSlides(deckId, lessonId, pacing.history) : [];
 
-  const sequenceIndex = getYear7LessonIndex(lesson.id);
   return {
-    lesson,
+    lesson: lesson ?? null,
     sequenceIndex,
+    deck,
+    accessibleSlides,
   };
 }
 
@@ -695,8 +737,10 @@ async function handleUpdateClassPacing(request, env, session, ctx, classId) {
   const command = String(body.command || '').toLowerCase();
   const requestedLessonId = body.lessonId ? String(body.lessonId).trim() : '';
   const requestedUnitId = body.unitId ? String(body.unitId).trim() : '';
-  const requestedLessonTitle = body.lessonTitle ? String(body.lessonTitle).trim() : '';
   const requestedTrack = body.track ? String(body.track).trim() : '';
+  const resume = body.resume !== false;
+  const resetHistory = Boolean(body.resetHistory);
+  const explicitHistory = Array.isArray(body.history) ? body.history.map((entry) => String(entry).trim()) : null;
 
   const db = getDb(env);
   const teacher = await findTeacherByUsername(db, session.username);
@@ -730,70 +774,75 @@ async function handleUpdateClassPacing(request, env, session, ctx, classId) {
     return null;
   };
 
-  const resolveLessonInfo = (lessonId, unitId, titleHint = '') => {
-    if (!lessonId) return null;
-    const year7Lesson = getYear7LessonById(lessonId);
-    if (year7Lesson) {
-      return year7Lesson;
+  const defaultPointer = getYear7DefaultPointer();
+  const fallbackDeckId =
+    requestedUnitId ||
+    currentPacing?.deckId ||
+    currentPacing?.unitId ||
+    defaultPointer?.unitId ||
+    YEAR7_LESSON_SEQUENCE[0]?.deckId ||
+    YEAR7_LESSON_SEQUENCE[0]?.unitId ||
+    null;
+
+  const ensureDeckId = (candidateId) => {
+    const deckId = candidateId || fallbackDeckId;
+    if (!deckId || !getLiveDeckById(deckId)) {
+      return null;
     }
-    if (!unitId) {
-      return {
-        id: lessonId,
-        title: titleHint || lessonId,
-        unitId: null,
-      };
-    }
-    return {
-      id: lessonId,
-      unitId,
-      title: titleHint || lessonId,
-    };
+    return deckId;
   };
 
-  if (command === 'advance') {
-    if (!currentPacing?.lessonId) {
-      const defaultPointer = getYear7DefaultPointer();
-      const firstLesson = defaultPointer ? getYear7LessonById(defaultPointer.lessonId) : null;
-      if (!firstLesson) {
-        return json({ error: 'Year 7 curriculum data is not configured.' }, 500);
+  const baseHistory = Array.isArray(currentPacing?.history) ? currentPacing.history : [];
+
+  const dedupeHistory = (list) => {
+    const seen = new Set();
+    const result = [];
+    for (const entry of list) {
+      const value = String(entry || '').trim();
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      result.push(value);
+    }
+    return result;
+  };
+
+  const buildHistory = (slideId, { reset = false, overrides = null } = {}) => {
+    if (Array.isArray(overrides) && overrides.length > 0) {
+      const merged = overrides.slice();
+      if (slideId && !merged.includes(slideId)) {
+        merged.push(slideId);
       }
-      const track = inferTrack() || 'ks3';
-      const updated = await setClassPacing(db, {
-        classId,
-        track,
-        unitId: firstLesson.unitId,
-        lessonId: firstLesson.id,
-        updatedBy: teacher.username,
-      });
+      return dedupeHistory(merged);
+    }
+    const base = reset ? [] : baseHistory.slice();
+    if (slideId && !base.includes(slideId)) {
+      base.push(slideId);
+    }
+    return dedupeHistory(base);
+  };
 
-      logDbOperation(ctx, {
-        action: 'setClassPacing',
-        classId,
-        teacherId: teacher.id,
-        command: 'advance:init',
-        track: updated.track,
-        unitId: updated.unitId,
-        lessonId: updated.lessonId,
-      });
+  const track = inferTrack() || 'ks3';
 
-      return json({
-        pacing: updated,
-        lesson: firstLesson,
-        sequenceIndex: getYear7LessonIndex(updated.lessonId),
-      });
+  const persist = async ({ deckId, slideId, history, sessionCode, sessionStatus, sessionStartedAt, logCommand }) => {
+    const resolvedDeckId = ensureDeckId(deckId);
+    if (!resolvedDeckId) {
+      return json({ error: 'Live deck is not configured.' }, 500);
     }
 
-    const nextLesson = getYear7NextLesson(currentPacing.lessonId);
-    if (!nextLesson) {
-      return json({ error: 'Already at the final lesson in the sequence.' }, 400);
-    }
+    const resolvedHistory = history.length > 0 ? history : [slideId];
+    const accessibleDetails = deriveAccessibleSlides(resolvedDeckId, slideId, resolvedHistory);
+    const accessibleIds = accessibleDetails.map((item) => item.slideId);
 
-    const track = inferTrack() || 'ks3';
     const updated = await setClassPacing(db, {
       classId,
       track,
-      unitId: nextLesson.unitId,
-      lessonId: nextLesson.id,
+      deckId: resolvedDeckId,
+      slideId,
+      history: resolvedHistory,
+      accessibleSlides: accessibleIds,
+      sessionCode: sessionCode ?? null,
+      sessionStatus: sessionStatus ?? null,
+      sessionStartedAt: sessionStartedAt ?? null,
       updatedBy: teacher.username,
     });
 
@@ -801,88 +850,168 @@ async function handleUpdateClassPacing(request, env, session, ctx, classId) {
       action: 'setClassPacing',
       classId,
       teacherId: teacher.id,
-      command: 'advance',
+      command: logCommand,
       track: updated.track,
       unitId: updated.unitId,
       lessonId: updated.lessonId,
     });
 
+    const metadata = buildPacingMetadata(updated);
     return json({
       pacing: updated,
-      lesson: nextLesson,
-      sequenceIndex: getYear7LessonIndex(updated.lessonId),
+      ...metadata,
+    });
+  };
+
+  if (command === 'start') {
+    const startDeckId = ensureDeckId(requestedUnitId);
+    if (!startDeckId) {
+      return json({ error: 'No live deck configured for Year 7.' }, 500);
+    }
+
+    const deck = getLiveDeckById(startDeckId);
+    const initialSlideId = (() => {
+      if (resume && currentPacing?.slideId && currentPacing.deckId === startDeckId && !resetHistory) {
+        return currentPacing.slideId;
+      }
+      return deck?.slides?.[0]?.id || null;
+    })();
+
+    if (!initialSlideId) {
+      return json({ error: 'Live deck does not contain any slides.' }, 500);
+    }
+
+    const history = buildHistory(initialSlideId, { reset: resetHistory || !resume, overrides: explicitHistory });
+    const sessionCode = await generateUniqueSessionCode(db);
+    const sessionStartedAt = new Date().toISOString();
+
+    return persist({
+      deckId: startDeckId,
+      slideId: initialSlideId,
+      history,
+      sessionCode,
+      sessionStatus: 'live',
+      sessionStartedAt,
+      logCommand: 'start',
     });
   }
 
-  if (command === 'start') {
-    const defaultPointer = getYear7DefaultPointer();
-    if (!defaultPointer) {
-      return json({ error: 'Year 7 curriculum data is not configured.' }, 500);
+  if (command === 'advance') {
+    if (!currentPacing?.lessonId && !currentPacing?.slideId) {
+      const fallbackLessonId = defaultPointer?.lessonId || YEAR7_LESSON_SEQUENCE[0]?.id || null;
+      const fallbackDeck = ensureDeckId(defaultPointer?.unitId || YEAR7_LESSON_SEQUENCE[0]?.deckId);
+      if (!fallbackLessonId || !fallbackDeck) {
+        return json({ error: 'Unable to determine the starting slide.' }, 500);
+      }
+      const history = buildHistory(fallbackLessonId, { reset: true });
+      const sessionCode = currentPacing?.sessionCode || (await generateUniqueSessionCode(db));
+      const sessionStartedAt = currentPacing?.sessionStartedAt || new Date().toISOString();
+      return persist({
+        deckId: fallbackDeck,
+        slideId: fallbackLessonId,
+        history,
+        sessionCode,
+        sessionStatus: 'live',
+        sessionStartedAt,
+        logCommand: 'advance:init',
+      });
     }
-    const nextLesson = getYear7LessonById(defaultPointer.lessonId);
+
+    const currentLessonId = currentPacing?.lessonId ?? currentPacing?.slideId;
+    const nextLesson = getYear7NextLesson(currentLessonId);
     if (!nextLesson) {
-      return json({ error: 'Unable to resolve the starting lesson.' }, 500);
+      return json({ error: 'Already at the final slide in the live deck.' }, 400);
     }
 
-    const track = inferTrack() || 'ks3';
-    const updated = await setClassPacing(db, {
-      classId,
-      track,
-      unitId: nextLesson.unitId,
-      lessonId: nextLesson.id,
-      updatedBy: teacher.username,
-    });
+    const history = buildHistory(nextLesson.id, { overrides: explicitHistory });
+    const sessionCode = currentPacing?.sessionCode || (await generateUniqueSessionCode(db));
+    const sessionStartedAt = currentPacing?.sessionStartedAt || new Date().toISOString();
 
-    logDbOperation(ctx, {
-      action: 'setClassPacing',
-      classId,
-      teacherId: teacher.id,
-      command: 'start',
-      track: updated.track,
-      unitId: updated.unitId,
-      lessonId: updated.lessonId,
-    });
-
-    return json({
-      pacing: updated,
-      lesson: nextLesson,
-      sequenceIndex: getYear7LessonIndex(updated.lessonId),
+    return persist({
+      deckId: nextLesson.unitId,
+      slideId: nextLesson.id,
+      history,
+      sessionCode,
+      sessionStatus: 'live',
+      sessionStartedAt,
+      logCommand: 'advance',
     });
   }
 
   if (command === 'stop') {
-    if (!currentPacing?.lessonId || !currentPacing?.unitId) {
+    if (!currentPacing?.lessonId && !currentPacing?.slideId) {
       return json({ error: 'No pacing pointer to save yet.' }, 400);
     }
-
-    const track = inferTrack();
-    const updated = await setClassPacing(db, {
-      classId,
-      track,
-      unitId: currentPacing.unitId,
-      lessonId: currentPacing.lessonId,
-      updatedBy: teacher.username,
-    });
-
-    logDbOperation(ctx, {
-      action: 'setClassPacing',
-      classId,
-      teacherId: teacher.id,
-      command: 'stop',
-      track: updated.track,
-      unitId: updated.unitId,
-      lessonId: updated.lessonId,
-    });
-
-    const lessonPayload = resolveLessonInfo(updated.lessonId, updated.unitId, requestedLessonTitle);
-    const sequenceIndex = updated.track === 'ks3' ? getYear7LessonIndex(updated.lessonId) : null;
-
-    return json({
-      pacing: updated,
-      lesson: lessonPayload,
-      sequenceIndex,
+    const slideId = currentPacing?.lessonId ?? currentPacing?.slideId;
+    const deckId = ensureDeckId(currentPacing?.deckId ?? currentPacing?.unitId);
+    if (!deckId) {
+      return json({ error: 'Live deck metadata missing for this class.' }, 500);
+    }
+    const history = buildHistory(slideId, { overrides: explicitHistory });
+    const sessionStartedAt = currentPacing?.sessionStartedAt || new Date().toISOString();
+    return persist({
+      deckId,
+      slideId,
+      history,
+      sessionCode: null,
+      sessionStatus: 'paused',
+      sessionStartedAt,
+      logCommand: 'stop',
     });
   }
+
+  if (command === 'reset') {
+    const deckId = ensureDeckId(requestedUnitId);
+    if (!deckId) {
+      return json({ error: 'Live deck is not configured.' }, 500);
+    }
+    const deck = getLiveDeckById(deckId);
+    const firstSlide = deck?.slides?.[0]?.id;
+    if (!firstSlide) {
+      return json({ error: 'Live deck does not contain any slides.' }, 500);
+    }
+    const history = buildHistory(firstSlide, { reset: true, overrides: explicitHistory });
+    return persist({
+      deckId,
+      slideId: firstSlide,
+      history,
+      sessionCode: null,
+      sessionStatus: 'idle',
+      sessionStartedAt: null,
+      logCommand: 'reset',
+    });
+  }
+
+  if (requestedLessonId) {
+    const lessonMeta = getYear7LessonById(requestedLessonId);
+    const resolvedUnitId = requestedUnitId || lessonMeta?.unitId || currentPacing?.deckId || currentPacing?.unitId;
+
+    if (!resolvedUnitId) {
+      return json({ error: 'unitId is required when setting a lesson pacing pointer.' }, 400);
+    }
+
+    if (requestedUnitId && lessonMeta && requestedUnitId !== lessonMeta.unitId) {
+      return json({ error: 'Lesson does not belong to the specified unit.' }, 400);
+    }
+
+    const history = buildHistory(requestedLessonId, { reset: resetHistory, overrides: explicitHistory });
+    const sessionCode = currentPacing?.sessionCode || null;
+    const sessionStatus = currentPacing?.sessionStatus || null;
+    const sessionStartedAt = currentPacing?.sessionStartedAt || null;
+
+    return persist({
+      deckId: resolvedUnitId,
+      slideId: requestedLessonId,
+      history,
+      sessionCode,
+      sessionStatus,
+      sessionStartedAt,
+      logCommand: 'manual-set',
+    });
+  }
+
+  return json({ error: 'Provide lessonId or a command (start, advance, stop, reset).' }, 400);
+}
 
 async function handleStudentClassPacing(_request, env, session, ctx, classId) {
   if (!classId) {
@@ -914,50 +1043,6 @@ async function handleStudentClassPacing(_request, env, session, ctx, classId) {
     pacing,
     ...metadata,
   });
-}
-
-  if (requestedLessonId) {
-    const year7Lesson = getYear7LessonById(requestedLessonId);
-    const resolvedUnitId = requestedUnitId || year7Lesson?.unitId || currentPacing?.unitId;
-
-    if (!resolvedUnitId) {
-      return json({ error: 'unitId is required when setting a lesson pacing pointer.' }, 400);
-    }
-
-    if (requestedUnitId && year7Lesson && requestedUnitId !== year7Lesson.unitId) {
-      return json({ error: 'Lesson does not belong to the specified unit.' }, 400);
-    }
-
-    const track = year7Lesson ? 'ks3' : inferTrack();
-    const updated = await setClassPacing(db, {
-      classId,
-      track,
-      unitId: resolvedUnitId,
-      lessonId: requestedLessonId,
-      updatedBy: teacher.username,
-    });
-
-    logDbOperation(ctx, {
-      action: 'setClassPacing',
-      classId,
-      teacherId: teacher.id,
-      command: 'manual-set',
-      track: updated.track,
-      unitId: updated.unitId,
-      lessonId: updated.lessonId,
-    });
-
-    const lessonPayload = year7Lesson || resolveLessonInfo(updated.lessonId, updated.unitId, requestedLessonTitle);
-    const sequenceIndex = updated.track === 'ks3' ? getYear7LessonIndex(updated.lessonId) : null;
-
-    return json({
-      pacing: updated,
-      lesson: lessonPayload,
-      sequenceIndex,
-    });
-  }
-
-  return json({ error: 'Provide lessonId or a command (start, advance, stop).' }, 400);
 }
 
 async function handleCreateClass(request, env, session, ctx) {
@@ -1686,6 +1771,45 @@ async function handleSyncStudentGamification(request, env, session, ctx) {
     level: gamification.level,
   });
   return json(gamification);
+}
+
+async function handleStudentJoinLiveSession(request, env, session, ctx) {
+  const body = await readJson(request);
+  const joinCode = String(body.joinCode || body.code || '').trim().toUpperCase();
+  if (!joinCode) {
+    return json({ error: 'joinCode is required' }, 400);
+  }
+
+  const db = getDb(env);
+  const student = await findStudentByUsername(db, session.username);
+  if (!student || student.archivedAt) {
+    return json({ error: 'Student not found' }, 404);
+  }
+
+  const pacing = await findClassPacingBySessionCode(db, joinCode);
+  if (!pacing || !pacing.classId) {
+    return json({ error: 'Live session not found' }, 404);
+  }
+
+  const classDoc = await findClassById(db, pacing.classId);
+  if (!classDoc) {
+    return json({ error: 'Class not found' }, 404);
+  }
+
+  const metadata = buildPacingMetadata(pacing);
+
+  logEvent(ctx, 'pacing.student.join_session', {
+    joinCode,
+    classId: pacing.classId,
+    studentId: student.id,
+  });
+
+  return json({
+    class: classDoc,
+    pacing,
+    joinCode,
+    ...metadata,
+  });
 }
 
 async function handleSeed(request, env, ctx) {

@@ -1,6 +1,6 @@
 import { id, tx } from './instant.js';
 import manifest from './manifest.js';
-import { getYear7DefaultPointer } from '../../shared/year7Curriculum.js';
+import { getYear7DefaultPointer } from '../../shared/liveDecks.js';
 
 /* ------------------------------------------------------------------ *
  * Sanitizers ensure we never leak password hashes back to callers.
@@ -123,12 +123,22 @@ function sanitizeStudentProgress(doc) {
 
 function sanitizeClassPacing(doc) {
   if (!doc) return null;
+  const history = Array.isArray(doc.history) ? doc.history : [];
+  const accessibleSlides = Array.isArray(doc.accessibleSlides) ? doc.accessibleSlides : null;
   return {
     id: extractId(doc),
     classId: doc.classId ?? null,
     track: doc.track ?? null,
-    unitId: doc.unitId ?? null,
-    lessonId: doc.lessonId ?? null,
+    unitId: doc.unitId ?? doc.deckId ?? null,
+    lessonId: doc.lessonId ?? doc.slideId ?? null,
+    deckId: doc.deckId ?? doc.unitId ?? null,
+    slideId: doc.slideId ?? doc.lessonId ?? null,
+    sessionCode: doc.sessionCode ?? null,
+    sessionStatus: doc.sessionStatus ?? null,
+    sessionStartedAt: doc.sessionStartedAt ?? null,
+    history,
+    accessibleSlides,
+    metadata: doc.metadata ?? null,
     updatedAt: doc.updatedAt ?? null,
     updatedBy: doc.updatedBy ?? null,
   };
@@ -1019,30 +1029,71 @@ export async function getClassPacing(db, classId) {
   return sanitizeClassPacing(result?.classPacing?.[0]);
 }
 
-export async function setClassPacing(db, { classId, track, unitId, lessonId, updatedBy }) {
-  if (!classId || !unitId || !lessonId) {
-    throw new Error('classId, unitId, and lessonId are required to update pacing');
+export async function findClassPacingBySessionCode(db, sessionCode) {
+  if (!sessionCode) return null;
+  const result = await db.query({
+    classPacing: {
+      $: {
+        where: { sessionCode },
+        limit: 1,
+      },
+    },
+  });
+  return sanitizeClassPacing(result?.classPacing?.[0]);
+}
+
+export async function setClassPacing(
+  db,
+  {
+    classId,
+    track,
+    unitId,
+    lessonId,
+    deckId,
+    slideId,
+    history,
+    accessibleSlides,
+    sessionCode,
+    sessionStatus,
+    sessionStartedAt,
+    metadata,
+    updatedBy,
+  },
+) {
+  const resolvedDeckId = deckId ?? unitId;
+  const resolvedSlideId = slideId ?? lessonId;
+  if (!classId || !resolvedDeckId || !resolvedSlideId) {
+    throw new Error('classId, deckId, and slideId are required to update pacing');
   }
+
   const updatedAt = new Date().toISOString();
+  const historyArray = Array.isArray(history) ? history : [];
+  const accessibleArray = Array.isArray(accessibleSlides) ? accessibleSlides : null;
+
+  const payload = {
+    classId,
+    track: track ?? null,
+    unitId: resolvedDeckId,
+    lessonId: resolvedSlideId,
+    deckId: resolvedDeckId,
+    slideId: resolvedSlideId,
+    history: historyArray,
+    accessibleSlides: accessibleArray,
+    sessionCode: sessionCode ?? null,
+    sessionStatus: sessionStatus ?? null,
+    sessionStartedAt: sessionStartedAt ?? null,
+    metadata: metadata ?? null,
+    updatedAt,
+    updatedBy: updatedBy ?? null,
+  };
+
   await db.transact([
-    tx.classPacing[classId].update({
-      classId,
-      track: track ?? null,
-      unitId,
-      lessonId,
-      updatedAt,
-      updatedBy: updatedBy ?? null,
-    }),
+    tx.classPacing[classId].update(payload),
   ]);
 
   return {
     id: classId,
-    classId,
-    track: track ?? null,
-    unitId,
-    lessonId,
-    updatedAt,
-    updatedBy: updatedBy ?? null,
+    ...payload,
   };
 }
 

@@ -10,7 +10,7 @@ import {
   describeTrack,
   normaliseStatus,
 } from "./StudentDashboardPage.jsx";
-import { getYear7LessonById } from "../../../shared/year7Curriculum.js";
+import { getYear7LessonById } from "../../../shared/liveDecks.js";
 
 function TeacherStudentDashboardPage() {
   const { session, ready } = useSession();

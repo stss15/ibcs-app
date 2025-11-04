@@ -12,7 +12,7 @@ import {
 import { generatePassword } from "../../../shared/passwords.js";
 import { useSession } from "../hooks/useSession.js";
 import "./TeacherDashboardPage.css";
-import { getYear7LessonById } from "../../../shared/year7Curriculum.js";
+import { getYear7LessonById } from "../../../shared/liveDecks.js";
 
 const STAGE_CONFIG = [
   {

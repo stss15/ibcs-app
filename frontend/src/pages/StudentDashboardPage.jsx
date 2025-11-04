@@ -7,13 +7,11 @@ import { useGamification } from "../context/GamificationContext.jsx";
 import { readUnitProgress, writeUnitProgress } from "../lib/progressStorage.js";
 import b1Unit from "../content/b1ComputationalThinking.jsx";
 import b2Unit from "../content/b2ProgrammingFundamentals.jsx";
-import y7IntroUnit from "../content/y7IntroductionComputing.jsx";
 import {
   YEAR7_CURRICULUM,
-  YEAR7_LESSON_SEQUENCE,
   getYear7LessonById,
   getYear7LessonIndex,
-} from "../../../shared/year7Curriculum.js";
+} from "../../../shared/liveDecks.js";
 
 import "./StudentDashboardPage.css";
 
@@ -695,7 +693,7 @@ function StudentDashboardPage() {
 
     const profileKey = studentSession.username.toLowerCase();
     const next = {};
-    [y7IntroUnit, b1Unit, b2Unit].forEach((unit) => {
+    [b1Unit, b2Unit].forEach((unit) => {
       if (!unit?.id) return;
       const { data } = readUnitProgress(unit.id, profileKey);
       if (data && typeof data === "object") {
@@ -950,17 +948,6 @@ function resolvePointerAction(track, pointerLesson, classPacing, classInfo) {
     const state = {};
     if (classInfo?.id) state.classId = classInfo.id;
 
-    if (pointerLesson.unitId === "Y7-INTRO") {
-      const hasState = Object.keys(state).length > 0;
-      return {
-        link: {
-          pathname: "/curriculum/year7/intro",
-          ...(hasState ? { state } : {}),
-        },
-        label: `Join ${pointerLesson.title}`,
-      };
-    }
-
     const mapState = {
       ...state,
       ...(pointerLesson.unitId ? { focusUnit: pointerLesson.unitId } : {}),
@@ -1005,14 +992,6 @@ function resolveLessonLink(track, unit, lesson, classInfo) {
     const baseState = {};
     if (classInfo?.id) baseState.classId = classInfo.id;
 
-    if (lesson.unitId === "Y7-INTRO") {
-      const hasState = Object.keys(baseState).length > 0;
-      return {
-        pathname: "/curriculum/year7/intro",
-        ...(hasState ? { state: baseState } : {}),
-      };
-    }
-
     const mapState = {
       ...baseState,
       ...(lesson.unitId ? { focusUnit: lesson.unitId } : {}),
@@ -1035,7 +1014,7 @@ function resolveLessonLink(track, unit, lesson, classInfo) {
 function buildInteractiveSections(track, localProgress) {
   const sequence = [];
   if (track.startsWith("ks3")) {
-    sequence.push(y7IntroUnit);
+    // KS3 interactive content rebuilt via teacher-paced decks; placeholder until new deck integration
   }
   sequence.push(b1Unit, b2Unit);
 
