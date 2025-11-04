@@ -38,6 +38,18 @@ import {
   getYear7DefaultPointer,
 } from '../shared/year7Curriculum.js';
 import { generatePassword } from '../shared/passwords.js';
+import {
+  createRequestContext,
+  updateRoute,
+  logRequestStart,
+  logRequestPayload,
+  logResponse,
+  logError,
+  attachSession,
+  logAuthResult,
+  logEvent,
+  logDbOperation,
+} from './src/logger.js';
 
 const BCRYPT_ROUNDS = 8;
 const CSV_HEADER = [
@@ -54,8 +66,12 @@ const CSV_HEADER = [
 
 export default {
   async fetch(request, env) {
+    const ctx = createRequestContext({ request });
+    logRequestStart(ctx);
+
     if (request.method === 'OPTIONS') {
-      return withCors(Promise.resolve(new Response(null, { status: 204 })), request, env);
+      updateRoute(ctx, 'cors.options');
+      return finalizeWithCors(request, env, ctx, Promise.resolve(new Response(null, { status: 204 })));
     }
 
     try {
@@ -63,61 +79,94 @@ export default {
       const { pathname } = url;
 
       if (pathname === '/auth/login' && request.method === 'POST') {
-        return withCors(handleLogin(request, env), request, env);
+        updateRoute(ctx, 'auth.login');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(request, env, ctx, handleLogin(request, env, ctx));
       }
 
       if (pathname === '/auth/verify' && request.method === 'POST') {
-        return withCors(handleVerify(request, env), request, env);
+        updateRoute(ctx, 'auth.verify');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(request, env, ctx, handleVerify(request, env, ctx));
       }
 
       if (pathname === '/admin/dashboard' && request.method === 'GET') {
-        return requireRole(request, env, 'admin', handleAdminDashboard);
+        updateRoute(ctx, 'admin.dashboard');
+        return finalizeWithCors(request, env, ctx, requireRole(request, env, 'admin', handleAdminDashboard, ctx));
       }
 
       if (pathname === '/admin/teachers' && request.method === 'POST') {
-        return requireRole(request, env, 'admin', handleAdminCreateTeacher);
+        updateRoute(ctx, 'admin.teachers.create');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(request, env, ctx, requireRole(request, env, 'admin', handleAdminCreateTeacher, ctx));
       }
 
       if (pathname.startsWith('/admin/teachers/') && request.method === 'DELETE') {
         const username = decodeURIComponent(pathname.split('/')[3] || '');
-        return requireRole(request, env, 'admin', (req, env, session) =>
-          handleAdminDeleteTeacher(req, env, session, username),
+        updateRoute(ctx, 'admin.teachers.delete');
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'admin', handleAdminDeleteTeacher, ctx, username),
         );
       }
 
       if (pathname === '/teacher/dashboard' && request.method === 'GET') {
-        return requireRole(request, env, 'teacher', handleTeacherDashboard);
+        updateRoute(ctx, 'teacher.dashboard');
+        return finalizeWithCors(request, env, ctx, requireRole(request, env, 'teacher', handleTeacherDashboard, ctx));
       }
 
       if (pathname === '/teacher/classes' && request.method === 'POST') {
-        return requireRole(request, env, 'teacher', handleCreateClass);
+        updateRoute(ctx, 'teacher.classes.create');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(request, env, ctx, requireRole(request, env, 'teacher', handleCreateClass, ctx));
       }
 
       if (pathname === '/teacher/students' && request.method === 'POST') {
-        return requireRole(request, env, 'teacher', handleCreateStudent);
+        updateRoute(ctx, 'teacher.students.create');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(request, env, ctx, requireRole(request, env, 'teacher', handleCreateStudent, ctx));
       }
 
       if (pathname === '/teacher/students/bulk' && request.method === 'POST') {
-        return requireRole(request, env, 'teacher', handleBulkCreateStudentsHandler);
+        updateRoute(ctx, 'teacher.students.bulk');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'teacher', handleBulkCreateStudentsHandler, ctx),
+        );
       }
 
       if (pathname === '/teacher/classes/unlocks' && request.method === 'POST') {
-        return requireRole(request, env, 'teacher', handleClassUnlock);
+        updateRoute(ctx, 'teacher.classes.unlock');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(request, env, ctx, requireRole(request, env, 'teacher', handleClassUnlock, ctx));
       }
 
       if (pathname === '/teacher/students/unlocks' && request.method === 'POST') {
-        return requireRole(request, env, 'teacher', handleStudentUnlock);
+        updateRoute(ctx, 'teacher.students.unlock');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(request, env, ctx, requireRole(request, env, 'teacher', handleStudentUnlock, ctx));
       }
 
       if (pathname === '/teacher/students/archive' && request.method === 'POST') {
-        return requireRole(request, env, 'teacher', handleArchiveStudent);
+        updateRoute(ctx, 'teacher.students.archive');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(request, env, ctx, requireRole(request, env, 'teacher', handleArchiveStudent, ctx));
       }
 
       if (pathname.startsWith('/teacher/students/') && pathname.endsWith('/dashboard') && request.method === 'GET') {
         const segments = pathname.split('/');
         const studentId = decodeURIComponent(segments[3] || '');
-        return requireRole(request, env, 'teacher', (req, env, session) =>
-          handleTeacherStudentDashboard(req, env, session, studentId),
+        updateRoute(ctx, 'teacher.students.dashboard');
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'teacher', handleTeacherStudentDashboard, ctx, studentId),
         );
       }
 
@@ -125,13 +174,22 @@ export default {
         const segments = pathname.split('/');
         const classId = decodeURIComponent(segments[3] || '');
         if (request.method === 'GET') {
-          return requireRole(request, env, 'teacher', (req, env, session) =>
-            handleGetClassPacing(req, env, session, classId),
+          updateRoute(ctx, 'teacher.classes.pacing.get');
+          return finalizeWithCors(
+            request,
+            env,
+            ctx,
+            requireRole(request, env, 'teacher', handleGetClassPacing, ctx, classId),
           );
         }
         if (request.method === 'POST') {
-          return requireRole(request, env, 'teacher', (req, env, session) =>
-            handleUpdateClassPacing(req, env, session, classId),
+          updateRoute(ctx, 'teacher.classes.pacing.update');
+          await captureRequestBody(request, ctx);
+          return finalizeWithCors(
+            request,
+            env,
+            ctx,
+            requireRole(request, env, 'teacher', handleUpdateClassPacing, ctx, classId),
           );
         }
       }
@@ -139,76 +197,172 @@ export default {
       if (pathname.startsWith('/teacher/classes/') && pathname.endsWith('/export') && request.method === 'GET') {
         const segments = pathname.split('/');
         const classId = decodeURIComponent(segments[3] || '');
-        return requireRole(request, env, 'teacher', (req, env, session) =>
-          handleClassExport(req, env, session, classId),
+        updateRoute(ctx, 'teacher.classes.export');
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'teacher', handleClassExport, ctx, classId),
         );
       }
 
       if (pathname.startsWith('/teacher/classes/') && pathname.endsWith('/credentials') && request.method === 'POST') {
         const segments = pathname.split('/');
         const classId = decodeURIComponent(segments[3] || '');
-        return requireRole(request, env, 'teacher', (req, env, session) =>
-          handleGenerateClassCredentials(req, env, session, classId),
+        updateRoute(ctx, 'teacher.classes.credentials');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'teacher', handleGenerateClassCredentials, ctx, classId),
         );
       }
 
       if (pathname.startsWith('/teacher/classes/') && pathname.endsWith('/live-assessment-status') && request.method === 'GET') {
         const segments = pathname.split('/');
         const classId = decodeURIComponent(segments[3] || '');
-        return requireRole(request, env, 'teacher', (req, env, session) =>
-          handleTeacherLiveAssessmentStatus(req, env, session, classId),
+        updateRoute(ctx, 'teacher.classes.liveAssessment');
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'teacher', handleTeacherLiveAssessmentStatus, ctx, classId),
         );
       }
 
       if (pathname === '/student/dashboard' && request.method === 'GET') {
-        return requireRole(request, env, 'student', handleStudentDashboard);
+        updateRoute(ctx, 'student.dashboard');
+        return finalizeWithCors(request, env, ctx, requireRole(request, env, 'student', handleStudentDashboard, ctx));
       }
 
       if (pathname.startsWith('/student/classes/') && pathname.endsWith('/pacing') && request.method === 'GET') {
         const segments = pathname.split('/');
         const classId = decodeURIComponent(segments[3] || '');
-        return requireRole(request, env, 'student', (req, env, session) =>
-          handleStudentClassPacing(req, env, session, classId),
+        updateRoute(ctx, 'student.classes.pacing');
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'student', handleStudentClassPacing, ctx, classId),
         );
       }
 
       if (pathname === '/student/gamification' && request.method === 'GET') {
-        return requireRole(request, env, 'student', handleGetStudentGamification);
+        updateRoute(ctx, 'student.gamification.get');
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'student', handleGetStudentGamification, ctx),
+        );
       }
 
       if (pathname === '/student/gamification' && request.method === 'POST') {
-        return requireRole(request, env, 'student', handleSyncStudentGamification);
+        updateRoute(ctx, 'student.gamification.sync');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'student', handleSyncStudentGamification, ctx),
+        );
       }
 
       if (pathname === '/student/live-assessment-status' && request.method === 'POST') {
-        return requireRole(request, env, 'student', handleStudentLiveAssessmentStatus);
+        updateRoute(ctx, 'student.liveAssessment.upsert');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(
+          request,
+          env,
+          ctx,
+          requireRole(request, env, 'student', handleStudentLiveAssessmentStatus, ctx),
+        );
       }
 
       if (pathname === '/setup/seed' && request.method === 'POST') {
-        return withCors(handleSeed(request, env), request, env);
+        updateRoute(ctx, 'setup.seed');
+        await captureRequestBody(request, ctx);
+        return finalizeWithCors(request, env, ctx, handleSeed(request, env, ctx));
       }
 
-      return withCors(Promise.resolve(json({ error: 'Not found' }, 404)), request, env);
+      updateRoute(ctx, 'not_found');
+      return finalizeWithCors(request, env, ctx, Promise.resolve(json({ error: 'Not found' }, 404)));
     } catch (error) {
-      console.error('Worker error', error);
-      return withCors(Promise.resolve(json({ error: 'Internal Server Error' }, 500)), request, env);
+      logError(ctx, error);
+      return finalizeWithCors(request, env, ctx, Promise.resolve(json({ error: 'Internal Server Error' }, 500)));
     }
   },
 };
 
+async function captureRequestBody(request, ctx) {
+  if (!request) return;
+  const method = (request.method || '').toUpperCase();
+  if (method === 'GET' || method === 'HEAD') {
+    return;
+  }
+
+  const contentType = request.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    return;
+  }
+
+  try {
+    const clone = request.clone();
+    const body = await clone.json();
+    logRequestPayload(ctx, body);
+  } catch (error) {
+    logEvent(ctx, 'request.body_parse_failed', { error: error?.message || String(error) }, 'warn');
+  }
+}
+
+async function finalizeWithCors(request, env, ctx, responsePromise) {
+  let response;
+  try {
+    response = await responsePromise;
+  } catch (error) {
+    logError(ctx, error);
+    response = json({ error: 'Internal Server Error' }, 500);
+  }
+
+  if (!(response instanceof Response)) {
+    response = json(response ?? { ok: true });
+  }
+
+  const logged = await logResponse(ctx, response);
+  return withCors(Promise.resolve(logged), request, env);
+}
+
 /* --------------------------- Route Handlers ---------------------------- */
 
-async function handleLogin(request, env) {
+async function handleLogin(request, env, ctx) {
   const { role = 'teacher', username = '', password = '' } = await readJson(request);
   const normalizedRole = String(role).toLowerCase();
   const normalizedUsername = String(username).trim();
   const normalizedUsernameLower = normalizedUsername.toLowerCase();
   const normalizedPassword = String(password);
 
+  logEvent(ctx, 'auth.login.attempt', {
+    role: normalizedRole,
+    username: normalizedUsername,
+  });
+
   if (!normalizedUsername || !normalizedPassword) {
+    logAuthResult(ctx, {
+      status: 'failure',
+      reason: 'missing_credentials',
+      role: normalizedRole,
+      username: normalizedUsername,
+    });
     return json({ error: 'Username and password are required.' }, 400);
   }
   if (!['admin', 'teacher', 'student'].includes(normalizedRole)) {
+    logAuthResult(ctx, {
+      status: 'failure',
+      reason: 'invalid_role',
+      role: normalizedRole,
+      username: normalizedUsername,
+    });
     return json({ error: "Role must be 'admin', 'teacher', or 'student'." }, 400);
   }
 
@@ -224,15 +378,33 @@ async function handleLogin(request, env) {
   }
 
   if (!userDoc?.password) {
+    logAuthResult(ctx, {
+      status: 'failure',
+      reason: 'user_not_found',
+      role: normalizedRole,
+      username: normalizedUsername,
+    });
     return json({ error: 'Invalid credentials' }, 401);
   }
 
   const passwordMatches = await bcrypt.compare(normalizedPassword, userDoc.password);
   if (!passwordMatches) {
+    logAuthResult(ctx, {
+      status: 'failure',
+      reason: 'password_mismatch',
+      role: normalizedRole,
+      username: normalizedUsername,
+    });
     return json({ error: 'Invalid credentials' }, 401);
   }
 
   if (userDoc.archivedAt) {
+    logAuthResult(ctx, {
+      status: 'failure',
+      reason: 'archived',
+      role: normalizedRole,
+      username: normalizedUsername,
+    });
     return json({ error: 'Account archived' }, 403);
   }
 
@@ -247,15 +419,26 @@ async function handleLogin(request, env) {
     env.TOKEN_SECRET,
   );
 
+  logAuthResult(ctx, {
+    status: 'success',
+    role: normalizedRole,
+    username: tokenUsername,
+    userId: userDoc.id ?? null,
+  });
+
   return json({
     token,
     user: formatSessionUser(normalizedRole, userDoc),
   });
 }
 
-async function handleVerify(request, env) {
+async function handleVerify(request, env, ctx) {
   const { token } = await readJson(request);
   if (!token) {
+    logAuthResult(ctx, {
+      status: 'failure',
+      reason: 'token_missing',
+    });
     return json({ valid: false, error: 'Token missing' }, 400);
   }
 
@@ -273,8 +456,21 @@ async function handleVerify(request, env) {
     }
 
     if (!doc || doc.archivedAt) {
+      logAuthResult(ctx, {
+        status: 'failure',
+        reason: 'user_not_found',
+        role: payload.role,
+        username: payload.username,
+      });
       return json({ valid: false }, 401);
     }
+
+    logAuthResult(ctx, {
+      status: 'success',
+      role: payload.role,
+      username: payload.username,
+      userId: doc.id ?? null,
+    });
 
     return json({
       valid: true,
@@ -282,50 +478,47 @@ async function handleVerify(request, env) {
     });
   } catch (error) {
     console.warn('Token verification failed', error);
+    logAuthResult(ctx, {
+      status: 'failure',
+      reason: 'token_verification_failed',
+    });
     return json({ valid: false }, 401);
   }
 }
 
-async function handleAdminDashboard(_request, env, session) {
+async function handleAdminDashboard(_request, env, session, ctx) {
   const db = getDb(env);
-  const [adminDoc, teachers] = await Promise.all([
-    findAdminByUsername(db, session.username),
-    listTeachers(db, { includeArchived: true }),
-  ]);
-
+  const adminDoc = await findAdminByUsername(db, session.username);
   if (!adminDoc) {
     return json({ error: 'Admin not found' }, 404);
   }
 
-  const teacherDetails = [];
-  for (const teacher of teachers) {
-    const summary = await getTeacherDashboardData(db, { teacherId: teacher.id, username: teacher.username });
-    const safeTeacher = stripPassword(teacher);
-    const activeStudents = summary.students.filter((student) => student.status === 'active').length;
-    const archivedStudents = summary.students.filter((student) => student.status === 'archived').length;
-    teacherDetails.push({
-      id: safeTeacher.id,
-      username: safeTeacher.username,
-      firstName: safeTeacher.firstName ?? null,
-      lastName: safeTeacher.lastName ?? null,
-      displayName: safeTeacher.displayName ?? safeTeacher.username,
-      createdAt: safeTeacher.createdAt ?? null,
-      archivedAt: safeTeacher.archivedAt ?? null,
-      totals: {
-        classes: summary.classes.filter((clazz) => !clazz.archivedAt).length,
-        activeStudents,
-        archivedStudents,
-      },
-    });
-  }
+  const teachers = await listTeachers(db, { includeArchived: true });
+  const teacherSummaries = teachers.map((teacher) => {
+    const safe = stripPassword(teacher);
+    return {
+      id: safe.id,
+      username: safe.username,
+      displayName: safe.displayName ?? safe.username,
+      firstName: safe.firstName ?? null,
+      lastName: safe.lastName ?? null,
+      createdAt: safe.createdAt ?? null,
+      archivedAt: safe.archivedAt ?? null,
+    };
+  });
+
+  logEvent(ctx, 'admin.dashboard.loaded', {
+    admin: session.username,
+    teacherCount: teacherSummaries.length,
+  });
 
   return json({
     admin: formatSessionUser('admin', adminDoc),
-    teachers: teacherDetails,
+    teachers: teacherSummaries,
   });
 }
 
-async function handleAdminCreateTeacher(request, env) {
+async function handleAdminCreateTeacher(request, env, _session, ctx) {
   const body = await readJson(request);
   const username = String(body.username || '').trim();
   const password = String(body.password || '');
@@ -340,6 +533,7 @@ async function handleAdminCreateTeacher(request, env) {
   const db = getDb(env);
   const existing = await findTeacherByUsername(db, username);
   if (existing) {
+    logEvent(ctx, 'admin.teacher.create_conflict', { username });
     return json({ error: 'Teacher already exists.' }, 409);
   }
 
@@ -352,10 +546,16 @@ async function handleAdminCreateTeacher(request, env) {
     displayName,
   });
 
+  logDbOperation(ctx, {
+    action: 'createTeacher',
+    username,
+    teacherId: created.id,
+  });
+
   return json({ teacher: stripPassword(created) }, 201);
 }
 
-async function handleAdminDeleteTeacher(_request, env, _session, username) {
+async function handleAdminDeleteTeacher(_request, env, session, ctx, username) {
   if (!username) {
     return json({ error: 'Teacher username required' }, 400);
   }
@@ -363,12 +563,19 @@ async function handleAdminDeleteTeacher(_request, env, _session, username) {
   const db = getDb(env);
   const teacher = await findTeacherByUsername(db, username);
   if (!teacher) {
+    logEvent(ctx, 'admin.teacher.delete_missing', { username, requestedBy: session?.username });
     return json({ error: 'Teacher not found' }, 404);
   }
 
   const summary = await getTeacherDashboardData(db, { teacherId: teacher.id, username: teacher.username });
 
   const archivedAt = await archiveTeacher(db, teacher.id);
+  logDbOperation(ctx, {
+    action: 'archiveTeacher',
+    teacherId: teacher.id,
+    username: teacher.username,
+    requestedBy: session?.username ?? null,
+  });
   let classesArchived = 0;
   for (const clazz of summary.classes) {
     if (!clazz.archivedAt) {
@@ -385,6 +592,12 @@ async function handleAdminDeleteTeacher(_request, env, _session, username) {
     }
   }
 
+  logEvent(ctx, 'admin.teacher.delete_complete', {
+    username: teacher.username,
+    classesArchived,
+    studentsArchived,
+  });
+
   return json({
     ok: true,
     archivedAt,
@@ -393,7 +606,7 @@ async function handleAdminDeleteTeacher(_request, env, _session, username) {
   });
 }
 
-async function handleTeacherDashboard(_request, env, session) {
+async function handleTeacherDashboard(_request, env, session, ctx) {
   const db = getDb(env);
   const teacher = await findTeacherByUsername(db, session.username);
   if (!teacher || teacher.archivedAt) {
@@ -404,6 +617,12 @@ async function handleTeacherDashboard(_request, env, session) {
   const safeStudents = data.students.map(stripPassword);
 
   const lessonSummary = summarizeLessons(data.progress);
+
+  logEvent(ctx, 'teacher.dashboard.loaded', {
+    teacherId: teacher.id,
+    classes: data.classes.length,
+    students: safeStudents.length,
+  });
 
   return json({
     teacher: formatSessionUser('teacher', teacher),
@@ -435,7 +654,7 @@ function buildPacingMetadata(pacing) {
   };
 }
 
-async function handleGetClassPacing(_request, env, session, classId) {
+async function handleGetClassPacing(_request, env, session, ctx, classId) {
   if (!classId) {
     return json({ error: 'Class id is required' }, 400);
   }
@@ -454,6 +673,12 @@ async function handleGetClassPacing(_request, env, session, classId) {
   const pacing = await getClassPacing(db, classId);
   const metadata = buildPacingMetadata(pacing);
 
+  logEvent(ctx, 'pacing.teacher.fetch', {
+    classId,
+    teacherId: teacher.id,
+    pacing,
+  });
+
   return json({
     class: classDoc,
     pacing,
@@ -461,7 +686,7 @@ async function handleGetClassPacing(_request, env, session, classId) {
   });
 }
 
-async function handleUpdateClassPacing(request, env, session, classId) {
+async function handleUpdateClassPacing(request, env, session, ctx, classId) {
   if (!classId) {
     return json({ error: 'Class id is required' }, 400);
   }
@@ -483,6 +708,15 @@ async function handleUpdateClassPacing(request, env, session, classId) {
   if (!classDoc || classDoc.teacherId !== teacher.id) {
     return json({ error: 'Class not found' }, 404);
   }
+
+  logEvent(ctx, 'pacing.teacher.update_request', {
+    classId,
+    teacherId: teacher.id,
+    command,
+    requestedLessonId: requestedLessonId || null,
+    requestedUnitId: requestedUnitId || null,
+    requestedTrack: requestedTrack || null,
+  });
 
   const currentPacing = await getClassPacing(db, classId);
 
@@ -532,6 +766,16 @@ async function handleUpdateClassPacing(request, env, session, classId) {
         updatedBy: teacher.username,
       });
 
+      logDbOperation(ctx, {
+        action: 'setClassPacing',
+        classId,
+        teacherId: teacher.id,
+        command: 'advance:init',
+        track: updated.track,
+        unitId: updated.unitId,
+        lessonId: updated.lessonId,
+      });
+
       return json({
         pacing: updated,
         lesson: firstLesson,
@@ -551,6 +795,16 @@ async function handleUpdateClassPacing(request, env, session, classId) {
       unitId: nextLesson.unitId,
       lessonId: nextLesson.id,
       updatedBy: teacher.username,
+    });
+
+    logDbOperation(ctx, {
+      action: 'setClassPacing',
+      classId,
+      teacherId: teacher.id,
+      command: 'advance',
+      track: updated.track,
+      unitId: updated.unitId,
+      lessonId: updated.lessonId,
     });
 
     return json({
@@ -579,6 +833,16 @@ async function handleUpdateClassPacing(request, env, session, classId) {
       updatedBy: teacher.username,
     });
 
+    logDbOperation(ctx, {
+      action: 'setClassPacing',
+      classId,
+      teacherId: teacher.id,
+      command: 'start',
+      track: updated.track,
+      unitId: updated.unitId,
+      lessonId: updated.lessonId,
+    });
+
     return json({
       pacing: updated,
       lesson: nextLesson,
@@ -600,6 +864,16 @@ async function handleUpdateClassPacing(request, env, session, classId) {
       updatedBy: teacher.username,
     });
 
+    logDbOperation(ctx, {
+      action: 'setClassPacing',
+      classId,
+      teacherId: teacher.id,
+      command: 'stop',
+      track: updated.track,
+      unitId: updated.unitId,
+      lessonId: updated.lessonId,
+    });
+
     const lessonPayload = resolveLessonInfo(updated.lessonId, updated.unitId, requestedLessonTitle);
     const sequenceIndex = updated.track === 'ks3' ? getYear7LessonIndex(updated.lessonId) : null;
 
@@ -610,7 +884,7 @@ async function handleUpdateClassPacing(request, env, session, classId) {
     });
   }
 
-async function handleStudentClassPacing(_request, env, session, classId) {
+async function handleStudentClassPacing(_request, env, session, ctx, classId) {
   if (!classId) {
     return json({ error: 'Class id is required' }, 400);
   }
@@ -628,6 +902,12 @@ async function handleStudentClassPacing(_request, env, session, classId) {
 
   const pacing = await getClassPacing(db, classId);
   const metadata = buildPacingMetadata(pacing);
+
+  logEvent(ctx, 'pacing.student.fetch', {
+    classId,
+    studentId: student.id,
+    pacing,
+  });
 
   return json({
     class: classDoc,
@@ -657,6 +937,16 @@ async function handleStudentClassPacing(_request, env, session, classId) {
       updatedBy: teacher.username,
     });
 
+    logDbOperation(ctx, {
+      action: 'setClassPacing',
+      classId,
+      teacherId: teacher.id,
+      command: 'manual-set',
+      track: updated.track,
+      unitId: updated.unitId,
+      lessonId: updated.lessonId,
+    });
+
     const lessonPayload = year7Lesson || resolveLessonInfo(updated.lessonId, updated.unitId, requestedLessonTitle);
     const sequenceIndex = updated.track === 'ks3' ? getYear7LessonIndex(updated.lessonId) : null;
 
@@ -670,7 +960,7 @@ async function handleStudentClassPacing(_request, env, session, classId) {
   return json({ error: 'Provide lessonId or a command (start, advance, stop).' }, 400);
 }
 
-async function handleCreateClass(request, env, session) {
+async function handleCreateClass(request, env, session, ctx) {
   const body = await readJson(request);
   const className = String(body.className || '').trim();
   const description = String(body.description || '').trim();
@@ -694,10 +984,18 @@ async function handleCreateClass(request, env, session) {
     yearGroup,
   });
 
+  logDbOperation(ctx, {
+    action: 'createClass',
+    classId: created.id,
+    teacherId: teacher.id,
+    teacherUsername: teacher.username,
+    yearGroup,
+  });
+
   return json({ class: created }, 201);
 }
 
-async function handleCreateStudent(request, env, session) {
+async function handleCreateStudent(request, env, session, ctx) {
   const body = await readJson(request);
   const classId = String(body.classId || '').trim();
   const firstName = String(body.firstName || '').trim();
@@ -736,6 +1034,7 @@ async function handleCreateStudent(request, env, session) {
   if (username) {
     const existingStudent = await findStudentByUsername(db, username);
     if (existingStudent) {
+      logEvent(ctx, 'teacher.student.create_conflict', { username, classId });
       return json({ error: 'Student username already exists.' }, 409);
     }
   }
@@ -753,10 +1052,19 @@ async function handleCreateStudent(request, env, session) {
     programme,
   });
 
+  logDbOperation(ctx, {
+    action: 'createStudent',
+    studentId: created.id,
+    teacherId: teacher.id,
+    classId,
+    username: created.username ?? null,
+    programme,
+  });
+
   return json({ student: stripPassword(created) }, 201);
 }
 
-async function handleBulkCreateStudentsHandler(request, env, session) {
+async function handleBulkCreateStudentsHandler(request, env, session, ctx) {
   const body = await readJson(request);
   const classId = String(body.classId || '').trim();
   const rows = Array.isArray(body.students) ? body.students : [];
@@ -803,6 +1111,7 @@ async function handleBulkCreateStudentsHandler(request, env, session) {
     if (username) {
       const existingStudent = await findStudentByUsername(db, username);
       if (existingStudent) {
+        logEvent(ctx, 'teacher.student.bulk_conflict', { username, classId });
         return json({ error: `Student username already exists: ${username}` }, 409);
       }
     }
@@ -822,13 +1131,19 @@ async function handleBulkCreateStudentsHandler(request, env, session) {
   }
 
   const created = await bulkCreateStudents(db, prepared);
+  logDbOperation(ctx, {
+    action: 'bulkCreateStudents',
+    teacherId: teacher.id,
+    classId,
+    count: created.length,
+  });
   return json({
     created: created.map(stripPassword),
     count: created.length,
   }, 201);
 }
 
-async function handleGenerateClassCredentials(request, env, session, classId) {
+async function handleGenerateClassCredentials(request, env, session, ctx, classId) {
   if (!classId) {
     return json({ error: 'Class id is required.' }, 400);
   }
@@ -885,6 +1200,13 @@ async function handleGenerateClassCredentials(request, env, session, classId) {
 
   await bulkUpdateStudentPasswords(db, updates);
 
+  logDbOperation(ctx, {
+    action: 'bulkPasswordReset',
+    classId,
+    teacherId: teacher.id,
+    count: credentials.length,
+  });
+
   return json({
     classId,
     generatedAt: timestamp,
@@ -893,7 +1215,7 @@ async function handleGenerateClassCredentials(request, env, session, classId) {
   });
 }
 
-async function handleClassUnlock(request, env, session) {
+async function handleClassUnlock(request, env, session, ctx) {
   const body = await readJson(request);
   const classId = String(body.classId || '').trim();
   const stageKey = String(body.stageKey || '').trim();
@@ -932,10 +1254,18 @@ async function handleClassUnlock(request, env, session) {
     teacherUsername: teacher.username,
   });
 
+  logDbOperation(ctx, {
+    action: 'createClassUnlock',
+    unlockId: unlock.id,
+    classId,
+    teacherId: teacher.id,
+    stageKey,
+  });
+
   return json({ unlock }, 201);
 }
 
-async function handleStudentUnlock(request, env, session) {
+async function handleStudentUnlock(request, env, session, ctx) {
   const body = await readJson(request);
   const studentId = String(body.studentId || '').trim();
   const stageKey = String(body.stageKey || '').trim();
@@ -983,10 +1313,20 @@ async function handleStudentUnlock(request, env, session) {
     await setStudentActiveStage(db, studentId, stageKey);
   }
 
+  logDbOperation(ctx, {
+    action: 'createStudentUnlock',
+    unlockId: unlock.id,
+    studentId,
+    classId: studentDoc.classId,
+    teacherId: teacher.id,
+    scope,
+    stageKey,
+  });
+
   return json({ unlock }, 201);
 }
 
-async function handleArchiveStudent(request, env, session) {
+async function handleArchiveStudent(request, env, session, ctx) {
   const body = await readJson(request);
   const studentId = String(body.studentId || '').trim();
 
@@ -1017,10 +1357,16 @@ async function handleArchiveStudent(request, env, session) {
   }
 
   const archivedAt = await archiveStudent(db, studentId);
+  logDbOperation(ctx, {
+    action: 'archiveStudent',
+    studentId,
+    teacherId: teacher.id,
+    classId: studentDoc.classId,
+  });
   return json({ archivedAt });
 }
 
-async function handleTeacherStudentDashboard(_request, env, session, studentId) {
+async function handleTeacherStudentDashboard(_request, env, session, ctx, studentId) {
   if (!studentId) {
     return json({ error: 'Student id required' }, 400);
   }
@@ -1036,6 +1382,11 @@ async function handleTeacherStudentDashboard(_request, env, session, studentId) 
     return json({ error: 'Student not found' }, 404);
   }
 
+  logEvent(ctx, 'teacher.student.dashboard', {
+    teacherId: teacher.id,
+    studentId: data.student.id,
+  });
+
   return json({
     student: formatSessionUser('student', data.student),
     class: data.class,
@@ -1045,7 +1396,7 @@ async function handleTeacherStudentDashboard(_request, env, session, studentId) 
   });
 }
 
-async function handleTeacherLiveAssessmentStatus(request, env, session, classId) {
+async function handleTeacherLiveAssessmentStatus(request, env, session, ctx, classId) {
   if (!classId) {
     return json({ error: 'Class id is required' }, 400);
   }
@@ -1127,6 +1478,14 @@ async function handleTeacherLiveAssessmentStatus(request, env, session, classId)
     'not-started': Math.max(totalStudents - completed - inProgress, 0),
   };
 
+  logEvent(ctx, 'teacher.live_assessment.status', {
+    teacherId: teacher.id,
+    classId,
+    unitId,
+    segmentId,
+    totals: summary,
+  });
+
   return json({
     classId,
     unitId,
@@ -1137,7 +1496,7 @@ async function handleTeacherLiveAssessmentStatus(request, env, session, classId)
   });
 }
 
-async function handleClassExport(_request, env, session, classId) {
+async function handleClassExport(_request, env, session, ctx, classId) {
   if (!classId) {
     return json({ error: 'Class ID required' }, 400);
   }
@@ -1211,6 +1570,12 @@ async function handleClassExport(_request, env, session, classId) {
     );
   }
 
+  logEvent(ctx, 'teacher.class.export', {
+    teacherId: teacher.id,
+    classId,
+    studentCount: students.length,
+  });
+
   return json({
     class: clazz,
     generatedAt: new Date().toISOString(),
@@ -1221,13 +1586,18 @@ async function handleClassExport(_request, env, session, classId) {
   });
 }
 
-async function handleStudentDashboard(_request, env, session) {
+async function handleStudentDashboard(_request, env, session, ctx) {
   const db = getDb(env);
   const data = await getStudentDashboardData(db, session.username);
 
   if (!data.student) {
     return json({ error: 'Student record not found' }, 404);
   }
+
+  logEvent(ctx, 'student.dashboard.loaded', {
+    studentId: data.student.id,
+    classId: data.class?.id ?? null,
+  });
 
   return json({
     student: formatSessionUser('student', data.student),
@@ -1239,7 +1609,7 @@ async function handleStudentDashboard(_request, env, session) {
   });
 }
 
-async function handleStudentLiveAssessmentStatus(request, env, session) {
+async function handleStudentLiveAssessmentStatus(request, env, session, ctx) {
   const body = await readJson(request);
   const classId = String(body.classId || '').trim();
   const unitId = String(body.unitId || '').trim();
@@ -1269,10 +1639,20 @@ async function handleStudentLiveAssessmentStatus(request, env, session) {
     score: scoreRaw,
   });
 
+  logDbOperation(ctx, {
+    action: 'upsertLiveAssessmentStatus',
+    studentId: student.id,
+    classId,
+    unitId,
+    segmentId,
+    attempts,
+    status: normalizedStatus,
+  });
+
   return json({ status: record });
 }
 
-async function handleGetStudentGamification(_request, env, session) {
+async function handleGetStudentGamification(_request, env, session, ctx) {
   const db = getDb(env);
   const student = await findStudentByUsername(db, session.username);
 
@@ -1281,10 +1661,15 @@ async function handleGetStudentGamification(_request, env, session) {
   }
 
   const gamification = await getStudentGamification(db, student.id);
+  logEvent(ctx, 'student.gamification.fetch', {
+    studentId: student.id,
+    xp: gamification?.xp ?? 0,
+    level: gamification?.level ?? 1,
+  });
   return json(gamification);
 }
 
-async function handleSyncStudentGamification(request, env, session) {
+async function handleSyncStudentGamification(request, env, session, ctx) {
   const db = getDb(env);
   const student = await findStudentByUsername(db, session.username);
 
@@ -1294,16 +1679,26 @@ async function handleSyncStudentGamification(request, env, session) {
 
   const payload = await readJson(request);
   const gamification = await syncStudentGamification(db, student.id, payload);
+  logDbOperation(ctx, {
+    action: 'syncStudentGamification',
+    studentId: student.id,
+    xp: gamification.xp,
+    level: gamification.level,
+  });
   return json(gamification);
 }
 
-async function handleSeed(request, env) {
+async function handleSeed(request, env, ctx) {
   if (!env.SEED_KEY) {
     return json({ error: 'Seed key not configured' }, 403);
   }
 
   const headerKey = request.headers.get('x-seed-key');
   if (!headerKey || headerKey !== env.SEED_KEY) {
+    logAuthResult(ctx, {
+      status: 'failure',
+      reason: 'invalid_seed_key',
+    });
     return json({ error: 'Forbidden' }, 403);
   }
 
@@ -1319,6 +1714,7 @@ async function handleSeed(request, env) {
   const db = getDb(env);
   const existing = await findTeacherByUsername(db, teacher.username);
   if (existing) {
+    logEvent(ctx, 'seed.teacher.exists', { username: teacher.username });
     return json({ ok: true, seeded: false, reason: 'teacher exists' });
   }
 
@@ -1331,28 +1727,57 @@ async function handleSeed(request, env) {
     displayName,
   });
 
+  logDbOperation(ctx, {
+    action: 'seedTeacher',
+    teacherId: created.id,
+    username: created.username,
+  });
+
   return json({ ok: true, seeded: true, teacher: created }, 201);
 }
 
 /* ------------------------------ Middleware ----------------------------- */
 
-async function requireRole(request, env, allowedRoles, handler) {
+async function requireRole(request, env, allowedRoles, handler, ctx, ...extraArgs) {
   const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
   const authHeader = request.headers.get('authorization') || '';
   if (!authHeader.startsWith('Bearer ')) {
-    return withCors(Promise.resolve(json({ error: 'Missing authorization' }, 401)), request, env);
+    logAuthResult(ctx, {
+      status: 'failure',
+      reason: 'missing_authorization',
+      requiredRoles: roles,
+    });
+    return json({ error: 'Missing authorization' }, 401);
   }
 
   try {
     const session = await verifyToken(authHeader.slice(7), env.TOKEN_SECRET);
+    attachSession(ctx, session);
     if (!roles.includes(session.role)) {
-      return withCors(Promise.resolve(json({ error: `${roles.join(', ')} role required` }, 403)), request, env);
+      logAuthResult(ctx, {
+        status: 'failure',
+        reason: 'role_mismatch',
+        role: session.role,
+        username: session.username,
+        requiredRoles: roles,
+      });
+      return json({ error: `${roles.join(', ')} role required` }, 403);
     }
 
-    const response = await handler(request, env, session);
-    return withCors(Promise.resolve(response), request, env);
+    logAuthResult(ctx, {
+      status: 'success',
+      reason: 'authorized',
+      role: session.role,
+      username: session.username,
+    });
+
+    return handler(request, env, session, ctx, ...extraArgs);
   } catch (error) {
-    return withCors(Promise.resolve(json({ error: 'Invalid or expired token' }, 401)), request, env);
+    logAuthResult(ctx, {
+      status: 'failure',
+      reason: 'invalid_or_expired_token',
+    });
+    return json({ error: 'Invalid or expired token' }, 401);
   }
 }
 

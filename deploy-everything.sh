@@ -10,6 +10,12 @@ ROOT="$SCRIPT_DIR"
 FRONTEND="$ROOT/frontend"
 WORKER="$ROOT/worker"
 
+# Default admin credentials created during deployment
+ADMIN_USERNAME="admin"
+ADMIN_PASSWORD="AdminReset123!"
+ADMIN_FIRST_NAME="Site"
+ADMIN_LAST_NAME="Administrator"
+
 cd "$ROOT"
 
 ensure_main_branch() {
@@ -75,13 +81,14 @@ cd "$ROOT"
 node worker/reset-db.js || echo "Database reset step completed with warnings"
 echo ""
 
-# Step 5: Seed teacher account (idempotent)
-echo "👨‍🏫 Step 5: Seeding teacher account..."
+# Step 5: Seed admin account (idempotent)
+echo "🛡️  Step 5: Seeding admin account..."
 cd "$ROOT"
-node worker/seed-teacher.js \
-  --username=MrStewart \
-  --password=SGSD2024! \
-  --display-name="Mr. Stewart" || echo "Seed step completed with warnings"
+node worker/seed-admin.js \
+  --username="$ADMIN_USERNAME" \
+  --password="$ADMIN_PASSWORD" \
+  --first-name="$ADMIN_FIRST_NAME" \
+  --last-name="$ADMIN_LAST_NAME" || echo "Admin seed step completed with warnings"
 echo ""
 
 # Step 6: Commit and push to GitHub
@@ -106,9 +113,11 @@ echo "✅ DEPLOYMENT COMPLETE!"
 echo ""
 echo "🌐 Your app is live at: https://stss15.github.io/ibcs-app/"
 echo ""
-echo "🔐 Login with:"
-echo "   Username: MrStewart"
-echo "   Password: SGSD2024!"
-echo "   Role: Teacher"
+echo "🔐 Fresh admin credentials:"
+echo "   Username: $ADMIN_USERNAME"
+echo "   Password: $ADMIN_PASSWORD"
+echo "   Role: Admin (can add/delete teachers only)"
+echo ""
+echo "➡️  After logging in as admin, create a teacher account, then proceed with class/student setup as that teacher."
 echo ""
 
