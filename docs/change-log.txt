@@ -19,7 +19,7 @@ IBCS APP — OPERATIONS CHANGE LOG
 - Compact Year 7 curriculum board with a selectable unit list and lesson timeline so the full KS3 plan fits on a single screen.
 - Refreshed the student dashboard hero and gamification cards with colour-forward gradients, metric badges, and motivational copy.
 - Added slide-in/out animations for lesson segments and moved the summative assessment into the main stage flow to respect pacing locks.
-- Deployment script now calls `worker/reset-db.js` before seeding so InstantDB starts from a clean slate on every `fix-and-deploy` run.
+- Deployment script now calls `worker/reset-db.js` before seeding so InstantDB starts from a clean slate on every `deploy.sh` run.
 - Unified the student dashboard behind a shared template that reads InstantDB pacing, manifest metadata, and local checkpoint analytics for every curriculum track.
 - Reflowed the Year 7 map into a responsive grid with a scrolling lesson timeline so the entire KS3 pathway is visible at once, and added a persistent “Exit presentation” control for projector view.
 - Added a live “Join lesson” CTA to the student dashboard, wired timeline links to respect the teacher pointer, and expanded KS3 lesson content with teacher objectives and task facilitation notes.
@@ -48,13 +48,13 @@ IBCS APP — OPERATIONS CHANGE LOG
 
 2025-11-03  Deployment safeguards
 ---------------------------------
-- `deploy-everything.sh` now aborts when not on `main` and fetches `origin/main` to prevent non-fast-forward pushes.
+- `deploy.sh` now aborts when not on `main` and fetches `origin/main` to prevent non-fast-forward pushes.
 - `seed-teacher.js` auto-fills first/last names (or prompts for them) to satisfy required InstantDB attributes during seeding.
 
 2025-11-03  Docs consolidation
 --------------------------------
 - Centralised operational guides under `docs/` with new index, setup, architecture, content-authoring, deployment, and AI agent playbooks.
-- Added lazy dependency installs and defensive git push handling to `deploy-everything.sh`.
+- Added lazy dependency installs and defensive git push handling to `deploy.sh`.
 - Archived legacy docs (`AI_AGENT_GUIDE.md`, `initial_setup.txt`, `APP_AIM.txt`) in favour of the new hub.
 
 Notes:

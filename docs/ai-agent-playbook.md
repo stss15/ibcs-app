@@ -29,7 +29,7 @@ Use this document as the operational script whenever the AI agent contributes to
 
 ## 4. Quality Checks
 - Run `npm run lint` (frontend) before committing changes.
-- For deployment changes, dry run `./fix-and-deploy.sh` or the affected stage when feasible.
+- For deployment changes, dry run `./deploy.sh` or the affected stage when feasible.
 - Highlight verification steps in the PR/summary so maintainers can reproduce.
 
 ## 5. Communication

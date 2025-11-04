@@ -24,7 +24,7 @@ npm install --prefix frontend
 npm install --prefix worker
 ```
 
-The deployment script automatically skips `npm install` when `node_modules` already exists (see `deploy-everything.sh`).
+The deployment script automatically skips `npm install` when `node_modules` already exists (see `deploy.sh`).
 
 ## Configure Runtime
 Update `frontend/public/app-config.json` with the Cloudflare Worker URL:

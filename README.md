@@ -10,8 +10,8 @@ IB Computer Science learning platform.
 ## Deploy
 
 ```bash
-chmod +x deploy-everything.sh
-./deploy-everything.sh
+chmod +x deploy.sh   # first time only
+./deploy.sh
 ```
 
 ## Login
