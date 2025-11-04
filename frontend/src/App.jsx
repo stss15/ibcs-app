@@ -5,6 +5,7 @@ import TeacherStudentDashboardPage from "./pages/TeacherStudentDashboardPage.jsx
 import StudentDashboardPage from "./pages/StudentDashboardPage.jsx";
 import CurriculumMapPage from "./pages/CurriculumMapPage.jsx";
 import IBCurriculumPage from "./pages/IBCurriculumPage.jsx";
+import IGCSECurriculumPage from "./pages/IGCSECurriculumPage.jsx";
 import TopicPage from "./pages/TopicPage.jsx";
 import LessonPage from "./pages/LessonPage.jsx";
 import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
@@ -118,6 +119,14 @@ function App() {
             element={
               <RequireAuth>
                 <IBCurriculumPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/curriculum/igcse"
+            element={
+              <RequireAuth>
+                <IGCSECurriculumPage />
               </RequireAuth>
             }
           />

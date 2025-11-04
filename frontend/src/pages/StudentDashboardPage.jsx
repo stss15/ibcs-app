@@ -932,7 +932,13 @@ function createCurriculumLink(track, classInfo) {
   }
 
   if (track === "igcse") {
-    return { link: "/curriculum", label: "Explore curriculum map" };
+    if (classInfo?.id) {
+      return {
+        link: { pathname: "/curriculum/igcse", state: { classId: classInfo.id } },
+        label: "Open IGCSE map",
+      };
+    }
+    return { link: "/curriculum/igcse", label: "Explore IGCSE map" };
   }
 
   return { link: "/curriculum/ib", label: "Browse IB curriculum" };
@@ -983,7 +989,10 @@ function resolvePointerAction(track, pointerLesson, classPacing, classInfo) {
   }
 
   if (track === "igcse") {
-    return { link: "/curriculum", label: "View unlocked topic" };
+    return {
+      link: { pathname: "/curriculum/igcse" },
+      label: "View IGCSE roadmap",
+    };
   }
 
   return null;

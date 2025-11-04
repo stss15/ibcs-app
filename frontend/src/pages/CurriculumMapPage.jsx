@@ -7,7 +7,7 @@ const tracks = {
     { label: "Year 8", state: "preview" },
     { label: "Year 9", state: "preview" },
   ],
-  igcse: [{ label: "IGCSE Computer Science", state: "preview" }],
+  igcse: [{ label: "IGCSE Computer Science", state: "live", href: "/curriculum/igcse" }],
 };
 
 function CurriculumMapPage() {
@@ -67,19 +67,25 @@ function CurriculumMapPage() {
               <h2>IGCSE Computer Science</h2>
               <p className="muted">Content sequencing to bridge from Key Stage 4 to DP readiness.</p>
             </div>
-            <span className="status-pill status-pill--muted">Under construction</span>
+            <span className="status-pill status-pill--info">Beta map</span>
           </header>
           <div className="curriculum-panel__body">
             <p>
-              Assessment objectives, mark schemes, and lesson flows are in QA. Expect a beta release with core topics
-              later this term.
+              Topics 110 are now scaffolded into two streams so you can plan assessment pacing, live unlocks, and content authoring.
             </p>
             <div className="curriculum-buttons">
               {tracks.igcse.map((item) => (
-                <button key={item.label} type="button" disabled className="pill pill--locked">
-                  {item.label}
-                  <small>Launch soon</small>
-                </button>
+                item.state === "live" && item.href ? (
+                  <Link key={item.label} to={item.href} className="pill pill--action">
+                    {item.label}
+                    <small>Open roadmap</small>
+                  </Link>
+                ) : (
+                  <button key={item.label} type="button" disabled className="pill pill--locked">
+                    {item.label}
+                    <small>Launch soon</small>
+                  </button>
+                )
               ))}
             </div>
           </div>
