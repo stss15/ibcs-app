@@ -80,6 +80,7 @@ See `docs/ui-ux-design-system.md` for complete component documentation.
 - Levels increase every 150 XP (level = `Math.floor(xp / 150) + 1`).
 - Always pass `totalCount` so dashboards can compute success rates.
 - Failure should call `resetStreak()` through `handleAttempt` (already handled in `GamifiedModulePage`).
+- Formative completions now flow through `frontend/src/lib/services/GamificationService.js`, so `onAttempt` callbacks automatically persist XP/streak data to InstantDB whenever an app ID is configured.
 
 ## 3. Authoring Workflow
 1. Duplicate an existing unit file (`frontend/src/content/b?*.jsx`).
@@ -101,6 +102,7 @@ See `docs/ui-ux-design-system.md` for complete component documentation.
 - Reflections and planner entries save into `progress.reflections` / `progress.planner` for student dashboards.
 - Assessment state includes `status`, `responses`, `marks`, `teacherNotes`, and `updatedAt`.
 - Teachers view aggregate data via `StudentDashboardPage.jsx` (local storage insights) and InstantDB for class-level data.
+- Realtime telemetry (slide dwell, pointer moves, checkpoint outcomes) is handled by `frontend/src/lib/services/AnalyticsService.js`; authors do not need to emit custom events when using the standard slide and assessment components.
 
 ## 6. Teacher Pacing System
 The application includes a teacher-led pacing system to control the flow of content for students.
@@ -110,6 +112,15 @@ The application includes a teacher-led pacing system to control the flow of cont
 - **Data Model:** The current pace for each class is stored in the `classPacing` collection in InstantDB.
 
 This system ensures that students work on the material currently being covered in class, while still allowing them to work at their own pace within that scope. For more technical details, see `docs/teacher-mode.md`.
+
+### Authoring teacher-paced slide decks
+
+- Author slide data for live lessons in `shared/content/lessons/**`. The new Year 7 introduction lesson lives in `shared/content/lessons/intro-to-cs.js` and demonstrates the schema.
+- Each `slide` entry should include an `id`, `type` (`content`, `interactive`, `assessment`, `checkpoint`, or `summative`), optional `assessmentId`, and a `content` object. Layouts currently supported by `SlideRenderer` are `centered`, `stack`, `split`, `interactive`, `gallery`, `reflection`, and `collaborative`.
+- Blocks inside `content.blocks` render through the new `SlideRenderer` component. Supported block types include `heading`, `paragraph`, `list`, `objectives`, `interactive`, `callout`, `reflectionPrompts`, `badgeAward`, and `sortingActivity`.
+- Interactive blocks map to the components exported from `frontend/src/components/interactive/PedagogicalComponents.jsx` (e.g., `ThinkPairShare`, `BinaryLightBulbs`, `RobotMaze`, `LiveCodeEditor`). Add new interactive experiences there and reference them by `component` name in a block.
+- Formative and summative checks use `frontend/src/components/assessments/FormativeAssessment.jsx`. Provide `question`, `items`, `correctOrder`, or `options` as needed; the renderer normalises ordering, multiple-choice, and classification variants.
+- Deck metadata is assembled in `shared/liveDecks.js`. Import the lesson object and convert slides with `transformSlide` so both the frontend and worker can reference shared content without duplication.
 
 ## 5. Best Practices
 - Keep stage descriptions succinct (one or two sentences) for the sidebar.

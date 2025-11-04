@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   getTeacherDashboard,
@@ -19,6 +19,11 @@ import {
   YEAR7_UNITS,
   YEAR7_CURRICULUM,
 } from "../../../shared/liveDecks.js";
+import SlideRenderer from "../components/slides/SlideRenderer.jsx";
+import LiveDashboard from "../components/teacher/LiveDashboard.jsx";
+import analyticsService from "../lib/services/AnalyticsService.js";
+import gamificationService from "../lib/services/GamificationService.js";
+import { useGamification } from "../context/GamificationContext.jsx";
 import "./Year7LiveSessionPage.css";
 
 const POLL_INTERVAL_MS = 4000;
@@ -113,515 +118,14 @@ function useArrowNavigation(callbacks) {
   }, [callbacks]);
 }
 
-function SlideRenderer({ slideMeta, audience, disabled, onCheckpointSubmit }) {
-  if (!slideMeta?.slide) {
-    return (
-      <div className="y7-live-stage__empty">
-        <p>Select a slide to begin.</p>
-      </div>
-    );
-  }
-
-  const { slide, deck } = slideMeta;
-  const title = slide.title || slideMeta.slideTitle || "Slide";
-  const isTeacher = audience === "teacher";
-
-  if (slide.type === "content") {
-    return <ContentSlide slide={slide} title={title} deck={deck} isTeacher={isTeacher} />;
-  }
-
-  if (slide.type === "checkpoint" || slide.type === "summative") {
-    const mode = slide.type === "summative" ? "summative" : "checkpoint";
-    return (
-      <CheckpointSlide
-        slide={slide}
-        title={title}
-        deck={deck}
-        mode={mode}
-        audience={audience}
-        disabled={disabled}
-        onCheckpointSubmit={onCheckpointSubmit}
-      />
-    );
-  }
-
-  return (
-    <div className="y7-live-slide">
-      <header className="y7-live-slide__header">
-        <span className="y7-live-slide__badge">{deck?.title || "Live deck"}</span>
-        <h2>{title}</h2>
-      </header>
-      <p>This slide type is not yet supported in the live viewer.</p>
-    </div>
-  );
-}
-
-function ContentSlide({ slide, title, deck, isTeacher }) {
-  const teacher = slide.teacher || {};
-  const student = slide.student || {};
-  return (
-    <div className="y7-live-slide">
-      <header className="y7-live-slide__header">
-        <span className="y7-live-slide__badge">{deck?.title || "Live deck"}</span>
-        <h2>{title}</h2>
-      </header>
-      {isTeacher ? (
-        <div className="y7-live-slide__body">
-          {teacher.headline && <p className="y7-live-slide__headline">{teacher.headline}</p>}
-          {Array.isArray(teacher.script) && teacher.script.length > 0 && (
-            <div className="y7-live-slide__panel">
-              <h3>Scripted moments</h3>
-              <ul>
-                {teacher.script.map((line, index) => (
-                  <li key={index}>{line}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {Array.isArray(teacher.prompts) && teacher.prompts.length > 0 && (
-            <div className="y7-live-slide__panel">
-              <h3>Prompt the class</h3>
-              <ul>
-                {teacher.prompts.map((prompt, index) => (
-                  <li key={index}>{prompt}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {Array.isArray(teacher.transitions) && teacher.transitions.length > 0 && (
-            <div className="y7-live-slide__panel">
-              <h3>When to advance</h3>
-              <ul>
-                {teacher.transitions.map((hint, index) => (
-                  <li key={index}>{hint}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="y7-live-slide__body">
-          {student.headline && <p className="y7-live-slide__headline">{student.headline}</p>}
-          {Array.isArray(student.revealSteps) && student.revealSteps.length > 0 && (
-            <ol className="y7-live-reveal">
-              {student.revealSteps.map((step, index) => (
-                <li key={index}>
-                  <strong>{step.title}</strong>
-                  <span>{step.body}</span>
-                </li>
-              ))}
-            </ol>
-          )}
-          {Array.isArray(student.objectives) && student.objectives.length > 0 && (
-            <div className="y7-live-slide__panel">
-              <h3>Learning objectives</h3>
-              <ul>
-                {student.objectives.map((objective, index) => (
-                  <li key={index}>{objective}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {Array.isArray(student.bullets) && student.bullets.length > 0 && (
-            <ul className="y7-live-bullets">
-              {student.bullets.map((bullet, index) => (
-                <li key={index}>{bullet}</li>
-              ))}
-            </ul>
-          )}
-          {Array.isArray(student.callouts) && student.callouts.length > 0 && (
-            <div className="y7-live-callouts">
-              {student.callouts.map((callout, index) => (
-                <div key={index} className={`y7-live-callout y7-live-callout--${callout.type || "info"}`}>
-                  {callout.title && <strong>{callout.title}</strong>}
-                  <p>{callout.body}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          {Array.isArray(student.notes) && student.notes.length > 0 && (
-            <div className="y7-live-notes">
-              {student.notes.map((note, index) => (
-                <p key={index}>{note}</p>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CheckpointSlide({ slide, title, deck, mode, audience, disabled, onCheckpointSubmit }) {
-  const teacher = slide.teacher || {};
-  const allowRetry = slide.allowRetry !== false;
-
-  if (audience === "teacher") {
-    return (
-      <div className="y7-live-slide">
-        <header className="y7-live-slide__header">
-          <span className="y7-live-slide__badge">{deck?.title || "Live deck"}</span>
-          <h2>{title}</h2>
-          <span className={`y7-live-slide__tag ${mode === "summative" ? "is-summative" : "is-checkpoint"}`}>
-            {mode === "summative" ? "Summative" : "Checkpoint"}
-          </span>
-        </header>
-        <div className="y7-live-slide__body">
-          {teacher.headline && <p className="y7-live-slide__headline">{teacher.headline}</p>}
-          {Array.isArray(teacher.script) && teacher.script.length > 0 && (
-            <div className="y7-live-slide__panel">
-              <h3>Facilitation script</h3>
-              <ul>
-                {teacher.script.map((line, index) => (
-                  <li key={index}>{line}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {slide.checkpoint?.type === "quiz" && Array.isArray(slide.checkpoint.questions) && (
-            <div className="y7-live-slide__panel">
-              <h3>Answer key</h3>
-              <ul>
-                {slide.checkpoint.questions.map((question) => (
-                  <li key={question.id}>
-                    <strong>{question.prompt}</strong>
-                    <span>
-                      {Array.isArray(question.answers)
-                        ? question.answers.join(", ")
-                        : typeof question.answer === "boolean"
-                        ? question.answer ? "True" : "False"
-                        : question.answer}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {slide.checkpoint?.type === "matching" && Array.isArray(slide.checkpoint.pairs) && (
-            <div className="y7-live-slide__panel">
-              <h3>Matching reference</h3>
-              <ul>
-                {slide.checkpoint.pairs.map((pair) => (
-                  <li key={pair.id}>
-                    <strong>{pair.term}</strong> → {pair.match}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (slide.checkpoint?.type === "quiz") {
-    return (
-      <QuizSlide
-        slide={slide}
-        title={title}
-        deck={deck}
-        allowRetry={allowRetry}
-        disabled={disabled}
-        onSubmit={onCheckpointSubmit}
-      />
-    );
-  }
-
-  if (slide.checkpoint?.type === "matching") {
-    return (
-      <MatchingSlide
-        slide={slide}
-        title={title}
-        deck={deck}
-        allowRetry={allowRetry}
-        disabled={disabled}
-        onSubmit={onCheckpointSubmit}
-      />
-    );
-  }
-
-  return (
-    <div className="y7-live-slide">
-      <header className="y7-live-slide__header">
-        <span className="y7-live-slide__badge">{deck?.title || "Live deck"}</span>
-        <h2>{title}</h2>
-      </header>
-      <p>This interactive checkpoint is not yet supported in the live viewer.</p>
-    </div>
-  );
-}
-
-function QuizSlide({ slide, title, deck, allowRetry, disabled, onSubmit }) {
-  const questions = Array.isArray(slide.checkpoint?.questions) ? slide.checkpoint.questions : [];
-  const [answers, setAnswers] = useState(() => ({}));
-  const [feedback, setFeedback] = useState(null);
-  const [attempts, setAttempts] = useState(0);
-  const [hasStarted, setHasStarted] = useState(false);
-
-  const notifyStart = useCallback(() => {
-    if (!hasStarted) {
-      setHasStarted(true);
-      onSubmit?.({ status: "in-progress", attempts });
-    }
-  }, [hasStarted, attempts, onSubmit]);
-
-  const handleSelect = (question, value) => {
-    notifyStart();
-    setAnswers((prev) => ({ ...prev, [question.id]: value }));
-  };
-
-  const handleToggleMulti = (questionId, optionId) => {
-    notifyStart();
-    setAnswers((prev) => {
-      const current = new Set(Array.isArray(prev[questionId]) ? prev[questionId] : []);
-      if (current.has(optionId)) current.delete(optionId);
-      else current.add(optionId);
-      return {
-        ...prev,
-        [questionId]: Array.from(current),
-      };
-    });
-  };
-
-  const evaluate = () => {
-    const nextAttempts = attempts + 1;
-    setAttempts(nextAttempts);
-    let correctCount = 0;
-    const details = questions.map((question) => {
-      const submitted = answers[question.id];
-      let isCorrect = false;
-      if (question.kind === "multi" && Array.isArray(question.answers)) {
-        const expected = [...question.answers].sort();
-        const actual = Array.isArray(submitted) ? [...submitted].sort() : [];
-        isCorrect = JSON.stringify(expected) === JSON.stringify(actual);
-      } else if (typeof question.answer === "boolean") {
-        isCorrect = submitted === question.answer;
-      } else {
-        isCorrect = submitted === question.answer;
-      }
-      if (isCorrect) correctCount += 1;
-      return {
-        questionId: question.id,
-        isCorrect,
-        explanation: question.rationale || question.feedback,
-      };
-    });
-    setFeedback({ correctCount, total: questions.length, details });
-    const score = questions.length ? correctCount / questions.length : 1;
-    onSubmit?.({ status: "completed", score, attempts: nextAttempts });
-  };
-
-  const reset = () => {
-    setFeedback(null);
-    setAnswers({});
-    setHasStarted(false);
-    onSubmit?.({ status: "in-progress", attempts });
-  };
-
-  return (
-    <div className="y7-live-slide">
-      <header className="y7-live-slide__header">
-        <span className="y7-live-slide__badge">{deck?.title || "Live deck"}</span>
-        <h2>{title}</h2>
-        <span className="y7-live-slide__tag is-checkpoint">Checkpoint</span>
-      </header>
-      <div className="y7-live-slide__body">
-        {questions.map((question) => (
-          <div key={question.id} className="y7-live-question">
-            <p>{question.prompt}</p>
-            {question.kind === "multi" ? (
-              <div className="y7-live-options">
-                {question.options?.map((option) => {
-                  const current = new Set(Array.isArray(answers[question.id]) ? answers[question.id] : []);
-                  const checked = current.has(option.id);
-                  const detail = feedback?.details?.find((item) => item.questionId === question.id);
-                  return (
-                    <label key={option.id} className={`y7-live-option ${checked ? "is-selected" : ""}`}>
-                      <input
-                        type="checkbox"
-                        disabled={Boolean(feedback) || disabled}
-                        checked={checked}
-                        onChange={() => handleToggleMulti(question.id, option.id)}
-                      />
-                      <span>{option.label || option.text}</span>
-                      {feedback && detail && (
-                        <span className={detail.isCorrect ? "y7-live-answer y7-live-answer--correct" : "y7-live-answer y7-live-answer--incorrect"}>
-                          {detail.isCorrect ? "Correct" : "Incorrect"}
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="y7-live-options">
-                {question.options?.map((option) => {
-                  const checked = answers[question.id] === option.id;
-                  const detail = feedback?.details?.find((item) => item.questionId === question.id);
-                  return (
-                    <label key={option.id} className={`y7-live-option ${checked ? "is-selected" : ""}`}>
-                      <input
-                        type="radio"
-                        name={question.id}
-                        disabled={Boolean(feedback) || disabled}
-                        checked={checked}
-                        onChange={() => handleSelect(question, option.id)}
-                      />
-                      <span>{option.label || option.text}</span>
-                      {feedback && detail && (
-                        <span className={detail.isCorrect ? "y7-live-answer y7-live-answer--correct" : "y7-live-answer y7-live-answer--incorrect"}>
-                          {detail.isCorrect ? "Correct" : "Incorrect"}
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-            {feedback && feedback.details && (
-              <p className="y7-live-question__feedback">
-                {feedback.details.find((item) => item.questionId === question.id)?.explanation || ""}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-      <footer className="y7-live-slide__footer">
-        {!feedback && (
-          <button type="button" className="y7-btn y7-btn--primary" disabled={disabled} onClick={evaluate}>
-            Check answers
-          </button>
-        )}
-        {feedback && allowRetry && (
-          <button type="button" className="y7-btn" onClick={reset}>
-            Try again
-          </button>
-        )}
-        {feedback && (
-          <span className="y7-live-score">
-            {feedback.correctCount} / {feedback.total} correct
-          </span>
-        )}
-      </footer>
-    </div>
-  );
-}
-
-function MatchingSlide({ slide, title, deck, allowRetry, disabled, onSubmit }) {
-  const pairs = Array.isArray(slide.checkpoint?.pairs) ? slide.checkpoint.pairs : [];
-  const feedbackMap = slide.checkpoint?.feedback || {};
-  const [answers, setAnswers] = useState(() => ({}));
-  const [feedback, setFeedback] = useState(null);
-  const [attempts, setAttempts] = useState(0);
-  const [hasStarted, setHasStarted] = useState(false);
-
-  const notifyStart = useCallback(() => {
-    if (!hasStarted) {
-      setHasStarted(true);
-      onSubmit?.({ status: "in-progress", attempts });
-    }
-  }, [hasStarted, attempts, onSubmit]);
-
-  const handleChange = (termId, value) => {
-    notifyStart();
-    setAnswers((prev) => ({ ...prev, [termId]: value }));
-  };
-
-  const evaluate = () => {
-    const nextAttempts = attempts + 1;
-    setAttempts(nextAttempts);
-    let correctCount = 0;
-    const details = pairs.map((pair) => {
-      const submitted = answers[pair.id];
-      const isCorrect = submitted === pair.match;
-      if (isCorrect) correctCount += 1;
-      return {
-        term: pair.term,
-        isCorrect,
-        explanation: feedbackMap[pair.match] || feedbackMap[pair.term] || null,
-      };
-    });
-    setFeedback({ correctCount, total: pairs.length, details });
-    const score = pairs.length ? correctCount / pairs.length : 1;
-    onSubmit?.({ status: "completed", score, attempts: nextAttempts });
-  };
-
-  const reset = () => {
-    setAnswers({});
-    setFeedback(null);
-    setHasStarted(false);
-    onSubmit?.({ status: "in-progress", attempts });
-  };
-
-  const options = Array.from(new Set(pairs.map((pair) => pair.match)));
-
-  return (
-    <div className="y7-live-slide">
-      <header className="y7-live-slide__header">
-        <span className="y7-live-slide__badge">{deck?.title || "Live deck"}</span>
-        <h2>{title}</h2>
-        <span className="y7-live-slide__tag is-checkpoint">Matching task</span>
-      </header>
-      <div className="y7-live-slide__body">
-        {pairs.map((pair) => {
-          const detail = feedback?.details?.find((item) => item.term === pair.term);
-          return (
-            <div key={pair.id} className="y7-live-matching">
-              <span className="y7-live-matching__term">{pair.term}</span>
-              <select
-                value={answers[pair.id] || ""}
-                disabled={Boolean(feedback) || disabled}
-                onChange={(event) => handleChange(pair.id, event.target.value)}
-              >
-                <option value="" disabled>
-                  Select stage
-                </option>
-                {options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              {feedback && detail && (
-                <span className={detail.isCorrect ? "y7-live-answer y7-live-answer--correct" : "y7-live-answer y7-live-answer--incorrect"}>
-                  {detail.isCorrect ? "Correct" : "Incorrect"}
-                </span>
-              )}
-            </div>
-          );
-        })}
-        {feedback && feedback.details && (
-          <ul className="y7-live-matching__feedback">
-            {feedback.details.map((detail, index) => (
-              <li key={index}>
-                <strong>{detail.term}</strong>: {detail.explanation || (detail.isCorrect ? "Nice!" : "Check the IPO cycle.")}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <footer className="y7-live-slide__footer">
-        {!feedback && (
-          <button type="button" className="y7-btn y7-btn--primary" disabled={disabled} onClick={evaluate}>
-            Check answers
-          </button>
-        )}
-        {feedback && allowRetry && (
-          <button type="button" className="y7-btn" onClick={reset}>
-            Try again
-          </button>
-        )}
-        {feedback && (
-          <span className="y7-live-score">
-            {feedback.correctCount} / {feedback.total} correct
-          </span>
-        )}
-      </footer>
-    </div>
-  );
-}
-
 function SlideTimeline({ slides, pointerId, activeId, accessibleSet, onSelect, disableFuture, label }) {
+  const labelMap = {
+    content: "Content",
+    checkpoint: "Checkpoint",
+    assessment: "Assessment",
+    summative: "Summative",
+    interactive: "Interactive",
+  };
   return (
     <div className="y7-live-timeline" aria-label={label}>
       {slides.map((slide) => {
@@ -639,7 +143,7 @@ function SlideTimeline({ slides, pointerId, activeId, accessibleSet, onSelect, d
             <span className="y7-live-timeline__order">{slide.order}</span>
             <div className="y7-live-timeline__text">
               <strong>{slide.title}</strong>
-              <span>{slide.type === "content" ? "Content" : slide.type === "checkpoint" ? "Checkpoint" : "Summative"}</span>
+              <span>{labelMap[slide.type] || "Slide"}</span>
             </div>
           </button>
         );
@@ -852,6 +356,7 @@ export default function Year7LiveSessionPage() {
   const isTeacher = role === "teacher";
   const isStudent = role === "student";
   const [searchParams] = useSearchParams();
+  const { awardXp, resetStreak } = useGamification();
 
   const deckIdFromQuery = searchParams.get("deckId") || getDefaultDeckId();
   const [deckId, setDeckId] = useState(deckIdFromQuery);
@@ -871,6 +376,53 @@ export default function Year7LiveSessionPage() {
   const [joinCodeInput, setJoinCodeInput] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const sessionId = useMemo(() => {
+    if (isTeacher) {
+      return classSnapshot?.pacing?.sessionId || classSnapshot?.sessionId || selectedClassId || null;
+    }
+    return studentSnapshot?.pacing?.sessionId || studentSnapshot?.sessionId || studentInfo?.class?.id || null;
+  }, [
+    isTeacher,
+    classSnapshot?.pacing?.sessionId,
+    classSnapshot?.sessionId,
+    selectedClassId,
+    studentSnapshot?.pacing?.sessionId,
+    studentSnapshot?.sessionId,
+    studentInfo?.class?.id,
+  ]);
+
+  const classId = useMemo(() => {
+    if (isTeacher) return selectedClassId || null;
+    return studentInfo?.class?.id || studentSnapshot?.classDoc?.id || null;
+  }, [isTeacher, selectedClassId, studentInfo?.class?.id, studentSnapshot?.classDoc?.id]);
+
+  const studentId = useMemo(() => (isStudent ? studentInfo?.student?.id || null : null), [isStudent, studentInfo?.student?.id]);
+
+  const lastSlideRef = useRef(null);
+  const slideStartRef = useRef(Date.now());
+  const lastPointerRef = useRef(null);
+
+  const logSlideView = useCallback(
+    (slideId, durationMs) => {
+      if (!isStudent || !slideId) return;
+      analyticsService.trackEvent("slide_view", {
+        sessionId,
+        classId,
+        studentId,
+        slideId,
+        payload: {
+          durationMs: Math.max(0, durationMs ?? 0),
+        },
+      });
+    },
+    [isStudent, sessionId, classId, studentId],
+  );
+
+  const classStudents = useMemo(() => {
+    if (!teacherData?.students || !selectedClassId) return [];
+    return teacherData.students.filter((student) => student.classId === selectedClassId);
+  }, [teacherData?.students, selectedClassId]);
 
   const liveState = isTeacher ? classSnapshot : studentSnapshot;
   const pointerSlideId = liveState?.lesson?.slideId || liveState?.lesson?.id || null;
@@ -974,6 +526,43 @@ export default function Year7LiveSessionPage() {
       setActiveSlideId(pointerSlideId || slides[0].id);
     }
   }, [slides, pointerSlideId, activeSlideId]);
+
+  useEffect(() => {
+    if (!isStudent || !activeSlideId) return;
+    const now = Date.now();
+    const previous = lastSlideRef.current;
+    if (previous && previous !== activeSlideId) {
+      logSlideView(previous, now - slideStartRef.current);
+    }
+    lastSlideRef.current = activeSlideId;
+    slideStartRef.current = now;
+  }, [isStudent, activeSlideId, logSlideView]);
+
+  useEffect(() => {
+    return () => {
+      if (!isStudent) return;
+      const previous = lastSlideRef.current;
+      if (previous) {
+        const duration = Date.now() - slideStartRef.current;
+        logSlideView(previous, duration);
+      }
+    };
+  }, [isStudent, logSlideView]);
+
+  useEffect(() => {
+    if (!isTeacher || !pointerSlideId) {
+      lastPointerRef.current = null;
+      return;
+    }
+    if (lastPointerRef.current === pointerSlideId) return;
+    lastPointerRef.current = pointerSlideId;
+    analyticsService.trackEvent("pointer_update", {
+      sessionId,
+      classId,
+      slideId: pointerSlideId,
+      payload: { role: "teacher" },
+    });
+  }, [isTeacher, pointerSlideId, sessionId, classId]);
 
   useEffect(() => {
     if (!isTeacher || !selectedClassId || !token || !pointerSlideId || pointerSlideMeta?.slide?.type !== "checkpoint") {
@@ -1115,22 +704,89 @@ export default function Year7LiveSessionPage() {
   }, [isTeacher, selectedClassId, token, deckSummary?.id, applySnapshot]);
 
   const handleCheckpointSubmit = useCallback(
-    async ({ status, score, attempts }) => {
-      if (!isStudent || !studentInfo?.class?.id || !token || !activeSlideId) return;
+    async (result) => {
+      if (!isStudent || !classId || !token || !activeSlideId) return;
+
+      const baseAttempts = typeof result === "object" && result !== null && Number.isFinite(result.attempts) ? Number(result.attempts) : 1;
+      const attempts = Math.max(1, baseAttempts);
+
+      const success = (() => {
+        if (typeof result === "boolean") return result;
+        if (result && typeof result === "object") {
+          if (typeof result.success === "boolean") return result.success;
+          if (typeof result.status === "string") return result.status === "completed";
+          if (typeof result.score === "number") return result.score > 0;
+        }
+        return false;
+      })();
+
+      const rawScore = typeof result === "object" && result !== null && Number.isFinite(result.score) ? Number(result.score) : null;
+      const normalizedScore = rawScore === null ? (success ? 1 : null) : rawScore <= 1 ? Math.max(0, rawScore) : 1;
+
+      const payload = {
+        status: success ? "completed" : "in-progress",
+        score: normalizedScore,
+        attempts,
+      };
+
+      let synced = false;
       try {
         await updateLiveAssessmentStatus(token, {
-          classId: studentInfo.class.id,
+          classId,
           unitId: deckSummary?.id,
           segmentId: activeSlideId,
-          status,
-          score,
-          attempts,
+          status: payload.status,
+          score: payload.score,
+          attempts: payload.attempts,
         });
+        synced = true;
       } catch (err) {
         console.error("Failed to sync checkpoint status", err);
       }
+
+      if (!synced) return;
+
+      analyticsService.trackEvent("assessment_complete", {
+        sessionId,
+        classId,
+        studentId,
+        slideId: activeSlideId,
+        payload: {
+          score: payload.score,
+          attempts: payload.attempts,
+          success,
+        },
+      });
+
+      if (success) {
+        const action = payload.score === 1 ? "assessment_perfect" : "assessment_attempt";
+        try {
+          const award = await gamificationService.awardExperience(studentId, action, {
+            firstAttempt: attempts === 1,
+            correct: success,
+            attempts,
+          });
+          if (award?.awarded > 0 && typeof awardXp === "function") {
+            awardXp({ xpGained: award.awarded, correct: 1, attempts, spriteUnlocks: [] });
+          }
+        } catch (err) {
+          console.warn("Failed to award experience", err);
+        }
+      } else if (typeof resetStreak === "function") {
+        resetStreak();
+      }
     },
-    [isStudent, studentInfo?.class?.id, token, activeSlideId, deckSummary?.id],
+    [
+      isStudent,
+      classId,
+      token,
+      activeSlideId,
+      deckSummary?.id,
+      sessionId,
+      studentId,
+      awardXp,
+      resetStreak,
+    ],
   );
 
   const handleJoinByCode = useCallback(async () => {
@@ -1197,10 +853,12 @@ export default function Year7LiveSessionPage() {
             <>
               <div className="y7-live-stage__card">
                 <SlideRenderer
-                  slideMeta={activeSlideMeta}
-                  audience={stageAudience}
-                  disabled={(!isTeacher && !accessibleSet.has(activeSlideId)) || false}
-                  onCheckpointSubmit={isStudent ? handleCheckpointSubmit : undefined}
+                  slideData={activeSlideMeta?.slide ?? activeSlideMeta}
+                  isTeacher={isTeacher}
+                  sessionId={classSnapshot?.pacing?.sessionId || classSnapshot?.sessionId || selectedClassId || null}
+                  studentId={studentInfo?.student?.id || studentSnapshot?.student?.id || null}
+                  canProgress={isTeacher || accessibleSet.has(activeSlideId)}
+                  onAssessmentComplete={isStudent ? handleCheckpointSubmit : undefined}
                 />
               </div>
               <div className="y7-live-controls">
@@ -1235,19 +893,25 @@ export default function Year7LiveSessionPage() {
         </main>
         <aside className="y7-live-sidebar">
           {isTeacher ? (
-            <TeacherPanel
-              classes={teacherData?.classes || []}
-              selectedClassId={selectedClassId}
-              onSelectClass={handleSelectClass}
-              onStart={handleStart}
-              onAdvance={goToNextSlide}
-              onPause={handlePause}
-              onReset={handleReset}
-              onRefresh={() => refreshClassSnapshot(selectedClassId)}
-              deckSummary={{ ...deckSummary, slideCount: slides.length }}
-              liveState={classSnapshot}
-              controlBusy={controlBusy}
-            />
+            <>
+              <TeacherPanel
+                classes={teacherData?.classes || []}
+                selectedClassId={selectedClassId}
+                onSelectClass={handleSelectClass}
+                onStart={handleStart}
+                onAdvance={goToNextSlide}
+                onPause={handlePause}
+                onReset={handleReset}
+                onRefresh={() => refreshClassSnapshot(selectedClassId)}
+                deckSummary={{ ...deckSummary, slideCount: slides.length }}
+                liveState={classSnapshot}
+                controlBusy={controlBusy}
+              />
+              <LiveDashboard
+                sessionId={classSnapshot?.pacing?.sessionId || classSnapshot?.sessionId || selectedClassId || null}
+                classSize={classStudents.length}
+              />
+            </>
           ) : (
             <StudentPanel
               deckSummary={{ ...deckSummary, slideCount: slides.length }}
@@ -1263,7 +927,11 @@ export default function Year7LiveSessionPage() {
 
           <LiveAssessmentPanel
             assessment={assessmentState}
-            isVisible={isTeacher && pointerSlideMeta?.slide?.type === "checkpoint" && Boolean(selectedClassId)}
+            isVisible={
+              isTeacher &&
+              ["checkpoint", "assessment"].includes(pointerSlideMeta?.slide?.type) &&
+              Boolean(selectedClassId)
+            }
           />
         </aside>
       </div>

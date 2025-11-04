@@ -70,6 +70,14 @@ From the dashboard, teachers have two important controls:
 - The teacher's dashboard has a live subscription to this data for the current class and assessment. As new data comes in, the dashboard UI updates in real-time.
 - This feature allows for a more interactive and responsive teaching experience, where teachers can provide targeted support to students exactly when they need it.
 
+## Analytics & Gamification Telemetry
+
+- **Event stream:** Slide views, pointer updates, and checkpoint completions now flow through `frontend/src/lib/services/AnalyticsService.js`. Each call records `sessionId`, `classId`, `studentId`, `slideId`, and contextual payload so we can surface dwell time, pacing changes, and success ratios later.
+- **Slide dwell tracking:** Students generate `slide_view` analytics whenever they change slides or exit the live deck. Durations are normalised into `slideMetrics` for per-slide averages.
+- **Pointer visibility:** Teachers emit `pointer_update` events whenever the live pointer advances, creating an audit trail of pacing decisions.
+- **Checkpoint completions:** Successful formative submissions trigger `assessment_complete` analytics and route through `frontend/src/lib/services/GamificationService.js` to update the `studentGamification` collection while refreshing the in-app XP context.
+- **InstantDB requirement:** Telemetry writes activate automatically when `VITE_INSTANTDB_APP_ID` (or the Next.js equivalents) is configured; otherwise, services gracefully no-op so offline demos still run.
+
 ## Implementation Details
 
 - **`liveDecks.js`:** Defines the default Year 7 live deck with slide metadata for both teacher and student views.
@@ -77,3 +85,6 @@ From the dashboard, teachers have two important controls:
 - **`updateClassPacing` endpoint:** Accepts commands `start`, `advance`, `stop`, and `reset`, plus manual `lessonId` overrides. The worker generates unique join codes and keeps history deduplicated.
 - **Student join endpoint:** `POST /student/live-sessions/join` lets a student supply a join code and receive the same pacing payload as classmates.
 - **Frontend Year 7 view:** `/curriculum/year7` renders a projector-friendly teacher console alongside the student-facing slide experience with checkpoints, matching tasks, and summative quizzes.
+- **`SlideRenderer.jsx`:** Centralises live slide rendering. It consumes the shared lesson object, maps blocks to interactive components, and routes assessments through the updated formative engine.
+- **`LiveDashboard.jsx`:** Streams `studentStates` and `assessmentResponses` (InstantDB) into a real-time engagement panel so teachers can monitor activity without leaving the session.
+- **InstantDB additions:** The schema now includes `liveSessions`, `studentStates`, `assessmentResponses`, `analytics`, and `slideMetrics` collections to support granular telemetry, and `classPacing` records carry `pointer`, `history`, and `sessionStatus` metadata for resumable sessions.
