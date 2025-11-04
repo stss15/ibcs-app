@@ -1024,3 +1024,79 @@ export async function listStudentsByClass(db, classId) {
     .map(sanitizeStudent)
     .filter((student) => student.status !== 'archived');
 }
+
+function sanitizeLiveAssessmentStatus(doc) {
+  if (!doc) return null;
+  return {
+    id: extractId(doc),
+    classId: doc.classId ?? null,
+    unitId: doc.unitId ?? null,
+    segmentId: doc.segmentId ?? null,
+    studentId: doc.studentId ?? null,
+    attempts: typeof doc.attempts === 'number' ? doc.attempts : 0,
+    status: doc.status ?? 'in-progress',
+    score: typeof doc.score === 'number' ? doc.score : null,
+    lastUpdated: doc.lastUpdated ?? null,
+  };
+}
+
+export async function upsertLiveAssessmentStatus(db, { classId, unitId, segmentId, studentId, attempts, status, score }) {
+  if (!classId || !unitId || !segmentId || !studentId) {
+    throw new Error('classId, unitId, segmentId, and studentId are required');
+  }
+
+  const now = new Date().toISOString();
+  const attemptValue = Number.isFinite(Number(attempts)) && Number(attempts) >= 0 ? Number(attempts) : 0;
+  const scoreValue = Number.isFinite(Number(score)) ? Number(score) : null;
+
+  const existing = await db.query({
+    liveAssessmentStatus: {
+      $: {
+        where: { classId, unitId, segmentId, studentId },
+        limit: 1,
+      },
+    },
+  });
+
+  const updatedRecord = {
+    classId,
+    unitId,
+    segmentId,
+    studentId,
+    attempts: attemptValue,
+    status: status || 'in-progress',
+    score: scoreValue,
+    lastUpdated: now,
+  };
+
+  if (existing?.liveAssessmentStatus?.[0]) {
+    const record = existing.liveAssessmentStatus[0];
+    await db.transact([
+      tx.liveAssessmentStatus[record.id].update(updatedRecord),
+    ]);
+    return sanitizeLiveAssessmentStatus({ ...record, ...updatedRecord, id: record.id });
+  }
+
+  const recordId = id();
+  await db.transact([
+    tx.liveAssessmentStatus[recordId].update({
+      ...updatedRecord,
+    }),
+  ]);
+
+  return sanitizeLiveAssessmentStatus({ id: recordId, ...updatedRecord });
+}
+
+export async function listLiveAssessmentStatus(db, { classId, unitId, segmentId }) {
+  if (!classId || !unitId || !segmentId) return [];
+
+  const result = await db.query({
+    liveAssessmentStatus: {
+      $: {
+        where: { classId, unitId, segmentId },
+      },
+    },
+  });
+
+  return (result?.liveAssessmentStatus ?? []).map(sanitizeLiveAssessmentStatus);
+}

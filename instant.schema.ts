@@ -103,6 +103,16 @@ const _schema = i.graph(
       totalAttempts: i.number(),
       lastUpdated: i.string(),
     }),
+    liveAssessmentStatus: i.entity({
+      classId: i.string().indexed(),
+      unitId: i.string().indexed(),
+      segmentId: i.string().indexed(),
+      studentId: i.string().indexed(),
+      attempts: i.number(),
+      status: i.string(), // e.g., 'not-started', 'in-progress', 'completed'
+      score: i.number().optional(),
+      lastUpdated: i.string(),
+    }),
   },
   {}
 );

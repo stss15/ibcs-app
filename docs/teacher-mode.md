@@ -10,6 +10,7 @@ When a user is authenticated as a teacher, the UI is adjusted to better suit a c
 - **Full Content Access:** Teachers are not restricted by content locks. All units, stages, and segments are immediately accessible, allowing for easy planning and classroom presentation.
 - **Presentation Mode:** A dedicated "Presentation Mode" is available on module pages. This mode provides a full-screen, distraction-free view of the content, ideal for displaying on a projector or smartboard.
 - **Pacing Controls:** Teachers have controls to set the learning pace for their classes.
+- **Live Assessment Dashboard:** When students are working on a formative assessment, teachers see a live dashboard of class progress instead of the assessment itself.
 
 ## Pacing System
 
@@ -26,9 +27,37 @@ The pacing system, also known as the "teacher pointer," allows teachers to contr
     - The student's progress is gated by the teacher's pace. They can only access stages up to the one set by the teacher.
     - Within the paced limit, students must still complete stages sequentially. For example, if the pace is set to Stage 3, a student must complete Stage 1 before they can access Stage 2.
 
-### Implementation Details
+## Live Assessment Dashboard
+
+When a teacher navigates to a stage that contains a formative assessment (such as a micro-quiz or an interactive activity), the application will display a real-time dashboard instead of the assessment content. This dashboard is designed to give teachers immediate insight into student progress and understanding.
+
+### Features
+
+- **Real-Time Updates:** The dashboard automatically updates as students work. There is no need for the teacher to refresh the page.
+- **Full Class Overview:** The dashboard displays a list of all students in the class, along with key metrics for each student on the current assessment.
+- **Key Metrics:**
+  - **Status:** Shows whether a student is "Not Started," "In Progress," or "Completed."
+  - **Attempts:** Tracks the number of times a student has attempted the assessment. This is particularly useful for identifying students who may be struggling.
+  - **Score:** Once a student completes the assessment, their score is displayed.
+- **Completion Summary:** A progress bar at the top of the dashboard shows the overall completion rate for the class, making it easy to see when the majority of students are finished.
+
+### Teacher Controls
+
+From the dashboard, teachers have two important controls:
+
+1.  **Show Assessment View:** This button allows the teacher to switch from the live dashboard to the actual assessment content. This is useful for when the teacher wants to review the questions with the class, discuss common mistakes, and clarify concepts. The teacher can toggle back to the dashboard at any time.
+2.  **Unlock Next Stage:** This button functions as an override for the normal content pacing. It allows the teacher to unlock the next stage for all students in the class, even if some students have not yet completed the current assessment. This is useful for managing classroom time and accommodating absent students.
+
+### How it Works
+
+- When a student interacts with a formative assessment, their progress (status, attempts, score) is sent to the backend and stored in the `liveAssessmentStatus` collection.
+- The teacher's dashboard has a live subscription to this data for the current class and assessment. As new data comes in, the dashboard UI updates in real-time.
+- This feature allows for a more interactive and responsive teaching experience, where teachers can provide targeted support to students exactly when they need it.
+
+## Implementation Details
 
 - **`GamifiedModulePage.jsx`:** This component now handles both student and teacher views. It uses an `isTeacher` flag to conditionally render UI elements and apply different logic.
 - **`TeacherModeContext.jsx`:** This context provides the `isPresentationMode` state and the `currentPacing` information for the UI.
 - **`classPacing` Schema:** The `instant.schema.ts` defines the `classPacing` entity, which stores the `classId`, `unitId`, and `lessonId` (which corresponds to a stage ID).
-- **API:** The `updateClassPacing` function in `lib/api.js` is used to persist the teacher's pacing selection to the backend. The `getClassPacing` function retrieves it for the students.
+- **`liveAssessmentStatus` Schema:** A new schema has been added to `instant.schema.ts` to store real-time assessment data.
+- **API:** The `updateClassPacing` function in `lib/api.js` is used to persist the teacher's pacing selection to the backend. The `getClassPacing` function retrieves it for the students. The `updateLiveAssessmentStatus` endpoint lets students report their progress, and `getLiveAssessmentStatus` streams the current class snapshot for teachers.

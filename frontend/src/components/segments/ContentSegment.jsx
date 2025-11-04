@@ -1,6 +1,5 @@
 import { Fragment } from "react";
 import SegmentNav from "./SegmentNav.jsx";
-import { EnhancedTable } from "./EnhancedComponents.jsx";
 import "./Segments.css";
 import "./EnhancedComponents.css";
 

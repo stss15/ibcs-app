@@ -9,9 +9,10 @@ import DemoSegment from "./segments/DemoSegment.jsx";
 import PythonPlaygroundSegment from "./segments/PythonPlaygroundSegment.jsx";
 import AssessmentResultsModal from "./segments/AssessmentResultsModal.jsx";
 import ReflectionSegment from "./segments/ReflectionSegment.jsx";
+import LiveAssessmentDashboard from "./segments/LiveAssessmentDashboard.jsx";
 import "./GamifiedModulePage.css";
 import { useTeacherMode } from "../context/TeacherModeContext.jsx";
-import { updateClassPacing, getClassPacing, syncStudentProgress } from "../lib/api.js";
+import { updateClassPacing, getClassPacing, syncStudentProgress, updateLiveAssessmentStatus } from "../lib/api.js";
 
 const STORAGE_VERSION = 2;
 const SYNC_DEBOUNCE_MS = 2500;
@@ -329,6 +330,8 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
     const totalCount = Number(normalized.totalCount ?? normalized.correctCount ?? 0);
 
     const resolvedTotal = Number.isFinite(totalCount) && totalCount > 0 ? totalCount : correctCount;
+    const previousAttempts = progress.attempts?.[segmentId]?.count ?? 0;
+    const nextAttemptCount = previousAttempts + 1;
     dispatch({
       type: "attempt",
       payload: {
@@ -338,6 +341,24 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
         totalCount: resolvedTotal,
       },
     });
+
+    if (!isTeacher && session?.user?.role === "student" && session?.token) {
+      const studentClassId = session.user?.classId;
+      if (studentClassId) {
+        const status = success ? "completed" : "in-progress";
+        const scoreValue = resolvedTotal > 0 ? Math.round((correctCount / resolvedTotal) * 100) : success ? 100 : null;
+        updateLiveAssessmentStatus(session.token, {
+          classId: studentClassId,
+          unitId: unit.id,
+          segmentId,
+          attempts: nextAttemptCount,
+          status,
+          score: scoreValue,
+        }).catch((error) => {
+          console.warn("Failed to update live assessment status", error);
+        });
+      }
+    }
 
     if (success) {
       if (correctCount > 0) {
@@ -397,17 +418,31 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
   );
 
   const handleSetPace = async (stageId) => {
-    if (!isTeacher || !classId) return;
+    if (!isTeacher || !classId) return false;
     setPaceStatus({ [stageId]: "setting" });
     try {
       await updateClassPacing(session.token, classId, { unitId: unit.id, lessonId: stageId });
       setCurrentPacing({ unitId: unit.id, lessonId: stageId });
       setPaceStatus({ [stageId]: "set" });
       setTimeout(() => setPaceStatus({ [stageId]: null }), 2000);
-    } catch (error) {
+      return true;
+    } catch {
       setPaceStatus({ [stageId]: "error" });
       setTimeout(() => setPaceStatus({ [stageId]: null }), 2000);
+      return false;
     }
+  };
+
+  const handleTeacherAdvancePacingToStage = async (targetStageId) => {
+    if (!targetStageId) return false;
+    const ok = await handleSetPace(targetStageId);
+    if (ok) {
+      const targetIndex = unit.stages.findIndex((stage) => stage.id === targetStageId);
+      if (targetIndex !== -1) {
+        setActiveStageIndex(targetIndex);
+      }
+    }
+    return ok;
   };
 
   return (
@@ -532,6 +567,8 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
             onPlannerSave={handlePlannerSave}
             onAttempt={handleAttempt}
             isTeacher={isTeacher}
+            classId={classId}
+            onAdvanceClassPace={handleTeacherAdvancePacingToStage}
           />
         </section>
       </main>
@@ -574,13 +611,49 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
   );
 }
 
-function StagePlayer({ unit, stage, progress, onAdvance, onReflectionSave, onPlannerSave, onAttempt, isTeacher }) {
+function StagePlayer({
+  unit,
+  stage,
+  progress,
+  onAdvance,
+  onReflectionSave,
+  onPlannerSave,
+  onAttempt,
+  isTeacher,
+  classId,
+  onAdvanceClassPace,
+}) {
   const segments = stage?.segments ?? [];
   const stageId = stage?.id;
   const stageProgress = stageId ? progress.stages?.[stageId] ?? {} : {};
   const initialIndex = Math.min(stageProgress.segmentIndex ?? 0, segments.length);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [teacherAssessmentView, setTeacherAssessmentView] = useState(false);
+  const [advanceState, setAdvanceState] = useState("idle");
+  const [advanceError, setAdvanceError] = useState(null);
   const stageContainerRef = useRef(null);
+  const advanceTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    setTeacherAssessmentView(false);
+  }, [stageId, currentIndex]);
+
+  useEffect(() => {
+    if (advanceTimeoutRef.current) {
+      clearTimeout(advanceTimeoutRef.current);
+      advanceTimeoutRef.current = null;
+    }
+    setAdvanceState("idle");
+    setAdvanceError(null);
+  }, [stageId]);
+
+  useEffect(() => {
+    return () => {
+      if (advanceTimeoutRef.current) {
+        clearTimeout(advanceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
@@ -607,6 +680,9 @@ function StagePlayer({ unit, stage, progress, onAdvance, onReflectionSave, onPla
   }
 
   const currentSegment = segments[currentIndex];
+  const isFormativeAssessment = currentSegment && (currentSegment.type === 'micro-quiz' || currentSegment.type === 'activity');
+  const currentStageIndex = unit?.stages?.findIndex((item) => item.id === stageId) ?? -1;
+  const nextStage = currentStageIndex >= 0 ? unit.stages[currentStageIndex + 1] : null;
 
   const handleComplete = () => {
     const nextIndex = Math.min(currentIndex + 1, segments.length);
@@ -618,6 +694,52 @@ function StagePlayer({ unit, stage, progress, onAdvance, onReflectionSave, onPla
   const handleBack = () => {
     setCurrentIndex((prev) => Math.max(prev - 1, 0));
   };
+
+  const handleAdvancePacingForClass = async () => {
+    if (!onAdvanceClassPace || !stageId) return;
+    const targetStageId = nextStage?.id ?? stageId;
+    setAdvanceState("pending");
+    setAdvanceError(null);
+    try {
+      const ok = await onAdvanceClassPace(targetStageId, { fromStageId: stageId, isLastStage: !nextStage });
+      if (!ok) {
+        throw new Error("Unable to update class pacing");
+      }
+      setAdvanceState("success");
+    } catch (error) {
+      console.warn("Failed to advance class pacing", error);
+      setAdvanceState("error");
+      setAdvanceError(error?.message || "Unable to unlock next stage right now");
+    } finally {
+      if (advanceTimeoutRef.current) {
+        clearTimeout(advanceTimeoutRef.current);
+      }
+      advanceTimeoutRef.current = setTimeout(() => {
+        setAdvanceState("idle");
+        setAdvanceError(null);
+      }, 2000);
+    }
+  };
+
+
+  if (isTeacher && isFormativeAssessment && !teacherAssessmentView) {
+    return (
+      <div className="gamified-stage" ref={stageContainerRef}>
+        <LiveAssessmentDashboard
+          classId={classId}
+          unitId={unit.id}
+          segment={currentSegment}
+          stage={stage}
+          isLastStage={!nextStage}
+          nextStageTitle={nextStage?.title ?? null}
+          advanceState={advanceState}
+          advanceError={advanceError}
+          onShowAssessment={() => setTeacherAssessmentView(true)}
+          onAdvancePacing={handleAdvancePacingForClass}
+        />
+      </div>
+    );
+  }
 
   if (!currentSegment) {
     return (
@@ -636,6 +758,11 @@ function StagePlayer({ unit, stage, progress, onAdvance, onReflectionSave, onPla
           <h2>{stage.title}</h2>
           <p>{stage.description}</p>
         </div>
+        {isTeacher && isFormativeAssessment && teacherAssessmentView && (
+          <button onClick={() => setTeacherAssessmentView(false)} className="btn btn--ghost">
+            Back to Live Dashboard
+          </button>
+        )}
         <span className="gamified-stage-progress">
           {Math.min(currentIndex + 1, segments.length)} / {segments.length}
         </span>
@@ -828,7 +955,7 @@ function LevelUpModal({ oldLevel, newLevel, xp, onClose }) {
             <span className="level-up-modal__arrow">→</span>
             <span className="level-up-modal__new-level">Lv {newLevel}</span>
           </div>
-          <p className="level-up-modal__message">Congratulations! You've reached Level {newLevel}!</p>
+          <p className="level-up-modal__message">Congratulations! You&apos;ve reached Level {newLevel}!</p>
           <div className="level-up-modal__xp">
             <strong>{xp} XP</strong>
             <span>Total Experience</span>

@@ -1,0 +1,195 @@
+/* LiveAssessmentDashboard.css */
+
+.live-assessment-dashboard {
+  background-color: var(--cs-grey-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md);
+  color: var(--cs-dark);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--cs-grey-mid);
+}
+
+.dashboard-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--cs-blue);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.summary progress {
+  width: 150px;
+  height: 10px;
+  accent-color: var(--cs-green);
+}
+
+.dashboard-controls {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.control-button {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--cs-blue);
+  background-color: transparent;
+  color: var(--cs-blue);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.control-button:hover {
+  background-color: var(--cs-blue-light);
+  color: var(--cs-light);
+}
+
+.control-button.primary {
+  background-color: var(--cs-blue);
+  color: var(--cs-light);
+}
+.control-button.primary:hover {
+  background-color: var(--cs-purple);
+}
+
+.control-button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--cs-grey-mid-light);
+  border-color: var(--cs-grey-mid);
+  color: var(--cs-grey-dark);
+}
+
+
+.student-grid-container {
+  overflow-x: auto;
+}
+
+.student-progress-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.student-progress-table th,
+.student-progress-table td {
+  padding: var(--space-md);
+  text-align: left;
+  border-bottom: 1px solid var(--cs-grey-mid);
+}
+
+.student-progress-table th {
+  background-color: var(--cs-grey-mid-light);
+  font-weight: bold;
+}
+
+.student-progress-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: var(--space-sm);
+}
+
+.status-not-started .status-indicator {
+  background-color: var(--cs-grey-dark);
+}
+
+.status-in-progress .status-indicator {
+  background-color: var(--cs-orange);
+  animation: pulse 1.5s infinite;
+}
+
+.status-completed .status-indicator {
+  background-color: var(--cs-green);
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.dashboard-subtitle {
+  margin: 0;
+  color: var(--cs-grey-dark);
+  font-size: 0.95rem;
+}
+
+.dashboard-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: calc(var(--space-xs) + 2px) var(--space-sm);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  background: var(--cs-grey-mid-light);
+  color: var(--cs-dark);
+}
+
+.meta-pill--complete {
+  background: rgba(56, 176, 0, 0.15);
+  color: var(--cs-green);
+}
+
+.meta-pill--progress {
+  background: rgba(255, 140, 0, 0.15);
+  color: var(--cs-orange, #ff8c00);
+}
+
+.meta-pill--idle {
+  background: rgba(120, 120, 120, 0.15);
+  color: var(--cs-grey-dark);
+}
+
+.dashboard-alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.alert-note {
+  color: var(--cs-blue);
+  font-weight: 500;
+}
+
+.alert-error {
+  color: var(--cs-red, #d32f2f);
+  font-weight: 500;
+}
+
+.table-empty {
+  text-align: center;
+  padding: var(--space-lg);
+  color: var(--cs-grey-dark);
+  font-style: italic;
+}

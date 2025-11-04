@@ -62,7 +62,6 @@ function IBCurriculumPage() {
   const staffBadgeLabel = isTeacher ? "Teacher view" : "Staff view";
   const [selectedUnitId, setSelectedUnitId] = useState(null);
   const trackOptions = useMemo(() => getTrackOptions(manifest), [manifest]);
-  const classId = location.state?.classId;
 
   const selectedTrack = useMemo(() => {
     if (!trackOptions.length) {

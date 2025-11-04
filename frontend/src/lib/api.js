@@ -179,6 +179,28 @@ export async function syncStudentProgress(token, progressData) {
   });
 }
 
+export async function updateLiveAssessmentStatus(token, statusData) {
+  return request("/student/live-assessment-status", {
+    method: "POST",
+    token,
+    body: statusData,
+  });
+}
+
+export async function getLiveAssessmentStatus(token, classId, { unitId, segmentId }) {
+  if (!classId) {
+    throw new Error("classId is required to fetch live assessment status");
+  }
+  const params = new URLSearchParams();
+  if (unitId) params.append("unitId", unitId);
+  if (segmentId) params.append("segmentId", segmentId);
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return request(`/teacher/classes/${encodeURIComponent(classId)}/live-assessment-status${query}`, {
+    method: "GET",
+    token,
+  });
+}
+
 export async function getAdminDashboard(token) {
   return request("/admin/dashboard", {
     method: "GET",

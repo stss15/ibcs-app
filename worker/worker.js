@@ -25,6 +25,8 @@ import {
   setClassPacing,
   getStudentGamification,
   syncStudentGamification,
+  listLiveAssessmentStatus,
+  upsertLiveAssessmentStatus,
 } from './src/repositories.js';
 import { json, readJson, withCors } from './src/http.js';
 import { createToken, verifyToken } from './src/jwt.js';
@@ -150,6 +152,14 @@ export default {
         );
       }
 
+      if (pathname.startsWith('/teacher/classes/') && pathname.endsWith('/live-assessment-status') && request.method === 'GET') {
+        const segments = pathname.split('/');
+        const classId = decodeURIComponent(segments[3] || '');
+        return requireRole(request, env, 'teacher', (req, env, session) =>
+          handleTeacherLiveAssessmentStatus(req, env, session, classId),
+        );
+      }
+
       if (pathname === '/student/dashboard' && request.method === 'GET') {
         return requireRole(request, env, 'student', handleStudentDashboard);
       }
@@ -160,6 +170,10 @@ export default {
 
       if (pathname === '/student/gamification' && request.method === 'POST') {
         return requireRole(request, env, 'student', handleSyncStudentGamification);
+      }
+
+      if (pathname === '/student/live-assessment-status' && request.method === 'POST') {
+        return requireRole(request, env, 'student', handleStudentLiveAssessmentStatus);
       }
 
       if (pathname === '/setup/seed' && request.method === 'POST') {
@@ -870,6 +884,98 @@ async function handleTeacherStudentDashboard(_request, env, session, studentId) 
   });
 }
 
+async function handleTeacherLiveAssessmentStatus(request, env, session, classId) {
+  if (!classId) {
+    return json({ error: 'Class id is required' }, 400);
+  }
+
+  const url = new URL(request.url);
+  const unitId = String(url.searchParams.get('unitId') || '').trim();
+  const segmentId = String(url.searchParams.get('segmentId') || '').trim();
+
+  if (!unitId || !segmentId) {
+    return json({ error: 'unitId and segmentId are required' }, 400);
+  }
+
+  const db = getDb(env);
+  const teacher = await findTeacherByUsername(db, session.username);
+  if (!teacher || teacher.archivedAt) {
+    return json({ error: 'Teacher not found' }, 404);
+  }
+
+  const classDoc = await findClassById(db, classId);
+  if (!classDoc || classDoc.teacherId !== teacher.id) {
+    return json({ error: 'Class not found' }, 404);
+  }
+
+  const [students, statuses] = await Promise.all([
+    listStudentsByClass(db, classId),
+    listLiveAssessmentStatus(db, { classId, unitId, segmentId }),
+  ]);
+
+  const statusMap = new Map();
+  for (const status of statuses) {
+    if (!status || !status.studentId) continue;
+    statusMap.set(status.studentId, status);
+  }
+
+  const rows = [];
+  let completed = 0;
+  let inProgress = 0;
+
+  for (const student of students) {
+    const status = statusMap.get(student.id);
+    const recordStatus = (status?.status || 'not-started').toLowerCase();
+    if (recordStatus === 'completed') completed += 1;
+    else if (recordStatus === 'in-progress') inProgress += 1;
+
+    rows.push({
+      id: student.id,
+      displayName: student.displayName,
+      username: student.username,
+      classId: student.classId,
+      attempts: status?.attempts ?? 0,
+      status: recordStatus,
+      score: status?.score ?? null,
+      lastUpdated: status?.lastUpdated ?? null,
+    });
+    statusMap.delete(student.id);
+  }
+
+  // Include orphan records (e.g. recently archived students) for visibility
+  for (const status of statusMap.values()) {
+    const recordStatus = (status.status || 'not-started').toLowerCase();
+    if (recordStatus === 'completed') completed += 1;
+    else if (recordStatus === 'in-progress') inProgress += 1;
+    rows.push({
+      id: status.studentId,
+      displayName: null,
+      username: null,
+      classId,
+      attempts: status.attempts ?? 0,
+      status: recordStatus,
+      score: status.score ?? null,
+      lastUpdated: status.lastUpdated ?? null,
+    });
+  }
+
+  const totalStudents = rows.length;
+  const summary = {
+    completed,
+    'in-progress': inProgress,
+    'not-started': Math.max(totalStudents - completed - inProgress, 0),
+  };
+
+  return json({
+    classId,
+    unitId,
+    segmentId,
+    students: rows,
+    summary,
+    total: totalStudents,
+  });
+}
+
 async function handleClassExport(_request, env, session, classId) {
   if (!classId) {
     return json({ error: 'Class ID required' }, 400);
@@ -970,6 +1076,39 @@ async function handleStudentDashboard(_request, env, session) {
     classPacing: data.classPacing ?? null,
     gamification: data.gamification ?? null,
   });
+}
+
+async function handleStudentLiveAssessmentStatus(request, env, session) {
+  const body = await readJson(request);
+  const classId = String(body.classId || '').trim();
+  const unitId = String(body.unitId || '').trim();
+  const segmentId = String(body.segmentId || '').trim();
+  const attempts = Number(body.attempts ?? 0);
+  const statusRaw = String(body.status || '').trim().toLowerCase();
+  const scoreRaw = body.score;
+
+  if (!classId || !unitId || !segmentId) {
+    return json({ error: 'classId, unitId, and segmentId are required.' }, 400);
+  }
+
+  const db = getDb(env);
+  const student = await findStudentByUsername(db, session.username);
+  if (!student || student.classId !== classId || student.archivedAt) {
+    return json({ error: 'Student not found for this class.' }, 404);
+  }
+
+  const normalizedStatus = statusRaw === 'completed' ? 'completed' : statusRaw === 'in-progress' ? 'in-progress' : 'in-progress';
+  const record = await upsertLiveAssessmentStatus(db, {
+    classId,
+    unitId,
+    segmentId,
+    studentId: student.id,
+    attempts,
+    status: normalizedStatus,
+    score: scoreRaw,
+  });
+
+  return json({ status: record });
 }
 
 async function handleGetStudentGamification(_request, env, session) {
