@@ -66,6 +66,31 @@ export const y7IntroUnit = {
       segments: [
         {
           type: "content",
+          id: "y7intro1-overview",
+          audience: "teacher",
+          heading: "Lesson snapshot",
+          body: (
+            <Fragment>
+              <Callout type="info" title="Objectives">
+                <ul>
+                  <li>Spot everyday objects that contain hidden digital systems.</li>
+                  <li>Use the words <em>input</em>, <em>process</em>, and <em>output</em> in full sentences.</li>
+                  <li>Agree classroom norms for practical computing work.</li>
+                </ul>
+              </Callout>
+              <Callout type="tip" title="Key vocabulary">
+                <ul>
+                  <li><strong>Digital system</strong> – a device that turns inputs into outputs by processing data.</li>
+                  <li><strong>Input</strong> – data captured from the world (voice, movement, light).</li>
+                  <li><strong>Output</strong> – information or action returned to the user.</li>
+                  <li><strong>Peripheral</strong> – hardware that expands a system’s input or output options.</li>
+                </ul>
+              </Callout>
+            </Fragment>
+          ),
+        },
+        {
+          type: "content",
           id: "y7intro1-teacher-brief",
           audience: "teacher",
           heading: "Teacher launch plan",
@@ -82,6 +107,29 @@ export const y7IntroUnit = {
                 <ul>
                   <li>Ask: “What tech gadget did you use before school today?”</li>
                   <li>Ask: “Why do you think computers are good at repeating tasks?”</li>
+                </ul>
+              </Callout>
+            </Fragment>
+          ),
+        },
+        {
+          type: "content",
+          id: "y7intro1-task-setup",
+          audience: "teacher",
+          heading: "Run the classification task",
+          body: (
+            <Fragment>
+              <Callout type="info" title="Facilitate the task">
+                <ol>
+                  <li>Explain that every card belongs in exactly one column. Model the first drag for the class.</li>
+                  <li>Give students two quiet minutes to classify individually, then a minute to compare answers with a partner.</li>
+                  <li>Use Presentation Mode to reveal the solution and coach arguments for any cards that caused debate.</li>
+                </ol>
+              </Callout>
+              <Callout type="success" title="Debrief prompts">
+                <ul>
+                  <li>“Which items fooled you at first? What input/output clues helped you decide?”</li>
+                  <li>“How could we upgrade one of the ‘helper’ items so it becomes a digital system?”</li>
                 </ul>
               </Callout>
             </Fragment>
@@ -190,6 +238,30 @@ export const y7IntroUnit = {
       segments: [
         {
           type: "content",
+          id: "y7intro2-overview",
+          audience: "teacher",
+          heading: "Lesson snapshot",
+          body: (
+            <Fragment>
+              <Callout type="info" title="Objectives">
+                <ul>
+                  <li>Model the input → process → output pattern with real-world systems.</li>
+                  <li>Connect classroom examples to the language of components (sensor, CPU, actuator).</li>
+                  <li>Coach students to justify why a component belongs in a particular stage.</li>
+                </ul>
+              </Callout>
+              <Callout type="tip" title="Key vocabulary">
+                <ul>
+                  <li><strong>Processor</strong> – the part of a system that makes decisions using instructions.</li>
+                  <li><strong>Actuator</strong> – hardware that turns digital decisions into physical movement or light.</li>
+                  <li><strong>Feedback</strong> – information that loops back to adjust inputs or processing.</li>
+                </ul>
+              </Callout>
+            </Fragment>
+          ),
+        },
+        {
+          type: "content",
           id: "y7intro2-teacher-brief",
           audience: "teacher",
           heading: "Teacher pacing notes",
@@ -255,6 +327,27 @@ export const y7IntroUnit = {
               <Callout type="tip" title="Class discussion">
                 Ask: “If the output is wrong, which part of the system should we test first?” Encourage students to justify
                 their choice using the table above.
+              </Callout>
+            </Fragment>
+          ),
+        },
+        {
+          type: "content",
+          id: "y7intro2-task-setup",
+          audience: "teacher",
+          heading: "Guide the matching task",
+          body: (
+            <Fragment>
+              <Callout type="info" title="Steps to run">
+                <ol>
+                  <li>Invite students to predict which items represent input, process, or output before they touch devices.</li>
+                  <li>Set a three-minute timer and encourage pairs to justify each match aloud using the vocabulary list.</li>
+                  <li>Project the Live Dashboard to monitor progress, then cold-call for explanations once most are complete.</li>
+                </ol>
+              </Callout>
+              <Callout type="warning" title="Teacher move">
+                Reinforce that a single component can take different roles in different systems (e.g., a touch screen is both
+                input and output). Ask students to produce alternate examples.
               </Callout>
             </Fragment>
           ),

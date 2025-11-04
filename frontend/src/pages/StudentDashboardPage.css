@@ -608,10 +608,22 @@
   box-shadow: 0 14px 34px rgba(12, 41, 124, 0.12);
 }
 
+.student-dashboard__lesson-info {
+  display: grid;
+  gap: 0.25rem;
+}
+
 .student-dashboard__lesson-items li strong {
   color: var(--cs-blue);
   display: block;
   margin-bottom: 0.15rem;
+}
+
+.student-dashboard__lesson-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: max-content;
 }
 
 .student-dashboard__insights {
@@ -766,7 +778,7 @@
   padding: 0.25rem 0.75rem;
   font-size: 0.78rem;
   font-weight: 600;
-  margin-left: 0.4rem;
+  margin-left: 0;
 }
 
 .student-tag--summative-complete {
@@ -819,6 +831,31 @@
 .pill--action:hover,
 .pill--action:focus-visible {
   background: linear-gradient(135deg, rgba(12, 41, 124, 1), rgba(70, 135, 255, 1));
+}
+
+.pill--ghost {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(12, 41, 124, 0.16);
+  color: var(--cs-blue);
+}
+
+.pill--ghost:hover,
+.pill--ghost:focus-visible {
+  background: rgba(12, 41, 124, 0.08);
+  border-color: rgba(12, 41, 124, 0.32);
+}
+
+.pill--live {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.95), rgba(249, 115, 22, 0.95));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 12px 30px rgba(249, 115, 22, 0.28);
+}
+
+.pill--live:hover,
+.pill--live:focus-visible {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 1), rgba(249, 115, 22, 1));
+  box-shadow: 0 16px 34px rgba(249, 115, 22, 0.35);
 }
 
 .student-dashboard-new {
