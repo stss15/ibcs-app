@@ -1,6 +1,17 @@
 IBCS APP — OPERATIONS CHANGE LOG
 ================================
 
+2025-11-04  Year 7 Unit 1 interactive proof-of-concept
+---------------------------------
+- Authored `frontend/src/content/y7IntroductionComputing.jsx` with two teacher-paced lessons, teacher-only presenter notes, formative checks, and an auto-marking summative quiz.
+- Added Year 7 intro module route (`/curriculum/year7/intro`) and launch links from the Year 7 map for teachers and students.
+- Extended `GamifiedModulePage` to filter segments by audience and to support end-of-unit `assessment.format: "auto-mcq"` self-marking workflows.
+- Documented audience flags and the new assessment format in `docs/content-authoring.md` and `docs/teacher-mode.md`.
+- Compact Year 7 curriculum board with a selectable unit list and lesson timeline so the full KS3 plan fits on a single screen.
+- Refreshed the student dashboard hero and gamification cards with colour-forward gradients, metric badges, and motivational copy.
+- Added slide-in/out animations for lesson segments and moved the summative assessment into the main stage flow to respect pacing locks.
+- Deployment script now calls `worker/reset-db.js` before seeding so InstantDB starts from a clean slate on every `fix-and-deploy` run.
+
 2025-11-03  Major UI/UX modernization & design system
 ---------------------------------
 - Implemented comprehensive UI/UX overhaul targeting students aged 11-18 with modern, gamified learning experience.

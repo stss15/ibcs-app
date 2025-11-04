@@ -85,8 +85,6 @@ function TeacherStudentDashboardPage() {
   const curriculumLink = isIBTrack ? "/curriculum/ib" : "/curriculum";
   const curriculumCtaLabel = isIBTrack ? "View curriculum map" : "Open curriculum overview";
 
-  const demographicsReady = Boolean(manifest);
-
   const unitSummaries = useMemo(() => {
     if (!manifest) return [];
     return createUnitSummaries(manifest, lessonStatusMap, track);

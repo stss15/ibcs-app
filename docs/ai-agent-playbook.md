@@ -16,9 +16,10 @@ Use this document as the operational script whenever the AI agent contributes to
 3. Create a TODO list only when the work spans multiple substantive steps; keep simple edits lightweight.
 
 ## 2. Implementing Changes
-- **Frontend features** – Follow structure and CSS conventions in `frontend-architecture.md`.
-- **Content updates** – Use the schema guidelines in `content-authoring.md`; update unit previews/routes accordingly.
-- **Scripts or deployment** – Ensure changes align with `deployment.md`; document updates in the change log.
+- **Frontend features** – Follow structure and CSS conventions in `frontend-architecture.md`. Stage content now animates via `StagePlayer`; do not introduce bespoke containers—extend the existing segment renderer instead.
+- **Teacher-paced modules** – Every curriculum track (IB, KS3, IGCSE) uses the shared `GamifiedModulePage`. When adding a summative, set `assessment.format` or stage metadata rather than creating custom panels; the end-of-unit assessment appears as the final stage automatically.
+- **Content updates** – Use the schema guidelines in `content-authoring.md`; update unit previews/routes accordingly. Include teacher-only presenter segments where needed and keep pacing-friendly sequencing.
+- **Scripts or deployment** – Ensure changes align with `deployment.md`. The deploy flow now purges InstantDB via `worker/reset-db.js` before reseeding; keep this behaviour intact and note any extra data requirements in the docs.
 - **Data contracts** – If modifying InstantDB models or Worker endpoints, record decisions in both the relevant guide and the change log.
 
 ## 3. Documentation Hygiene

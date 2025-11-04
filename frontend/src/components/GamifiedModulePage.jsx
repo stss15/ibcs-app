@@ -16,6 +16,7 @@ import { updateClassPacing, getClassPacing, syncStudentProgress, updateLiveAsses
 
 const STORAGE_VERSION = 2;
 const SYNC_DEBOUNCE_MS = 2500;
+const ASSESSMENT_STAGE_ID = "__assessment__";
 
 function normalizeAssessment(raw = null) {
   if (!raw || typeof raw !== "object") {
@@ -34,6 +35,368 @@ function normalizeAssessment(raw = null) {
     teacherNotes: raw.teacherNotes ?? {},
     updatedAt: raw.updatedAt ?? null,
   };
+}
+
+const AUTO_ASSESSMENT_ATTEMPTS_KEY = "__autoAttempts";
+
+function getSegmentAudience(segment) {
+  if (!segment || typeof segment !== "object") return "all";
+  if (segment.audience) {
+    const value = String(segment.audience).toLowerCase();
+    if (value === "teacher" || value === "student" || value === "all") {
+      return value;
+    }
+  }
+  if (segment.teacherOnly) return "teacher";
+  if (segment.studentOnly) return "student";
+  return "all";
+}
+
+function isSegmentVisibleForRole(segment, { isTeacher }) {
+  if (!segment) return false;
+  if (segment.hidden) return false;
+  const audience = getSegmentAudience(segment);
+  if (audience === "teacher") return Boolean(isTeacher);
+  if (audience === "student") return !isTeacher || Boolean(segment.allowTeacherPreview);
+  return true;
+}
+
+function evaluateAutoQuestion(question, value) {
+  if (!question) return { correct: false, details: {} };
+  switch (question.type) {
+    case "true-false": {
+      const expected = Boolean(question.answer);
+      const provided = Boolean(value);
+      return {
+        correct: expected === provided,
+        details: { selected: provided, answer: expected },
+      };
+    }
+    case "mcq": {
+      const expected = question.answer ?? question.options?.find((option) => option.isCorrect)?.id ?? null;
+      return {
+        correct: expected != null && value === expected,
+        details: { selected: value, answer: expected },
+      };
+    }
+    case "multi-select": {
+      const expected = Array.isArray(question.answers)
+        ? [...question.answers].sort()
+        : question.options?.filter((option) => option.isCorrect).map((option) => option.id).sort() ?? [];
+      const provided = Array.isArray(value) ? [...value].sort() : [];
+      const match =
+        expected.length === provided.length && expected.every((entry, index) => entry === provided[index]);
+      return {
+        correct: match,
+        details: { selected: provided, answers: expected },
+      };
+    }
+    default:
+      return { correct: false, details: {} };
+  }
+}
+
+function getAutoOptionState(question, optionValue, evaluation) {
+  if (!evaluation) return "idle";
+  if (question.type === "true-false") {
+    if (optionValue === evaluation.details.selected) {
+      return evaluation.correct ? "correct" : "incorrect";
+    }
+    if (evaluation.correct && optionValue === evaluation.details.answer) {
+      return "correct";
+    }
+    return "idle";
+  }
+
+  if (question.type === "mcq") {
+    if (optionValue === evaluation.details.selected) {
+      return optionValue === evaluation.details.answer ? "correct" : "incorrect";
+    }
+    if (optionValue === evaluation.details.answer) {
+      return "correct";
+    }
+    return "idle";
+  }
+
+  if (question.type === "multi-select") {
+    const selected = evaluation.details.selected ?? [];
+    const correct = evaluation.details.answers ?? [];
+    if (selected.includes(optionValue) && correct.includes(optionValue)) return "correct";
+    if (selected.includes(optionValue) && !correct.includes(optionValue)) return "incorrect";
+    if (!selected.includes(optionValue) && correct.includes(optionValue)) return "missed";
+    return "idle";
+  }
+
+  return "idle";
+}
+
+function AutoMarkingAssessment({
+  assessment,
+  normalizedState,
+  onResponseChange,
+  onMarkChange,
+  onStatusChange,
+  isTeacher,
+}) {
+  const assessmentQuestions = assessment?.questions;
+  const questions = useMemo(
+    () => (Array.isArray(assessmentQuestions) ? assessmentQuestions : []),
+    [assessmentQuestions],
+  );
+  const [feedback, setFeedback] = useState(null);
+  const responses = useMemo(() => normalizedState.responses ?? {}, [normalizedState.responses]);
+  const marks = useMemo(() => normalizedState.marks ?? {}, [normalizedState.marks]);
+  const status = normalizedState.status ?? "not-started";
+  const attemptCount = Number(responses[AUTO_ASSESSMENT_ATTEMPTS_KEY] ?? 0);
+  const instructions = assessment?.instructions;
+
+  const totalPoints = useMemo(
+    () => questions.reduce((sum, question) => sum + Number(question.points ?? 1), 0),
+    [questions],
+  );
+
+  const awardedPoints = useMemo(
+    () =>
+      questions.reduce((sum, question) => {
+        const raw = marks?.[question.id];
+        const numeric = Number(raw);
+        return sum + (Number.isFinite(numeric) ? numeric : 0);
+      }, 0),
+    [marks, questions],
+  );
+
+  const evaluationByQuestion = useMemo(() => {
+    if (status !== "completed") return {};
+    return questions.reduce((acc, question) => {
+      acc[question.id] = evaluateAutoQuestion(question, responses[question.id]);
+      return acc;
+    }, {});
+  }, [status, responses, questions]);
+
+  const allAnswered = useMemo(
+    () =>
+      questions.every((question) => {
+        const value = responses[question.id];
+        if (question.type === "multi-select") {
+          return Array.isArray(value) && value.length > 0;
+        }
+        return value !== undefined && value !== null && value !== "";
+      }),
+    [responses, questions],
+  );
+
+  useEffect(() => {
+    if (status === "completed") {
+      const perfect = awardedPoints === totalPoints && totalPoints > 0;
+      setFeedback({
+        tone: perfect ? "success" : "info",
+        message: perfect
+          ? "Perfect score! Fantastic work."
+          : `You scored ${awardedPoints}/${totalPoints}. Review the highlights and retry if needed.`,
+      });
+    } else {
+      setFeedback(null);
+    }
+  }, [status, awardedPoints, totalPoints]);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (status === "completed") {
+      setFeedback({
+        tone: "info",
+        message: "Assessment already submitted. Use Retake to try again.",
+      });
+      return;
+    }
+
+    if (!allAnswered) {
+      setFeedback({ tone: "error", message: "Answer every question before checking." });
+      return;
+    }
+
+    let totalAwarded = 0;
+    questions.forEach((question) => {
+      const result = evaluateAutoQuestion(question, responses[question.id]);
+      const points = Number(question.points ?? 1);
+      const awarded = result.correct ? points : 0;
+      totalAwarded += awarded;
+      onMarkChange(question.id, awarded);
+    });
+    onResponseChange(AUTO_ASSESSMENT_ATTEMPTS_KEY, String(attemptCount + 1));
+    onStatusChange("completed");
+    const perfect = totalAwarded === totalPoints && totalPoints > 0;
+    setFeedback({
+      tone: perfect ? "success" : "info",
+      message: perfect
+        ? "Perfect score! Fantastic work."
+        : `You scored ${totalAwarded}/${totalPoints}. Review the highlights and retry if needed.`,
+    });
+  };
+
+  const handleRetake = () => {
+    questions.forEach((question) => {
+      const resetValue = question.type === "multi-select" ? [] : null;
+      onResponseChange(question.id, resetValue);
+      onMarkChange(question.id, 0);
+    });
+    onStatusChange("in-progress");
+    setFeedback(null);
+  };
+
+  return (
+    <div className="gamified-assessment__body">
+      <div className="gamified-assessment__intro">
+        <p>
+          {instructions
+            ? instructions
+            : "Answer the multiple-choice questions below. You can retake the assessment to improve your score."}
+        </p>
+      </div>
+      <form className="gamified-micro-quiz" onSubmit={handleSubmit}>
+        {questions.map((question) => {
+          const evaluation = evaluationByQuestion[question.id];
+          const locked = status === "completed";
+          const response = responses[question.id];
+          return (
+            <fieldset
+              key={question.id}
+              className={`gamified-micro-question ${
+                evaluation ? (evaluation.correct ? "is-correct" : "is-incorrect") : ""
+              }`}
+              disabled={locked && !isTeacher}
+            >
+              <legend>{question.prompt}</legend>
+
+              {question.type === "true-false" && (
+                <div className="gamified-micro-options">
+                  {[true, false].map((option) => (
+                    <label
+                      key={String(option)}
+                      className={`gamified-micro-option gamified-micro-option--${getAutoOptionState(
+                        question,
+                        option,
+                        evaluation,
+                      )}`}
+                    >
+                      <input
+                        type="radio"
+                        name={question.id}
+                        value={String(option)}
+                        checked={Boolean(response) === option}
+                        onChange={() => {
+                          onResponseChange(question.id, option);
+                          if (status === "completed") onStatusChange("in-progress");
+                        }}
+                      />
+                      <span>{option ? "True" : "False"}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {question.type === "mcq" && (
+                <div className="gamified-micro-options">
+                  {question.options?.map((option) => (
+                    <label
+                      key={option.id}
+                      className={`gamified-micro-option gamified-micro-option--${getAutoOptionState(
+                        question,
+                        option.id,
+                        evaluation,
+                      )}`}
+                    >
+                      <input
+                        type="radio"
+                        name={question.id}
+                        value={option.id}
+                        checked={response === option.id}
+                        onChange={() => {
+                          onResponseChange(question.id, option.id);
+                          if (status === "completed") onStatusChange("in-progress");
+                        }}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {question.type === "multi-select" && (
+                <div className="gamified-micro-options">
+                  {question.options?.map((option) => {
+                    const selected = Array.isArray(response) ? response.includes(option.id) : false;
+                    return (
+                      <label
+                        key={option.id}
+                        className={`gamified-micro-option gamified-micro-option--${getAutoOptionState(
+                          question,
+                          option.id,
+                          evaluation,
+                        )}`}
+                      >
+                        <input
+                          type="checkbox"
+                          value={option.id}
+                          checked={selected}
+                          onChange={(event) => {
+                            const checked = event.target.checked;
+                            const current = Array.isArray(response) ? response : [];
+                            const next = checked
+                              ? [...new Set([...current, option.id])]
+                              : current.filter((value) => value !== option.id);
+                            onResponseChange(question.id, next);
+                            if (status === "completed") onStatusChange("in-progress");
+                          }}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+
+              {evaluation && !evaluation.correct && question.rationale && (
+                <p className="gamified-feedback">{question.rationale}</p>
+              )}
+            </fieldset>
+          );
+        })}
+
+        <div className="gamified-segment-nav">
+          <span />
+          <div className="gamified-segment-actions">
+            <button type="submit" className="btn btn--primary" disabled={status === "completed"}>
+              Check answers
+            </button>
+            {status === "completed" && (
+              <button type="button" className="btn btn--ghost" onClick={handleRetake}>
+                Retake assessment
+              </button>
+            )}
+          </div>
+        </div>
+      </form>
+
+      <aside className="gamified-assessment__teacher gamified-assessment__teacher--hint">
+        <h3>Assessment status</h3>
+        <p>
+          Score: {awardedPoints} / {totalPoints}
+        </p>
+        <p className="muted">Attempts: {attemptCount}</p>
+        {feedback ? (
+          <p className={`gamified-feedback ${feedback.tone === "error" ? "is-error" : ""}`}>{feedback.message}</p>
+        ) : (
+          <p className="muted">Submit your answers to calculate a score.</p>
+        )}
+        {isTeacher && (
+          <p className="small muted">
+            Teachers see aggregated analytics on the dashboard. Students can retry to improve their score until you reset
+            the unit.
+          </p>
+        )}
+      </aside>
+    </div>
+  );
 }
 
 function buildInitialState(unit, profileKey) {
@@ -202,12 +565,28 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
   const [paceStatus, setPaceStatus] = useState({});
   const [classPacing, setClassPacing] = useState(null);
   const classId = isTeacher ? teacherClassId : session?.user?.classId;
+  const hasAssessment = Boolean(unit.assessment);
+  const stages = useMemo(() => {
+    if (!hasAssessment) {
+      return unit.stages;
+    }
+    const assessmentStage = {
+      id: ASSESSMENT_STAGE_ID,
+      title: unit.assessment.title ?? "End-of-unit assessment",
+      duration: unit.assessment.duration ?? "45 min",
+      description:
+        unit.assessment.summary ?? `Summative checkpoint worth ${unit.assessment.totalMarks ?? 0} marks.`,
+      isAssessment: true,
+    };
+    return [...unit.stages, assessmentStage];
+  }, [unit, hasAssessment]);
 
   const [progress, dispatch] = useReducer(
     reducer,
     { unit, profileKey },
     ({ unit: initialUnit, profileKey: initialProfile }) => buildInitialState(initialUnit, initialProfile),
   );
+  const programmeLabel = unit.programmeLabel ?? "IB Computer Science";
 
   useEffect(() => {
     if (isTeacher || !classId || !session?.token) return;
@@ -245,7 +624,7 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
   const previousLevelRef = useRef(null);
   const syncTimeoutRef = useRef(null);
 
-  const activeStage = unit.stages[activeStageIndex];
+  const activeStage = stages[activeStageIndex];
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -278,11 +657,11 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
   }, [progress, unit.id, profileKey, session?.token, isTeacher]);
 
   useEffect(() => {
-    const firstIncomplete = unit.stages.findIndex((stage) => !progress.stages?.[stage.id]?.completed);
+    const firstIncomplete = stages.findIndex((stage) => !stage.isAssessment && !progress.stages?.[stage.id]?.completed);
     if (firstIncomplete !== -1) {
       setActiveStageIndex(firstIncomplete);
     }
-  }, [progress.stages, unit.stages]);
+  }, [progress.stages, stages]);
 
   const overallXp = gamificationState.xp ?? 0;
   const level = gamificationState.level ?? 1;
@@ -406,16 +785,21 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
     dispatch({ type: "assessment-note", payload: { questionId, value } });
   };
 
+  const handleAssessmentStatusChange = (status) => {
+    dispatch({ type: "assessment-status", payload: { status } });
+  };
+
   const overallCompletion = useMemo(() => {
     const total = unit.stages.length;
     const completed = Object.values(progress.stages ?? {}).filter((entry) => entry.completed).length;
     return total > 0 ? Math.round((completed / total) * 100) : 0;
   }, [unit.stages.length, progress.stages]);
 
-  const allStagesComplete = useMemo(
+  const regularStagesComplete = useMemo(
     () => unit.stages.every((stage) => progress.stages?.[stage.id]?.completed),
     [unit.stages, progress.stages],
   );
+  const assessmentUnlocked = !hasAssessment || regularStagesComplete;
 
   const handleSetPace = async (stageId) => {
     if (!isTeacher || !classId) return false;
@@ -450,14 +834,14 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
       <header className={`gamified-header ${headerCollapsed ? "is-collapsed" : ""}`}>
         <div className="gamified-header__main">
           <div>
-            <span className="gamified-eyebrow">IB Computer Science · {unit.id}</span>
+            <span className="gamified-eyebrow">{programmeLabel} · {unit.id}</span>
             <h1>{unit.title}</h1>
             {!headerCollapsed && (
               <>
                 <p>{unit.guidingQuestion}</p>
                 <div className="gamified-meta">
-                  <span>{unit.hours?.sl}</span>
-                  <span>{unit.hours?.hl}</span>
+                  {unit.hours?.sl && <span>{unit.hours.sl}</span>}
+                  {unit.hours?.hl && <span>{unit.hours.hl}</span>}
                 </div>
               </>
             )}
@@ -512,16 +896,18 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
             {sidebarCollapsed ? "▶" : "◀"}
           </button>
           <ul>
-            {unit.stages.map((stage, index) => {
+            {stages.map((stage, index) => {
               const state = progress.stages?.[stage.id];
 
               let unlocked;
               if (isTeacher) {
                 unlocked = true;
+              } else if (stage.id === ASSESSMENT_STAGE_ID) {
+                unlocked = assessmentUnlocked;
               } else if (classPacing) {
-                const paceIndex = unit.stages.findIndex(s => s.id === classPacing.lessonId);
-                const isWithinPace = index <= paceIndex;
-                unlocked = isWithinPace && (index === 0 || progress.stages?.[unit.stages[index - 1].id]?.completed);
+                const paceIndex = stages.findIndex((entry) => entry.id === classPacing.lessonId);
+                const isWithinPace = paceIndex === -1 ? index === 0 : index <= paceIndex;
+                unlocked = isWithinPace && (index === 0 || progress.stages?.[stages[index - 1].id]?.completed);
               } else {
                 unlocked = index === 0;
               }
@@ -560,8 +946,17 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
           <StagePlayer
             key={activeStage?.id}
             unit={unit}
+            stages={stages}
             stage={activeStage}
             progress={progress}
+            assessment={unit.assessment}
+            assessmentState={progress.assessment}
+            onAssessmentResponseChange={handleAssessmentResponseChange}
+            onAssessmentMarkChange={handleAssessmentMarkChange}
+            onAssessmentNoteChange={handleAssessmentNoteChange}
+            onAssessmentStatusChange={handleAssessmentStatusChange}
+            assessmentUnlocked={assessmentUnlocked}
+            overallCompletion={overallCompletion}
             onAdvance={handleSegmentAdvance}
             onReflectionSave={handleReflectionSave}
             onPlannerSave={handlePlannerSave}
@@ -572,19 +967,6 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
           />
         </section>
       </main>
-
-      {unit.assessment && (
-        <AssessmentPanel
-          unit={unit}
-          assessmentState={progress.assessment}
-          onResponseChange={handleAssessmentResponseChange}
-          onMarkChange={handleAssessmentMarkChange}
-          onTeacherNoteChange={handleAssessmentNoteChange}
-          isTeacher={isTeacher}
-          isUnlocked={allStagesComplete}
-          completionPercentage={overallCompletion}
-        />
-      )}
 
       {resultModal && (
         <AssessmentResultsModal
@@ -613,8 +995,17 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
 
 function StagePlayer({
   unit,
+  stages,
   stage,
   progress,
+  assessment,
+  assessmentState,
+  onAssessmentResponseChange,
+  onAssessmentMarkChange,
+  onAssessmentNoteChange,
+  onAssessmentStatusChange,
+  assessmentUnlocked,
+  overallCompletion,
   onAdvance,
   onReflectionSave,
   onPlannerSave,
@@ -623,16 +1014,25 @@ function StagePlayer({
   classId,
   onAdvanceClassPace,
 }) {
-  const segments = stage?.segments ?? [];
+  const isAssessmentStage = stage?.id === ASSESSMENT_STAGE_ID;
+  const segments = useMemo(() => {
+    if (isAssessmentStage) {
+      return [];
+    }
+    const candidates = Array.isArray(stage?.segments) ? stage.segments : [];
+    return candidates.filter((segment) => isSegmentVisibleForRole(segment, { isTeacher }));
+  }, [stage?.segments, isTeacher, isAssessmentStage]);
   const stageId = stage?.id;
   const stageProgress = stageId ? progress.stages?.[stageId] ?? {} : {};
-  const initialIndex = Math.min(stageProgress.segmentIndex ?? 0, segments.length);
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const initialIndex = Math.min(stageProgress.segmentIndex ?? 0, Math.max(segments.length - 1, 0));
+  const [currentIndex, setCurrentIndex] = useState(isAssessmentStage ? 0 : initialIndex);
   const [teacherAssessmentView, setTeacherAssessmentView] = useState(false);
   const [advanceState, setAdvanceState] = useState("idle");
   const [advanceError, setAdvanceError] = useState(null);
   const stageContainerRef = useRef(null);
   const advanceTimeoutRef = useRef(null);
+  const [transitionDirection, setTransitionDirection] = useState("forward");
+  const assessmentStatus = assessmentState?.status;
 
   useEffect(() => {
     setTeacherAssessmentView(false);
@@ -656,8 +1056,13 @@ function StagePlayer({
   }, []);
 
   useEffect(() => {
-    setCurrentIndex(initialIndex);
-  }, [initialIndex, stageId]);
+    if (isAssessmentStage) {
+      setCurrentIndex(0);
+    } else {
+      setCurrentIndex(initialIndex);
+    }
+    setTransitionDirection("forward");
+  }, [initialIndex, stageId, isAssessmentStage]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -670,6 +1075,13 @@ function StagePlayer({
     });
   }, [stageId, currentIndex]);
 
+  useEffect(() => {
+    if (!isAssessmentStage || !assessmentState || !stage?.id) return;
+    if (assessmentStatus === "completed" && !stageProgress.completed) {
+      onAdvance(stage.id, 1, true);
+    }
+  }, [isAssessmentStage, assessmentState, assessmentStatus, stageProgress.completed, stage?.id, onAdvance]);
+
   if (!stage) {
     return (
       <div className="gamified-stage-complete">
@@ -681,17 +1093,19 @@ function StagePlayer({
 
   const currentSegment = segments[currentIndex];
   const isFormativeAssessment = currentSegment && (currentSegment.type === 'micro-quiz' || currentSegment.type === 'activity');
-  const currentStageIndex = unit?.stages?.findIndex((item) => item.id === stageId) ?? -1;
-  const nextStage = currentStageIndex >= 0 ? unit.stages[currentStageIndex + 1] : null;
+  const currentStageIndex = stages?.findIndex((item) => item.id === stageId) ?? -1;
+  const nextStage = currentStageIndex >= 0 ? stages[currentStageIndex + 1] : null;
 
   const handleComplete = () => {
     const nextIndex = Math.min(currentIndex + 1, segments.length);
     const stageComplete = nextIndex >= segments.length;
+    setTransitionDirection("forward");
     setCurrentIndex((prev) => Math.min(prev + 1, segments.length));
     onAdvance(stage.id, nextIndex, stageComplete);
   };
 
   const handleBack = () => {
+    setTransitionDirection("back");
     setCurrentIndex((prev) => Math.max(prev - 1, 0));
   };
 
@@ -722,6 +1136,26 @@ function StagePlayer({
   };
 
 
+  if (isAssessmentStage && assessment) {
+    return (
+      <div className="gamified-stage" ref={stageContainerRef}>
+        <div className={`gamified-stage__panel gamified-stage__panel--${transitionDirection}`}>
+          <AssessmentPanel
+            unit={unit}
+            assessmentState={assessmentState}
+            onResponseChange={onAssessmentResponseChange}
+            onMarkChange={onAssessmentMarkChange}
+            onTeacherNoteChange={onAssessmentNoteChange}
+            onStatusChange={onAssessmentStatusChange}
+            isTeacher={isTeacher}
+            isUnlocked={assessmentUnlocked}
+            completionPercentage={overallCompletion}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (isTeacher && isFormativeAssessment && !teacherAssessmentView) {
     return (
       <div className="gamified-stage" ref={stageContainerRef}>
@@ -750,6 +1184,9 @@ function StagePlayer({
     );
   }
 
+  const panelKey = `${stageId}:${currentSegment?.id}:${transitionDirection}`;
+  const panelClassName = `gamified-stage__panel gamified-stage__panel--${transitionDirection}`;
+
   return (
     <div className="gamified-stage" ref={stageContainerRef}>
       <header className="gamified-stage-header">
@@ -767,20 +1204,22 @@ function StagePlayer({
           {Math.min(currentIndex + 1, segments.length)} / {segments.length}
         </span>
       </header>
-      <SegmentRenderer
-        unit={unit}
-        stage={stage}
-        segment={currentSegment}
-        onComplete={handleComplete}
-        onBack={currentIndex > 0 ? handleBack : null}
-        onReflectionSave={onReflectionSave}
-        onPlannerSave={onPlannerSave}
-        onAttempt={onAttempt}
-        attempts={progress.attempts}
-        reflections={progress.reflections}
-        planner={progress.planner}
-        isTeacher={isTeacher}
-      />
+      <div key={panelKey} className={panelClassName}>
+        <SegmentRenderer
+          unit={unit}
+          stage={stage}
+          segment={currentSegment}
+          onComplete={handleComplete}
+          onBack={currentIndex > 0 ? handleBack : null}
+          onReflectionSave={onReflectionSave}
+          onPlannerSave={onPlannerSave}
+          onAttempt={onAttempt}
+          attempts={progress.attempts}
+          reflections={progress.reflections}
+          planner={progress.planner}
+          isTeacher={isTeacher}
+        />
+      </div>
     </div>
   );
 }
@@ -791,13 +1230,14 @@ function AssessmentPanel({
   onResponseChange,
   onMarkChange,
   onTeacherNoteChange,
+  onStatusChange,
   isTeacher,
   isUnlocked,
   completionPercentage,
 }) {
   const assessment = unit.assessment;
   const questions = assessment?.questions ?? [];
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const normalized = normalizeAssessment(assessmentState);
 
   const totalAwarded = useMemo(
@@ -817,6 +1257,48 @@ function AssessmentPanel({
 
   if (!assessment) {
     return null;
+  }
+
+  if (assessment.format === "auto-mcq") {
+    return (
+      <section className="gamified-assessment">
+        <article className="gamified-card gamified-assessment__card">
+          <header className="gamified-assessment__header">
+            <div>
+              <h2>Summative checkpoint</h2>
+              <p className="muted">
+                {assessment.duration} · {assessment.totalMarks} marks
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn--outline"
+              onClick={() => setExpanded((prev) => !prev)}
+              disabled={!isUnlocked}
+            >
+              {expanded ? "Hide assessment" : "Open assessment"}
+            </button>
+          </header>
+
+          {!isUnlocked && (
+            <p className="gamified-assessment__lock">
+              Complete all stages to unlock the assessment. You are {completionPercentage}% through the unit.
+            </p>
+          )}
+
+          {expanded && isUnlocked && (
+            <AutoMarkingAssessment
+              assessment={assessment}
+              normalizedState={normalized}
+              onResponseChange={onResponseChange}
+              onMarkChange={onMarkChange}
+              onStatusChange={onStatusChange}
+              isTeacher={isTeacher}
+            />
+          )}
+        </article>
+      </section>
+    );
   }
 
   return (

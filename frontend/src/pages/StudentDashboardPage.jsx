@@ -213,6 +213,13 @@ function StudentDashboardLayout({
   const gamificationLevel = typeof gamification?.level === "number" ? gamification.level : null;
   const gamificationXp = typeof gamification?.xp === "number" ? gamification.xp : null;
   const gamificationStreak = typeof gamification?.streak === "number" ? gamification.streak : null;
+  const xpToNextLevel = useMemo(() => {
+    if (!Number.isFinite(gamificationXp)) return null;
+    const base = Math.floor(gamificationXp / 150) * 150;
+    const nextThreshold = base + 150;
+    const remaining = nextThreshold - gamificationXp;
+    return Math.max(remaining, 0);
+  }, [gamificationXp]);
   const computedAccuracy = useMemo(() => {
     if (typeof gamification?.accuracy === "number") return gamification.accuracy;
     if (typeof gamification?.totalAttempts === "number" && gamification.totalAttempts > 0 && typeof gamification?.totalCorrect === "number") {
@@ -220,6 +227,12 @@ function StudentDashboardLayout({
     }
     return null;
   }, [gamification?.accuracy, gamification?.totalAttempts, gamification?.totalCorrect]);
+
+  const levelMessage = gamificationLevel != null ? `Lv ${gamificationLevel + 1} unlocks new rewards` : "Clear your first activity to begin levelling";
+  const xpMessage = gamificationXp != null ? `${xpToNextLevel ?? 150} XP until the next rank` : "Complete activities to earn XP";
+  const streakMessage = gamificationStreak != null && gamificationStreak > 0 ? `${gamificationStreak} in a row—keep it going!` : "Pass activities on the first try to build a streak";
+  const attemptsLogged = gamification?.totalAttempts ?? 0;
+  const accuracyMessage = computedAccuracy != null ? `${attemptsLogged} attempts logged` : "Your accuracy will appear once you start practicing";
 
   return (
     <div className="page-shell page-shell--fluid student-dashboard">
@@ -291,21 +304,25 @@ function StudentDashboardLayout({
             caption={`${totalCompleted}/${totalLessons} lessons`}
           />
           <div className="student-dashboard__stat-grid">
-            <div className="student-dashboard__stat-card">
+            <div className="student-dashboard__stat-card student-dashboard__stat-card--level">
               <span>Level</span>
               <strong>{gamificationLevel != null ? `Lv ${gamificationLevel}` : "—"}</strong>
+              <small>{levelMessage}</small>
             </div>
-            <div className="student-dashboard__stat-card">
+            <div className="student-dashboard__stat-card student-dashboard__stat-card--xp">
               <span>XP</span>
               <strong>{gamificationXp != null ? gamificationXp : "—"}</strong>
+              <small>{xpMessage}</small>
             </div>
-            <div className="student-dashboard__stat-card">
+            <div className="student-dashboard__stat-card student-dashboard__stat-card--streak">
               <span>Streak</span>
               <strong>{gamificationStreak != null ? gamificationStreak : "—"}</strong>
+              <small>{streakMessage}</small>
             </div>
-            <div className="student-dashboard__stat-card">
+            <div className="student-dashboard__stat-card student-dashboard__stat-card--accuracy">
               <span>Accuracy</span>
               <strong>{computedAccuracy != null ? `${computedAccuracy}%` : "—"}</strong>
+              <small>{accuracyMessage}</small>
             </div>
           </div>
         </div>
@@ -584,10 +601,10 @@ function StudentDashboardPage() {
   const navigate = useNavigate();
   const token = session?.token ?? null;
   const studentSession = session?.user?.role === "student" ? session.user : null;
-  const { state: gamificationState, updateFromRemote } = useGamification();
+  const { updateFromRemote } = useGamification();
 
   const [dashboardData, setDashboardData] = useState(null);
-  const [status, setStatus] = useState(null);
+  const [error, setError] = useState(null);
   
   useEffect(() => {
     if (!ready) return;
@@ -597,7 +614,7 @@ function StudentDashboardPage() {
     }
 
     let active = true;
-    setStatus({ tone: "info", message: "Loading your dashboard…" });
+    setError(null);
 
     (async () => {
       try {
@@ -629,19 +646,26 @@ function StudentDashboardPage() {
             writeUnitProgress(b2Unit.id, progressOwner, progressMap.get(b2Unit.id));
         }
 
-        setStatus(null);
+        setError(null);
       } catch (error) {
         if (!active) return;
-        setStatus({ tone: "error", message: error.message || "Unable to load dashboard" });
+        setError(error.message || "Unable to load dashboard");
       }
     })();
 
     return () => { active = false; };
   }, [ready, studentSession, token, navigate, updateFromRemote]);
 
-  // Render a loading state or the new dashboard layout
+  if (error && !dashboardData) {
+    return (
+      <div className="page-shell">
+        <p className="status-banner status-banner--error">{error}</p>
+      </div>
+    );
+  }
+
   if (!dashboardData) {
-    return <div className="page-shell">Loading...</div>; // Or a more styled loader
+    return <div className="page-shell">Loading...</div>;
   }
 
   return <DashboardLayout data={dashboardData} />;
@@ -649,7 +673,7 @@ function StudentDashboardPage() {
 
 
 function DashboardLayout({ data }) {
-  const { student, class: classInfo, gamification, progress } = data;
+  const { student, progress } = data;
   const { state: gamificationState } = useGamification();
   const { manifest } = useCurriculumManifest();
   const [activeUnit, setActiveUnit] = useState(null);

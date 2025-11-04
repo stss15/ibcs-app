@@ -1,6 +1,6 @@
 # Deployment Playbook
 
-`fix-and-deploy.sh` wraps the entire release pipeline. It calls `deploy-everything.sh`, which now uses dynamic paths, idempotent dependency installs, and defensive git pushes. Follow these steps for smooth deployments.
+`fix-and-deploy.sh` wraps the entire release pipeline. It calls `deploy-everything.sh`, which now uses dynamic paths, idempotent dependency installs, an InstantDB reset, and defensive git pushes. Follow these steps for smooth deployments.
 
 ## 1. Standard Deployment
 ```bash
@@ -14,8 +14,9 @@
 2. **Build frontend** – Runs `npm run build` inside `frontend/`. Dependencies install only when `node_modules` is absent.
 3. **Publish static bundle** – Copies `frontend/dist/{index.html,404.html,app-config.json,assets}` into the repo root for GitHub Pages.
 4. **Deploy Worker** – `npx wrangler deploy` in `worker/`. Dependencies install lazily.
-5. **Seed teacher** – `node worker/seed-teacher.js` (idempotent). Credentials defined inline for now.
-6. **Git push** – Commits with message “Deploy working app”. If `git push origin main` fails (e.g., offline), the script prints a warning so you can push manually later.
+5. **Reset demo data** – Runs `node worker/reset-db.js` to purge teachers, classes, students, pacing, and progress so every deploy starts from a blank InstantDB slate.
+6. **Seed teacher** – `node worker/seed-teacher.js` (idempotent). Credentials defined inline for now.
+7. **Git push** – Commits with message “Deploy working app”. If `git push origin main` fails (e.g., offline), the script prints a warning so you can push manually later.
 
 ## 2. Manual Deployment Steps
 Use these commands when a specific stage fails and you want to retry it alone.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useSession } from "../hooks/useSession.js";
 import { getTeacherDashboard, getStudentDashboard, updateClassPacing } from "../lib/api.js";
 import {
@@ -16,8 +16,6 @@ const STATUS_LABELS = {
   ready: "Ready",
   locked: "Locked",
 };
-
-const PREVIEW_LESSON_COUNT = 6;
 
 function isYear7ClassRecord(classRecord) {
   return (classRecord?.yearGroup ?? "").toLowerCase().includes("year 7");
@@ -39,13 +37,14 @@ export default function Year7MapPage() {
   const isTeacher = role === "teacher";
   const isStudent = role === "student";
 
+  const defaultUnitId = YEAR7_CURRICULUM[0]?.id ?? null;
   const [teacherData, setTeacherData] = useState(null);
   const [studentData, setStudentData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedClassId, setSelectedClassId] = useState(searchParams.get("classId") || "");
   const [pacingState, setPacingState] = useState({});
-  const [expandedUnits, setExpandedUnits] = useState({});
+  const [selectedUnitId, setSelectedUnitId] = useState(defaultUnitId);
 
   useEffect(() => {
     if (!ready || !token) return;
@@ -81,7 +80,7 @@ export default function Year7MapPage() {
         setLoading(false);
       }
     })();
-  }, [ready, token, isTeacher, isStudent]);
+  }, [ready, token, isTeacher, isStudent, selectedClassId]);
 
   useEffect(() => {
     if (selectedClassId) {
@@ -124,6 +123,12 @@ export default function Year7MapPage() {
 
   const pointerUnitId = pointerLesson?.unitId ?? null;
 
+  useEffect(() => {
+    if (pointerUnitId) {
+      setSelectedUnitId(pointerUnitId);
+    }
+  }, [pointerUnitId]);
+
   const pointerUpdatedAt = useMemo(() => {
     if (!activePacing?.updatedAt) return null;
     const timestamp = new Date(activePacing.updatedAt);
@@ -139,13 +144,7 @@ export default function Year7MapPage() {
 
   const pacingInfo = selectedClassId ? pacingState[selectedClassId] : null;
 
-  const toggleUnitExpansion = useCallback((unitId) => {
-    if (!unitId) return;
-    setExpandedUnits((prev) => ({
-      ...prev,
-      [unitId]: !prev[unitId],
-    }));
-  }, []);
+  const moduleLinkState = selectedClassId ? { classId: selectedClassId } : undefined;
 
   const clearPacingMessage = useCallback((classId) => {
     setTimeout(() => {
@@ -278,9 +277,21 @@ export default function Year7MapPage() {
         lessons,
         completed,
         unlocked,
+        progress: unit.lessons.length ? Math.round((completed / unit.lessons.length) * 100) : 0,
       };
     });
   }, [pointerIndex]);
+
+  const selectedUnit = useMemo(() => {
+    if (!unitSummaries.length) return null;
+    if (selectedUnitId) {
+      const match = unitSummaries.find((unit) => unit.id === selectedUnitId);
+      if (match) {
+        return match;
+      }
+    }
+    return unitSummaries[0];
+  }, [unitSummaries, selectedUnitId]);
 
   if (loading) {
     return (
@@ -354,6 +365,14 @@ export default function Year7MapPage() {
               </button>
             </div>
 
+            <Link
+              to="/curriculum/year7/intro"
+              state={moduleLinkState}
+              className="pill pill--action y7-controls__launch"
+            >
+              Open Unit 1 interactive lesson
+            </Link>
+
             {pacingInfo?.message && (
               <p className={`y7-status y7-status--${pacingInfo.tone ?? "info"}`}>{pacingInfo.message}</p>
             )}
@@ -373,6 +392,9 @@ export default function Year7MapPage() {
                 : "Your teacher will unlock the first lesson in class."}
             </strong>
             {pointerUpdatedAt && <span className="muted">Updated {pointerUpdatedAt}</span>}
+            <Link to="/curriculum/year7/intro" className="pill pill--action y7-student-focus__launch">
+              Open Unit 1 lesson
+            </Link>
           </div>
         )}
       </section>
@@ -402,57 +424,79 @@ export default function Year7MapPage() {
         )}
       </section>
 
-      <section className="y7-map__grid">
-        {unitSummaries.map((unit) => {
-          const isExpanded = expandedUnits[unit.id] ?? unit.id === pointerUnitId;
-          const displayedLessons = isExpanded ? unit.lessons : unit.lessons.slice(0, PREVIEW_LESSON_COUNT);
-          const hasMoreLessons = unit.lessons.length > displayedLessons.length;
-          const progressPercent = unit.lessons.length
-            ? Math.round((unit.completed / unit.lessons.length) * 100)
-            : 0;
-
-          return (
-            <article key={unit.id} className="y7-unit" style={{ borderColor: unit.accent }}>
-              <header className="y7-unit__header">
-                <span className="y7-unit__icon" aria-hidden="true">
+      <section className="y7-board">
+        <aside className="y7-board__list" aria-label="Year 7 units">
+          {unitSummaries.map((unit) => {
+            const isActive = selectedUnit?.id === unit.id;
+            const isPointerUnit = pointerUnitId === unit.id;
+            return (
+              <button
+                key={unit.id}
+                type="button"
+                className={`y7-unit-chip ${isActive ? "is-active" : ""}`}
+                onClick={() => setSelectedUnitId(unit.id)}
+                aria-pressed={isActive}
+              >
+                <span className="y7-unit-chip__icon" aria-hidden="true">
                   {unit.icon}
                 </span>
-                <div>
-                  <h2>{unit.title}</h2>
-                  <p className="muted">{unit.summary}</p>
-                  <span className="y7-unit__progress">
-                    {progressPercent}% unlocked · {unit.completed} complete
-                  </span>
+                <div className="y7-unit-chip__meta">
+                  <strong>{unit.title}</strong>
+                  <span>{unit.progress}% unlocked · {unit.completed}/{unit.lessons.length} complete</span>
                 </div>
-              </header>
-              <ul className="y7-lessons">
-                {displayedLessons.map((lesson) => {
-                  const statusLabel = STATUS_LABELS[lesson.status] ?? STATUS_LABELS.locked;
-                  const isPointerLesson = lesson.status === "current";
-                  return (
-                    <li
-                      key={lesson.id}
-                      className={`y7-lesson y7-lesson--${lesson.status}`}
-                      aria-current={isPointerLesson ? "true" : undefined}
-                    >
-                      <span className="y7-lesson__index">{lesson.order}</span>
-                      <div className="y7-lesson__content">
+                {isPointerUnit && <span className="y7-unit-chip__live">Live now</span>}
+              </button>
+            );
+          })}
+        </aside>
+
+        {selectedUnit && (
+          <article className="y7-board__detail" aria-live="polite">
+            <header className="y7-detail__header" style={{ borderColor: selectedUnit.accent }}>
+              <div className="y7-detail__title">
+                <span aria-hidden="true" className="y7-detail__icon">
+                  {selectedUnit.icon}
+                </span>
+                <div>
+                  <h2>{selectedUnit.title}</h2>
+                  <p className="muted">{selectedUnit.summary}</p>
+                </div>
+              </div>
+              <div className="y7-detail__stats">
+                <div>
+                  <span>Unlocked</span>
+                  <strong>{selectedUnit.progress}%</strong>
+                </div>
+                <div>
+                  <span>Completed</span>
+                  <strong>{selectedUnit.completed}/{selectedUnit.lessons.length}</strong>
+                </div>
+              </div>
+            </header>
+
+            <ol className="y7-timeline">
+              {selectedUnit.lessons.map((lesson) => {
+                const statusLabel = STATUS_LABELS[lesson.status] ?? STATUS_LABELS.locked;
+                return (
+                  <li
+                    key={lesson.id}
+                    className={`y7-timeline__item y7-timeline__item--${lesson.status}`}
+                    aria-current={lesson.status === "current" ? "step" : undefined}
+                  >
+                    <div className="y7-timeline__marker">{lesson.order}</div>
+                    <div className="y7-timeline__body">
+                      <div className="y7-timeline__heading">
                         <strong>{lesson.title}</strong>
-                        <span className="muted">{lesson.duration}</span>
+                        <span>{lesson.duration}</span>
                       </div>
-                      <span className={`y7-lesson__status y7-lesson__status--${lesson.status}`}>{statusLabel}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-              {hasMoreLessons && (
-                <button type="button" className="y7-unit__toggle" onClick={() => toggleUnitExpansion(unit.id)}>
-                  {isExpanded ? "Show fewer lessons" : `View all ${unit.lessons.length} lessons`}
-                </button>
-              )}
-            </article>
-          );
-        })}
+                      <span className="y7-timeline__status">{statusLabel}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </article>
+        )}
       </section>
 
       <section className="y7-notes">

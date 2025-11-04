@@ -69,8 +69,14 @@ maybe_install "$WORKER"
 npx wrangler deploy
 echo ""
 
-# Step 4: Seed teacher account (idempotent)
-echo "👨‍🏫 Step 4: Seeding teacher account..."
+# Step 4: Reset InstantDB state
+echo "🧹 Step 4: Resetting InstantDB demo data..."
+cd "$ROOT"
+node worker/reset-db.js || echo "Database reset step completed with warnings"
+echo ""
+
+# Step 5: Seed teacher account (idempotent)
+echo "👨‍🏫 Step 5: Seeding teacher account..."
 cd "$ROOT"
 node worker/seed-teacher.js \
   --username=MrStewart \
@@ -78,8 +84,8 @@ node worker/seed-teacher.js \
   --display-name="Mr. Stewart" || echo "Seed step completed with warnings"
 echo ""
 
-# Step 5: Commit and push to GitHub
-echo "📦 Step 5: Deploying to GitHub Pages..."
+# Step 6: Commit and push to GitHub
+echo "📦 Step 6: Deploying to GitHub Pages..."
 cd "$ROOT"
 if git fetch --quiet origin main; then
   if ! git merge-base --is-ancestor origin/main HEAD; then

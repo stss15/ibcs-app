@@ -5,6 +5,7 @@ Use this guide when creating or updating IB units inside `frontend/src/content/`
 ## 1. Content Model
 - Each unit exports a `GamifiedUnit` object (see `b1ComputationalThinking.jsx`, `b2ProgrammingFundamentals.jsx`).
 - Required keys: `id`, `title`, `hours`, `guidingQuestion`, `overview`, `stages`, `assessment`.
+- Optional but recommended: `programmeLabel` to customise the header badge (for example, "Year 7 Computing").
 - `stages` is a locked sequence; the next stage unlocks only after the previous stage reports `completed`.
 - Every `segment` requires a unique `id` (used for persistence, XP tracking, and dashboards).
 
@@ -20,6 +21,12 @@ Use this guide when creating or updating IB units inside `frontend/src/content/`
 | `python-playground` | `PythonPlaygroundSegment` | Requires `starterCode`; optional `snippets`, `fillTasks`. |
 | `demo` | `DemoSegment` | References a reusable entry in the `lessonDemos` InstantDB collection. |
 | `reflection` | `ReflectionSegment` | Prompt students; result saves locally and in analytics. |
+
+#### Audience controls
+
+- Use `audience: "teacher"` on any segment to make it visible only when a teacher or admin is in the module. This is ideal for presenter notes and recall questions.
+- `audience: "student"` hides the segment in teacher view while keeping it for learners. Teachers can still enable previews by setting `allowTeacherPreview: true`.
+- Legacy flags `teacherOnly` / `studentOnly` map to the same behaviour.
 
 Add new segment types by adding a component under `components/segments/` and extending the switch in `GamifiedModulePage.jsx`.
 
@@ -80,6 +87,9 @@ See `docs/ui-ux-design-system.md` for complete component documentation.
 4. Ensure all interactive segments call `onAttempt` via their segment component (built-in activities already do).
 5. Provide a reflection or planner to capture learning plans where helpful.
 6. Define the summative assessment (duration, total marks, question list). Questions feed the end-of-unit planner for teachers.
+   - Support for `assessment.format: "auto-mcq"` renders a self-marking quiz at the end of the unit. Reuse the same question schema as `micro-quiz` segments (`type`, `answer` / `answers`, `options`, `rationale`). Include `points` per question so totals reach `totalMarks`.
+   - Omit `format` (or set any other value) to default to the traditional free-response panel with teacher marking controls.
+   - The summative is injected as the final stage automatically—do **not** create a manual “assessment” stage; pacing and navigation expect the engine-managed slot.
 7. Import the unit into `IBCurriculumPage.jsx` for previews and into a route-level page when launching.
 8. Run `npm run lint` to catch missing imports or unused values.
 9. Update `docs/change-log.txt` if you introduce a new segment type or adjust schema expectations.

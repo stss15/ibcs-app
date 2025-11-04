@@ -4,7 +4,6 @@ import {
   Callout,
   EnhancedTable,
 } from "../components/segments/EnhancedComponents";
-import flowchartBasics from "../assets/flowchart-basics.svg";
 
 const keyVocabulary = [
   {
@@ -111,7 +110,7 @@ export const b1Unit = {
       title: "Unit Orientation",
       duration: "15 min",
       description:
-        "Get familiar with the unit's guiding question, learning objectives, and key vocabulary.",
+        "Get familiar with the unit&apos;s guiding question, learning objectives, and key vocabulary.",
       segments: [
         {
           type: "content",
@@ -178,11 +177,11 @@ export const b1Unit = {
                 <Fragment>
                   <p>
                     This is a concise, clear definition of the problem. It
-                    focuses on the 'what' and the 'why'.
+                    focuses on the &lsquo;what&rsquo; and the &lsquo;why&rsquo;.
                   </p>
                   <Callout type="error" title="Poor Example">
                     “Our customer service processes are inefficient.” (This is
-                    too broad and vague. What does "inefficient" mean?)
+                    too broad and vague. What does &quot;inefficient&quot; mean?)
                   </Callout>
                   <Callout type="success" title="Strong Example">
                     “Customers wait an average of 25 minutes on hold before
@@ -202,7 +201,7 @@ export const b1Unit = {
                     solution. They can be technical, financial, or even legal.
                   </p>
                   <Callout type="error" title="Poor Example">
-                    “We don't have many resources.” (Vague. Does this refer to
+                    “We don&apos;t have many resources.” (Vague. Does this refer to
                     money, people, or time?)
                   </Callout>
                   <Callout type="success" title="Strong Example">
@@ -223,8 +222,8 @@ export const b1Unit = {
                     milestones to achieve those objectives.
                   </p>
                   <p>
-                    <strong>Objective:</strong> "Increase customer satisfaction
-                    with service interactions."
+                    <strong>Objective:</strong> &quot;Increase customer satisfaction
+                    with service interactions.&quot;
                   </p>
                   <p>
                     <strong>Specific Goals:</strong>
@@ -236,7 +235,7 @@ export const b1Unit = {
                       months.
                     </li>
                     <li>
-                      Reduce the number of 'highly dissatisfied' customer
+                      Reduce the number of &lsquo;highly dissatisfied&rsquo; customer
                       ratings by 30% within the next quarter.
                     </li>
                   </ul>
@@ -373,7 +372,7 @@ export const b1Unit = {
                     understand and solve.
                   </p>
                   <Callout type="tip" title="Example: Designing an NPC">
-                    Instead of tackling "realistic AI behavior" all at once, you
+                    Instead of tackling &quot;realistic AI behavior&quot; all at once, you
                     decompose it into:
                     <ul>
                       <li>
@@ -403,10 +402,10 @@ export const b1Unit = {
                     reuse solutions and make predictions.
                   </p>
                   <Callout type="tip" title="Example: Handwritten Digits">
-                    To recognize a handwritten '8', a machine learning model
-                    doesn't memorize every possible '8'. It learns the
+                    To recognize a handwritten &lsquo;8&rsquo;, a machine learning model
+                    doesn&apos;t memorize every possible &lsquo;8&rsquo;. It learns the
                     underlying pattern: two connected loops. This allows it to
-                    recognize any '8', even ones it has never seen before.
+                    recognize any &lsquo;8&rsquo;, even ones it has never seen before.
                   </Callout>
                 </Fragment>
               ),
@@ -422,8 +421,8 @@ export const b1Unit = {
                   </p>
                   <Callout type="tip" title="Example: Predicting a Race Winner">
                     What factors are essential? Engine horsepower, driver
-                    experience, weather. What's irrelevant? The car's color,
-                    the driver's favorite snack. Abstraction means you build
+                    experience, weather. What&apos;s irrelevant? The car&apos;s color,
+                    the driver&apos;s favorite snack. Abstraction means you build
                     your predictive model using only the essential factors.
                   </Callout>
                 </Fragment>
@@ -497,8 +496,8 @@ export const b1Unit = {
           heading: "Computational Thinking in Action",
           body: (
             <p>
-              Computational thinking isn't just a theoretical framework; it's the
-              practical foundation for many fields within computer science. Let's
+              Computational thinking isn&apos;t just a theoretical framework; it&apos;s the
+              practical foundation for many fields within computer science. Let&apos;s
               explore how the four concepts are applied in different areas.
             </p>
           ),

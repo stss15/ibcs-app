@@ -9,8 +9,10 @@ When a user is authenticated as a teacher, the UI is adjusted to better suit a c
 - **No Gamification:** Teachers do not earn XP, have levels, or streaks. All gamification-related UI elements are hidden.
 - **Full Content Access:** Teachers are not restricted by content locks. All units, stages, and segments are immediately accessible, allowing for easy planning and classroom presentation.
 - **Presentation Mode:** A dedicated "Presentation Mode" is available on module pages. This mode provides a full-screen, distraction-free view of the content, ideal for displaying on a projector or smartboard.
+- **Teacher-only segments:** Lesson authors can mark any segment with `audience: "teacher"`. These presenter notes appear exclusively in Teacher Mode, giving you a scripted launch without revealing it to learners.
 - **Pacing Controls:** Teachers have controls to set the learning pace for their classes.
 - **Live Assessment Dashboard:** When students are working on a formative assessment, teachers see a live dashboard of class progress instead of the assessment itself.
+- **Integrated assessments:** The end-of-unit summative now lives in the final stage slot and unlocks automatically once every prior stage reports `completed`, keeping the pacing pointer consistent for both teachers and students.
 
 ## Pacing System
 
