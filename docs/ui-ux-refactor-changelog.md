@@ -140,6 +140,11 @@ Add all new entries under the appropriate phase heading below.
 - **Notes / Decisions**: Migrated PythonPlaygroundSegment to use design system components (FeedbackPanel, ButtonGroup) and tokenized all CSS styling. Replaced hardcoded spacing, font sizes, border radius, and typography with design tokens (--space-*, --text-*, --radius-*, --font-family-mono, --line-height-base). Maintained dark theme for code editor (dark backgrounds preserved for code readability). All spacing, typography, and layout now consistent with design system. CSP exception for Skulpt runtime already documented and preserved.
 - **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found) (2025-11-05).
 
+### Phase 2 — 2025-11-05 — P2-011 — Audit embedded console/editor theming
+- **Files / Areas**: frontend/src/components/segments/activities/Activities.css, docs/p2-011-editor-audit.md, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md
+- **Notes / Decisions**: Audited all console/editor components (PythonPlaygroundSegment, CodeCompletionActivity, LiveCodeEditor/Sandpack). Tokenized CodeCompletionActivity CSS (spacing, typography, border radius, font-family, line-height) with design tokens. PythonPlaygroundSegment already tokenized in P2-010. Sandpack (LiveCodeEditor) uses third-party default theme - no changes needed. No syntax highlighting libraries currently used; code blocks use plain text with dark theme. All components CSP-compliant (no inline styles, uses CSS classes and variables). Dark code block backgrounds preserved for readability.
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found) (2025-11-05).
+
 ---
 
 ## Phase 3 — Polish, QA, & Deployment
