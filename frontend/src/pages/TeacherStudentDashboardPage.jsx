@@ -10,6 +10,7 @@ import {
   describeTrack,
   normaliseStatus,
 } from "./StudentDashboardPage.jsx";
+import StatusBanner from "../components/ui/StatusBanner.jsx";
 import { getYear7LessonById } from "../../../shared/liveDecks.js";
 
 function TeacherStudentDashboardPage() {
@@ -112,7 +113,7 @@ function TeacherStudentDashboardPage() {
   if (status?.tone === "error" && !payload) {
     return (
       <div className="page-shell page-shell--fluid student-dashboard">
-        <p className="status-banner status-banner--error">{status.message}</p>
+        <StatusBanner tone="danger">{status.message}</StatusBanner>
       </div>
     );
   }
@@ -120,7 +121,7 @@ function TeacherStudentDashboardPage() {
   if (status?.tone === "info" && !payload) {
     return (
       <div className="page-shell page-shell--fluid student-dashboard">
-        <p className="status-banner status-banner--info">{status.message}</p>
+        <StatusBanner tone="info">{status.message}</StatusBanner>
       </div>
     );
   }

@@ -1,0 +1,103 @@
+.status-pill {
+  --status-pill-bg: var(--status-info-bg);
+  --status-pill-border: var(--status-info-border);
+  --status-pill-text: var(--status-info-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: calc(var(--space-1) + 1px) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--status-pill-border);
+  background: var(--status-pill-bg);
+  color: var(--status-pill-text);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.status-pill__icon {
+  font-size: 1em;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-pill__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.status-pill--size-md {
+  padding: calc(var(--space-1) + 2px) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.status-pill--size-lg {
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  letter-spacing: 0.06em;
+}
+
+.status-pill--info {
+  --status-pill-bg: var(--status-info-bg);
+  --status-pill-border: var(--status-info-border);
+  --status-pill-text: var(--status-info-text);
+}
+
+.status-pill--success {
+  --status-pill-bg: var(--color-success-light);
+  --status-pill-border: color-mix(in srgb, var(--color-success-dark) 40%, transparent);
+  --status-pill-text: var(--color-success-dark);
+}
+
+.status-pill--warning {
+  --status-pill-bg: var(--color-warning-light);
+  --status-pill-border: color-mix(in srgb, var(--color-warning-dark) 32%, transparent);
+  --status-pill-text: var(--color-warning-dark);
+}
+
+.status-pill--danger {
+  --status-pill-bg: var(--color-error-light);
+  --status-pill-border: color-mix(in srgb, var(--color-error-dark) 36%, transparent);
+  --status-pill-text: var(--color-error-dark);
+}
+
+.status-pill--neutral,
+.status-pill--muted {
+  --status-pill-bg: color-mix(in srgb, var(--color-primary-100) 32%, var(--color-white));
+  --status-pill-border: color-mix(in srgb, var(--color-primary-800) 24%, transparent);
+  --status-pill-text: color-mix(in srgb, var(--color-primary-800) 64%, var(--color-white));
+}
+
+.status-pill--variant-solid {
+  border-color: transparent;
+  color: var(--color-white);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--status-pill-text) 86%, var(--color-black) 14%), var(--status-pill-text));
+}
+
+.status-pill--variant-outline {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--status-pill-border) 70%, var(--status-pill-text) 30%);
+  color: var(--status-pill-text);
+}
+
+.status-pill--with-icon.status-pill--variant-outline {
+  padding-inline: var(--space-4);
+}
+
+.status-pill--variant-outline .status-pill__icon {
+  color: inherit;
+}
+
+.status-pill--variant-solid .status-pill__icon,
+.status-pill--variant-solid .status-pill__label {
+  color: inherit;
+}
+
+

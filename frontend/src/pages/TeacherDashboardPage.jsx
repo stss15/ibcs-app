@@ -13,6 +13,8 @@ import { generatePassword } from "../../../shared/passwords.js";
 import { useSession } from "../hooks/useSession.js";
 import ContentContainer from "../components/ui/ContentContainer.jsx";
 import ResponsiveGrid from "../components/ui/ResponsiveGrid.jsx";
+import StatCard from "../components/ui/StatCard.jsx";
+import StatusBanner from "../components/ui/StatusBanner.jsx";
 import "./TeacherDashboardPage.css";
 import { getYear7LessonById } from "../../../shared/liveDecks.js";
 
@@ -401,6 +403,41 @@ function TeacherDashboardPage() {
   const selectedClassMeta = useMemo(() => (selectedClass ? parseClassMeta(selectedClass) : null), [selectedClass]);
   const selectedPacing = selectedClass ? classPacingMap.get(selectedClass.id) ?? null : null;
   const selectedPacingLesson = selectedPacing ? getYear7LessonById(selectedPacing.lessonId) : null;
+  const classSummaryCards = useMemo(() => {
+    if (!selectedClass) return [];
+    const totalLessons = availableLessons + lockedLessons;
+    const formattedStudents = numberFormatter.format(selectedStudents.length);
+    const formattedAvailable = numberFormatter.format(availableLessons);
+    const formattedLocked = numberFormatter.format(lockedLessons);
+    const formattedTotalLessons = numberFormatter.format(totalLessons);
+    return [
+      {
+        key: "students",
+        label: "Total students",
+        value: formattedStudents,
+      },
+      {
+        key: "available",
+        label: "Lessons available",
+        value: formattedAvailable,
+        progress: totalLessons > 0 ? availableLessons / totalLessons : null,
+        progressLabel:
+          totalLessons > 0
+            ? `${formattedAvailable} of ${formattedTotalLessons} open`
+            : "No lessons unlocked yet",
+      },
+      {
+        key: "locked",
+        label: "Lessons locked",
+        value: formattedLocked,
+        progress: totalLessons > 0 ? lockedLessons / totalLessons : null,
+        progressLabel:
+          totalLessons > 0
+            ? `${formattedLocked} awaiting release`
+            : "All lessons unlocked",
+      },
+    ];
+  }, [availableLessons, lockedLessons, numberFormatter, selectedClass, selectedStudents.length]);
   const selectedPacingInfo = selectedClass ? pacingState[selectedClass.id] : null;
   const isYear7Selected = selectedClass ? isYear7ClassRecord(selectedClass) : false;
 
@@ -571,13 +608,17 @@ function TeacherDashboardPage() {
   const availableLessons = dashboard?.lessonSummary?.available ?? 0;
   const formativeComplete = dashboard?.lessonSummary?.["formative-complete"] ?? 0;
   const summativeComplete = dashboard?.lessonSummary?.["summative-complete"] ?? 0;
+  const numberFormatter = useMemo(() => new Intl.NumberFormat(), []);
 
-  const summaryCards = [
-    { label: "Active classes", value: classes.length },
-    { label: "Active students", value: overallStudentCount },
-    { label: "Formative complete", value: formativeComplete },
-    { label: "Summative complete", value: summativeComplete },
-  ];
+  const summaryCards = useMemo(
+    () => [
+      { label: "Active classes", value: numberFormatter.format(classes.length) },
+      { label: "Active students", value: numberFormatter.format(overallStudentCount) },
+      { label: "Formative complete", value: numberFormatter.format(formativeComplete) },
+      { label: "Summative complete", value: numberFormatter.format(summativeComplete) },
+    ],
+    [classes.length, formativeComplete, numberFormatter, overallStudentCount, summativeComplete],
+  );
 
   const studentLookup = useMemo(() => {
     const map = new Map();
@@ -1010,17 +1051,14 @@ function TeacherDashboardPage() {
             </button>
           </div>
         </div>
-        <ResponsiveGrid variant="autoFit" minColumnWidth={160} className="teacher-dashboard__summary-grid">
+        <ResponsiveGrid variant="autoFit" minColumnWidth={200} className="teacher-dashboard__summary-grid">
           {summaryCards.map((card) => (
-            <article key={card.label} className="teacher-dashboard__summary-card">
-              <span className="teacher-dashboard__summary-value">{card.value}</span>
-              <span className="teacher-dashboard__summary-label">{card.label}</span>
-            </article>
+            <StatCard key={card.label} label={card.label} value={card.value} tone="brand" compact />
           ))}
         </ResponsiveGrid>
       </section>
 
-      {status && <p className={`status-banner status-banner--${status.tone}`}>{status.message}</p>}
+      {status && <StatusBanner tone={status.tone}>{status.message}</StatusBanner>}
 
       <section className="teacher-dashboard__workspace">
         <aside className="teacher-dashboard__class-panel">
@@ -1080,69 +1118,83 @@ function TeacherDashboardPage() {
                 </div>
               </header>
 
-              <div className="teacher-dashboard__class-summary">
-                <div>
-                  <span>Total students</span>
-                  <strong>{selectedStudents.length}</strong>
-                </div>
-                <div>
-                  <span>Available lessons</span>
-                  <strong>{availableLessons}</strong>
-                </div>
-                <div>
-                  <span>Locked lessons</span>
-                  <strong>{lockedLessons}</strong>
-                </div>
-              </div>
+              {classSummaryCards.length > 0 && (
+                <ResponsiveGrid variant="autoFit" minColumnWidth={200} className="teacher-dashboard__class-summary">
+                  {classSummaryCards.map((card, index) => (
+                    <StatCard
+                      key={card.key}
+                      label={card.label}
+                      value={card.value}
+                      compact
+                      tone={index === 0 ? "brand" : undefined}
+                      progress={card.progress}
+                      progressLabel={card.progressLabel}
+                    />
+                  ))}
+                </ResponsiveGrid>
+              )}
 
               {isYear7Selected && (
-                <div className="teacher-dashboard__pacing">
-                  <div className="teacher-dashboard__pacing-summary">
-                    <span>Teacher-paced pointer</span>
-                    <strong>
-                      {selectedPacingLesson
-                        ? `${selectedPacingLesson.unitTitle}: ${selectedPacingLesson.title}`
-                        : "Pointer not set"}
-                    </strong>
-                    {selectedPacing?.updatedAt && (
-                      <small>Updated {new Date(selectedPacing.updatedAt).toLocaleString()}</small>
-                    )}
-                  </div>
-                  <div className="teacher-dashboard__pacing-actions">
-                    <button type="button" className="pill" onClick={() => handleOpenYear7Map(selectedClass.id)}>
-                      Open Year 7 map
-                    </button>
-                    <button
-                      type="button"
-                      className="pill pill--action"
-                      onClick={() => handleStartPacing(selectedClass.id)}
-                      disabled={Boolean(selectedPacingInfo?.busy)}
-                    >
-                      {selectedPacing ? "Restart at lesson 1" : "Start teaching"}
-                    </button>
-                    <button
-                      type="button"
-                      className="pill"
-                      onClick={() => handleAdvancePacing(selectedClass.id)}
-                      disabled={Boolean(selectedPacingInfo?.busy) || !selectedPacing}
-                    >
-                      Advance lesson
-                    </button>
-                    <button
-                      type="button"
-                      className="pill"
-                      onClick={() => handleStopPacing(selectedClass.id)}
-                      disabled={Boolean(selectedPacingInfo?.busy) || !selectedPacing}
-                    >
-                      Stop teaching
-                    </button>
-                  </div>
+                <StatCard
+                  label="Teacher-paced pointer"
+                  value={
+                    selectedPacingLesson
+                      ? selectedPacingLesson.title
+                      : "Pointer not set"
+                  }
+                  description={
+                    selectedPacingLesson
+                      ? selectedPacingLesson.unitTitle
+                      : "Set the pointer to guide the Year 7 teaching sequence."
+                  }
+                  meta={
+                    selectedPacing?.updatedAt
+                      ? `Updated ${new Date(selectedPacing.updatedAt).toLocaleString()}`
+                      : null
+                  }
+                  tone="brand"
+                  actions={
+                    <div className="teacher-dashboard__pacing-actions">
+                      <button
+                        type="button"
+                        className="pill"
+                        onClick={() => handleOpenYear7Map(selectedClass.id)}
+                      >
+                        Open Year 7 map
+                      </button>
+                      <button
+                        type="button"
+                        className="pill pill--action"
+                        onClick={() => handleStartPacing(selectedClass.id)}
+                        disabled={Boolean(selectedPacingInfo?.busy)}
+                      >
+                        {selectedPacing ? "Restart at lesson 1" : "Start teaching"}
+                      </button>
+                      <button
+                        type="button"
+                        className="pill"
+                        onClick={() => handleAdvancePacing(selectedClass.id)}
+                        disabled={Boolean(selectedPacingInfo?.busy) || !selectedPacing}
+                      >
+                        Advance lesson
+                      </button>
+                      <button
+                        type="button"
+                        className="pill"
+                        onClick={() => handleStopPacing(selectedClass.id)}
+                        disabled={Boolean(selectedPacingInfo?.busy) || !selectedPacing}
+                      >
+                        Stop teaching
+                      </button>
+                    </div>
+                  }
+                >
                   {selectedPacingInfo?.message && (
                     <p className={`teacher-dashboard__pacing-status teacher-dashboard__pacing-status--${selectedPacingInfo.tone ?? "info"}`}>
                       {selectedPacingInfo.message}
                     </p>
                   )}
-                </div>
+                </StatCard>
               )}
 
               <div className="teacher-dashboard__table-wrapper">

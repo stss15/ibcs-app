@@ -13,6 +13,9 @@ import {
   getYear7LessonIndex,
 } from "../../../shared/liveDecks.js";
 import ContentContainer from "../components/ui/ContentContainer.jsx";
+import ProgressBar from "../components/ui/ProgressBar.jsx";
+import StatusPill from "../components/ui/StatusPill.jsx";
+import StatusBanner from "../components/ui/StatusBanner.jsx";
 
 import "./StudentDashboardPage.css";
 
@@ -36,6 +39,20 @@ function progressLabel(status) {
       return "Ready to start";
     default:
       return "Locked";
+  }
+}
+
+function progressTone(status) {
+  switch (normaliseStatus(status)) {
+    case "summative-complete":
+    case "formative-complete":
+      return "success";
+    case "available":
+      return "info";
+    case "locked":
+      return "muted";
+    default:
+      return "neutral";
   }
 }
 
@@ -358,9 +375,14 @@ function StudentDashboardLayout({
                 </div>
                 <div className="student-dashboard__mini-summary">
                   <span>{unit.percentage}%</span>
-                  <div className="student-dashboard__mini-bar">
-                    <div style={{ width: `${Math.min(unit.percentage, 100)}%` }} />
-                  </div>
+                  <ProgressBar
+                    className="student-dashboard__mini-bar"
+                    value={Math.max(0, unit.percentage)}
+                    max={100}
+                    tone="brand"
+                    size="xs"
+                    ariaLabel={`${unit.title} completion`}
+                  />
                   <small>
                     {unit.completedCount} / {unit.totalCount} lessons
                   </small>
@@ -401,7 +423,7 @@ function StudentDashboardLayout({
                       <div
                         key={item.id}
                         className={`student-dashboard__stack-bar-segment student-dashboard__stack-bar-segment--${item.id}`}
-                        style={{ width: `${(item.value / breakdownTotal) * 100}%` }}
+                        style={{ "--segment-percent": `${Math.max(0, Math.min(100, (item.value / breakdownTotal) * 100))}%` }}
                         aria-label={`${item.label}: ${item.value}`}
                       />
                     ))}
@@ -447,7 +469,6 @@ function StudentDashboardLayout({
                 <ul className="student-dashboard__lesson-items">
                   {selectedUnit.lessons.slice(0, 6).map((lesson) => {
                     const lessonLink = resolveLessonLink(track, selectedUnit, lesson, classInfo);
-                    const statusClass = `student-tag student-tag--${normaliseStatus(lesson.status)}`;
                     const actionLabel = lesson.status === "formative-complete" ? "Review" : "Open lesson";
                     return (
                       <li key={lesson.id}>
@@ -456,7 +477,9 @@ function StudentDashboardLayout({
                           {lesson.chapterTitle && <span className="muted">{lesson.chapterTitle}</span>}
                         </div>
                         <div className="student-dashboard__lesson-actions">
-                          <span className={statusClass}>{progressLabel(lesson.status)}</span>
+                          <StatusPill tone={progressTone(lesson.status)} size="sm">
+                            {progressLabel(lesson.status)}
+                          </StatusPill>
                           {lessonLink && lesson.status !== "locked" && (
                             <Link to={lessonLink} className="pill pill--ghost">
                               {actionLabel}
@@ -550,9 +573,9 @@ function StudentDashboardLayout({
                       <li key={record.id}>
                         <div>
                           <strong>{record.lessonSlug}</strong>
-                          <span className={`student-tag student-tag--${normaliseStatus(record.status)}`}>
+                          <StatusPill tone={progressTone(record.status)} size="sm">
                             {progressLabel(record.status)}
-                          </span>
+                          </StatusPill>
                         </div>
                         <span className="muted">
                           Updated {record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "recently"}
@@ -572,7 +595,7 @@ function StudentDashboardLayout({
         </div>
       </section>
 
-      {status && <p className="status-banner status-banner--info">{status}</p>}
+      {status && <StatusBanner tone="info">{status}</StatusBanner>}
     </ContentContainer>
   );
 }
@@ -585,7 +608,7 @@ function CircularProgress({ value, size = 148, strokeWidth = 12, label, caption 
   const dashOffset = circumference - (clamped / 100) * circumference;
 
   return (
-    <div className="circular-progress" style={{ width: size, height: size }}>
+    <div className="circular-progress" style={{ "--progress-size": `${size}px`, "--progress-stroke": strokeWidth }}>
       <svg className="circular-progress__svg" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <circle
           className="circular-progress__track"
@@ -708,7 +731,7 @@ function StudentDashboardPage() {
   if (error && !dashboardData) {
     return (
       <ContentContainer variant="fullWidth" className="student-dashboard">
-        <p className="status-banner status-banner--error">{error}</p>
+        <StatusBanner tone="danger">{error}</StatusBanner>
       </ContentContainer>
     );
   }

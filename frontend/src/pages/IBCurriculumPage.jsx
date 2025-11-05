@@ -9,6 +9,7 @@ import {
 import { IB_UNIT_METADATA, SUBTOPIC_DESCRIPTIONS } from "../lib/ibMetadata.js";
 import b1Unit from "../content/b1ComputationalThinking.jsx";
 import b2Unit from "../content/b2ProgrammingFundamentals.jsx";
+import StatusPill from "../components/ui/StatusPill.jsx";
 import "./IBCurriculumPage.css";
 
 function getTrackOptions(manifest) {
@@ -203,7 +204,11 @@ function IBCurriculumPage() {
               >
                 <span className="ib-sidebar__unit-code">{unit.id}</span>
                 <span className="ib-sidebar__unit-title">{metadata.summary ?? unit.title}</span>
-                {!isTrackAvailable && <span className="ib-badge ib-badge--muted">HL only</span>}
+                {!isTrackAvailable && (
+                  <StatusPill tone="warning" size="sm">
+                    HL only
+                  </StatusPill>
+                )}
               </button>
             );
           })}
@@ -224,9 +229,21 @@ function IBCurriculumPage() {
                 )}
               </div>
               <div className="ib-content__meta">
-                {unitMeta.hours?.sl && <span className="ib-badge">{unitMeta.hours.sl}</span>}
-                {unitMeta.hours?.hl && <span className="ib-badge">{unitMeta.hours.hl}</span>}
-                {trackBadgeText && <span className="ib-badge ib-badge--outline">{trackBadgeText}</span>}
+                {unitMeta.hours?.sl && (
+                  <StatusPill tone="neutral" variant="outline" size="sm">
+                    {unitMeta.hours.sl}
+                  </StatusPill>
+                )}
+                {unitMeta.hours?.hl && (
+                  <StatusPill tone="neutral" variant="outline" size="sm">
+                    {unitMeta.hours.hl}
+                  </StatusPill>
+                )}
+                {trackBadgeText && (
+                  <StatusPill tone="info" variant="outline" size="sm">
+                    {trackBadgeText}
+                  </StatusPill>
+                )}
               </div>
             </header>
             {selectedUnit.id === "B1" ? (
@@ -257,9 +274,15 @@ function IBCurriculumPage() {
                         </p>
                       </div>
                       <div className="ib-chapter__actions">
-                        <Link
+                        <StatusPill
+                          as={Link}
                           to={canViewAll || isChapterAvailable ? `/topic/${encodeURIComponent(subtopic.id)}` : "#"}
-                          className={`ib-chapter__link ${canViewAll || isChapterAvailable ? "" : "is-disabled"}`}
+                          className="ib-chapter__link"
+                          tone={canViewAll || isChapterAvailable ? "info" : "neutral"}
+                          variant={canViewAll || isChapterAvailable ? "outline" : "soft"}
+                          size="sm"
+                          aria-disabled={!canViewAll && !isChapterAvailable}
+                          tabIndex={!canViewAll && !isChapterAvailable ? -1 : undefined}
                           onClick={(event) => {
                             if (!canViewAll && !isChapterAvailable) {
                               event.preventDefault();
@@ -267,13 +290,21 @@ function IBCurriculumPage() {
                           }}
                         >
                           View chapter
-                        </Link>
+                        </StatusPill>
                         {!canViewAll && !isChapterAvailable && (
-                          <span className="ib-badge ib-badge--muted">Locked</span>
+                          <StatusPill tone="muted" size="sm">
+                            Locked
+                          </StatusPill>
                         )}
-                        {canViewAll && <span className="ib-badge ib-badge--outline">{staffBadgeLabel}</span>}
+                        {canViewAll && (
+                          <StatusPill tone="neutral" variant="outline" size="sm">
+                            {staffBadgeLabel}
+                          </StatusPill>
+                        )}
                         {!canViewAll && isChapterAvailable && (
-                          <span className="ib-badge ib-badge--outline">First page unlocked</span>
+                          <StatusPill tone="info" variant="outline" size="sm">
+                            First page unlocked
+                          </StatusPill>
                         )}
                       </div>
                     </header>
@@ -300,17 +331,32 @@ function IBCurriculumPage() {
                             <span className="ib-lesson__title">{lesson.title}</span>
                             <span className="ib-lesson__status">
                               {canLaunchLesson && (
-                                <Link
+                                <StatusPill
+                                  as={Link}
                                   to={lessonHref}
-                                  className="ib-status-pill is-unlocked ib-status-pill--link"
+                                  tone={unlocked ? "success" : "info"}
+                                  variant="outline"
+                                  size="sm"
                                   aria-label={`Open ${lesson.title}`}
                                 >
                                   {canViewAll ? "Open lesson" : "Start lesson"}
-                                </Link>
+                                </StatusPill>
                               )}
-                              {canViewAll && <span className="ib-status-pill is-teacher">{staffBadgeLabel}</span>}
-                              {!canViewAll && hlOnly && <span className="ib-status-pill is-hl">HL only</span>}
-                              {!canViewAll && !unlocked && !hlOnly && <span className="ib-status-pill">Locked</span>}
+                              {canViewAll && (
+                                <StatusPill tone="info" variant="outline" size="sm">
+                                  {staffBadgeLabel}
+                                </StatusPill>
+                              )}
+                              {!canViewAll && hlOnly && (
+                                <StatusPill tone="warning" size="sm">
+                                  HL only
+                                </StatusPill>
+                              )}
+                              {!canViewAll && !unlocked && !hlOnly && (
+                                <StatusPill tone="muted" size="sm">
+                                  Locked
+                                </StatusPill>
+                              )}
                             </span>
                           </li>
                         );

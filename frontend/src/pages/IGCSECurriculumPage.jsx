@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { IGCSE_CURRICULUM } from "../../../shared/igcseCurriculum.js";
+import StatusPill from "../components/ui/StatusPill.jsx";
+
 import "./IGCSECurriculumPage.css";
 
 function LessonList({ lessons }) {
@@ -33,7 +35,9 @@ export default function IGCSECurriculumPage() {
           </p>
         </div>
         <div className="igcse-hero__status">
-          <span className="status-pill status-pill--info">Beta map</span>
+          <StatusPill tone="info" size="sm">
+            Beta map
+          </StatusPill>
           <p className="muted">Lesson content placeholders are ready for authoring.</p>
         </div>
       </section>

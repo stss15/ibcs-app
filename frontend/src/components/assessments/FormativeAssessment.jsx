@@ -5,16 +5,29 @@ import { CSS } from "@dnd-kit/utilities";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 
+import classNames from "../../utils/classNames.js";
+import "./FormativeAssessment.css";
+
 function SortableRow({ item }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.65 : 1,
+    "--sortable-transform": transform ? CSS.Transform.toString(transform) : undefined,
+    "--sortable-transition": transition || undefined,
+    "--sortable-opacity": isDragging ? 0.72 : 1,
   };
 
   return (
-    <motion.div ref={setNodeRef} layout className="formative-card" style={style} data-id={item.id} {...attributes} {...listeners}>
+    <motion.div
+      ref={setNodeRef}
+      layout
+      className="formative-card"
+      data-id={item.id}
+      data-dragging={isDragging ? "true" : "false"}
+      style={style}
+      role="listitem"
+      {...attributes}
+      {...listeners}
+    >
       <span className="formative-card__handle" aria-hidden="true">
         ☰
       </span>
@@ -46,15 +59,29 @@ function MultipleChoice({ question, onSubmit, allowRetry, disabled }) {
     setFeedback(null);
   };
 
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (selected === null || disabled) return;
+    evaluate();
+  };
+
+  const promptId = `${question.id}-prompt`;
+
   return (
-    <div className="formative">
-      <p className="formative__prompt">{question.prompt}</p>
-      <div className="formative__options">
+    <form className="formative formative--choice" onSubmit={handleSubmit}>
+      <p className="formative__prompt" id={promptId}>
+        {question.prompt}
+      </p>
+      <div className="formative__options" role="radiogroup" aria-labelledby={promptId}>
         {question.options?.map((option) => (
-          <label key={option.id} className={`formative-option ${selected === option.id ? "is-selected" : ""}`}>
+          <label
+            key={option.id}
+            className={classNames("formative-option", { "is-selected": selected === option.id })}
+          >
             <input
               type="radio"
               name={question.id}
+              value={option.id}
               disabled={Boolean(feedback) || disabled}
               checked={selected === option.id}
               onChange={() => setSelected(option.id)}
@@ -65,7 +92,7 @@ function MultipleChoice({ question, onSubmit, allowRetry, disabled }) {
       </div>
       <footer className="formative__footer">
         {!feedback && (
-          <button type="button" className="y7-btn y7-btn--primary" onClick={evaluate} disabled={selected === null || disabled}>
+          <button type="submit" className="y7-btn y7-btn--primary" disabled={selected === null || disabled}>
             Check answer
           </button>
         )}
@@ -74,9 +101,16 @@ function MultipleChoice({ question, onSubmit, allowRetry, disabled }) {
             Try again
           </button>
         )}
-        {feedback && <span className={`formative__badge ${feedback.isCorrect ? "is-correct" : "is-incorrect"}`}>{feedback.isCorrect ? "Correct" : "Try again"}</span>}
+        {feedback && (
+          <span
+            className={classNames("formative__badge", feedback.isCorrect ? "is-correct" : "is-incorrect")}
+            role="status"
+          >
+            {feedback.isCorrect ? "Correct" : "Try again"}
+          </span>
+        )}
       </footer>
-    </div>
+    </form>
   );
 }
 
@@ -115,11 +149,16 @@ function OrderingAssessment({ question, onComplete, disabled }) {
   };
 
   return (
-    <div className="formative">
+    <section className="formative formative--ordering">
       <p className="formative__prompt">{question.prompt}</p>
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} onDragStart={({ active }) => setActiveId(active.id)} onDragCancel={() => setActiveId(null)}>
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+        onDragStart={({ active }) => setActiveId(active.id)}
+        onDragCancel={() => setActiveId(null)}
+      >
         <SortableContext items={items} strategy={verticalListSortingStrategy}>
-          <div className="formative__stack">
+          <div className="formative__stack" role="list">
             {items.map((item) => (
               <SortableRow key={item.id} item={item} />
             ))}
@@ -127,7 +166,15 @@ function OrderingAssessment({ question, onComplete, disabled }) {
         </SortableContext>
         <DragOverlay>
           {activeId ? (
-            <motion.div layout className="formative-card formative-card--overlay">
+            <motion.div
+              layout
+              className="formative-card formative-card--overlay"
+              data-dragging="true"
+              style={{
+                "--sortable-transform": "translate3d(0, 0, 0)",
+                "--sortable-opacity": 1,
+              }}
+            >
               <span className="formative-card__handle" aria-hidden="true">
                 ☰
               </span>
@@ -147,9 +194,16 @@ function OrderingAssessment({ question, onComplete, disabled }) {
             Try again
           </button>
         )}
-        {feedback && <span className={`formative__badge ${feedback.correct ? "is-correct" : "is-incorrect"}`}>{feedback.correct ? "Great work" : "One more attempt"}</span>}
+        {feedback && (
+          <span
+            className={classNames("formative__badge", feedback.correct ? "is-correct" : "is-incorrect")}
+            role="status"
+          >
+            {feedback.correct ? "Great work" : "One more attempt"}
+          </span>
+        )}
       </footer>
-    </div>
+    </section>
   );
 }
 
@@ -180,14 +234,29 @@ function ClassificationAssessment({ question, onComplete }) {
     setFeedback(null);
   };
 
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    evaluate();
+  };
+
   return (
-    <div className="formative">
+    <form className="formative formative--classification" onSubmit={handleSubmit}>
       <p className="formative__prompt">{question.prompt}</p>
       <div className="formative__classification">
-        {question.items.map((item) => (
-          <div key={item.id} className="formative-classification__row">
-            <span>{item.label}</span>
-            <select value={answers[item.id] || ""} onChange={(event) => setAnswers((prev) => ({ ...prev, [item.id]: event.target.value }))}>
+        {question.items.map((item) => {
+          const fieldId = `${question.id}-${item.id}`;
+          const entry = feedback?.summary.find((summary) => summary.id === item.id);
+          const toneClass = entry ? (entry.isCorrect ? "is-correct" : "is-incorrect") : null;
+          return (
+            <div key={item.id} className={classNames("formative-classification__row", { "has-feedback": Boolean(entry) })}>
+              <label className="formative-classification__label" htmlFor={fieldId}>
+                {item.label}
+              </label>
+              <select
+                id={fieldId}
+                value={answers[item.id] || ""}
+                onChange={(event) => setAnswers((prev) => ({ ...prev, [item.id]: event.target.value }))}
+              >
               <option value="" disabled>
                 Select category
               </option>
@@ -198,16 +267,20 @@ function ClassificationAssessment({ question, onComplete }) {
               ))}
             </select>
             {feedback && (
-              <span className={`formative__badge ${feedback.summary.find((entry) => entry.id === item.id)?.isCorrect ? "is-correct" : "is-incorrect"}`}>
-                {feedback.summary.find((entry) => entry.id === item.id)?.isCorrect ? "Correct" : "Incorrect"}
+                <span
+                  className={classNames("formative__badge", toneClass)}
+                  role="status"
+                >
+                  {entry?.isCorrect ? "Correct" : "Incorrect"}
               </span>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
       <footer className="formative__footer">
         {!feedback && (
-          <button type="button" className="y7-btn y7-btn--primary" onClick={evaluate}>
+          <button type="submit" className="y7-btn y7-btn--primary">
             Check answers
           </button>
         )}
@@ -217,7 +290,7 @@ function ClassificationAssessment({ question, onComplete }) {
           </button>
         )}
       </footer>
-    </div>
+    </form>
   );
 }
 

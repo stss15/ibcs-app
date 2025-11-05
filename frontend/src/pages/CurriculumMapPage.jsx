@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import ContentContainer from "../components/ui/ContentContainer.jsx";
+import StatusPill from "../components/ui/StatusPill.jsx";
+
 import "./CurriculumMapPage.css";
 
 const tracks = {
@@ -37,7 +39,9 @@ function CurriculumMapPage() {
               <h2>Key Stage 3</h2>
               <p className="muted">Start with the Year 7 Computing Adventure. Years 8 &amp; 9 unlock as the sequence ships.</p>
             </div>
-            <span className="status-pill status-pill--info">Rolling release</span>
+            <StatusPill tone="info" size="sm">
+              Rolling release
+            </StatusPill>
           </header>
           <div className="curriculum-panel__body">
             <p>
@@ -68,7 +72,9 @@ function CurriculumMapPage() {
               <h2>IGCSE Computer Science</h2>
               <p className="muted">Content sequencing to bridge from Key Stage 4 to DP readiness.</p>
             </div>
-            <span className="status-pill status-pill--info">Beta map</span>
+            <StatusPill tone="info" size="sm">
+              Beta map
+            </StatusPill>
           </header>
           <div className="curriculum-panel__body">
             <p>
@@ -98,7 +104,9 @@ function CurriculumMapPage() {
               <h2>IB Computer Science</h2>
               <p className="muted">Full Standard and Higher Level strands with lesson unlock logic.</p>
             </div>
-            <span className="status-pill status-pill--info">Live</span>
+            <StatusPill tone="success" size="sm">
+              Live
+            </StatusPill>
           </header>
           <div className="curriculum-panel__body">
             <p>

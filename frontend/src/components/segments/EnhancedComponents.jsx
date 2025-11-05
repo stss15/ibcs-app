@@ -73,19 +73,20 @@ export function EnhancedTable({ columns, rows, caption }) {
  * Progress indicator for showing completion status
  */
 export function ProgressIndicator({ current, total, label }) {
-  const percentage = Math.round((current / total) * 100);
+  const safeTotal = Number.isFinite(total) && total > 0 ? total : 1;
+  const safeCurrent = Number.isFinite(current) ? current : 0;
+  const percentage = Math.round(Math.max(0, Math.min((safeCurrent / safeTotal) * 100, 100)));
 
   return (
-    <div className="progress-indicator">
+    <div className="progress-indicator" style={{ "--progress-indicator": `${percentage}%` }}>
       {label && <div className="progress-indicator__label">{label}</div>}
       <div className="progress-indicator__track">
         <div
           className="progress-indicator__fill"
-          style={{ width: `${percentage}%` }}
           role="progressbar"
-          aria-valuenow={current}
+          aria-valuenow={Math.max(0, Math.min(safeCurrent, safeTotal))}
           aria-valuemin="0"
-          aria-valuemax={total}
+          aria-valuemax={safeTotal}
         >
           <span className="progress-indicator__shimmer" />
         </div>

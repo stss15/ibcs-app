@@ -1,5 +1,4 @@
 import { classNames } from "../../utils/classNames.js";
-import styles from "./ResponsiveGrid.module.css";
 
 function normalizeUnit(value) {
   if (value == null) return undefined;
@@ -33,14 +32,13 @@ function ResponsiveGrid({
     resolvedStyle["--min-column-width"] = normalizeUnit(minColumnWidth);
   }
 
-  const classNamesList = classNames(
-    variant === "masonry" ? styles.masonry : styles.grid,
-    variant === "autoFit" && styles.autoFit,
-    className,
-  );
+  const classes =
+    variant === "masonry"
+      ? classNames("responsive-grid--masonry", className)
+      : classNames("responsive-grid", variant === "autoFit" && "responsive-grid--auto-fit", className);
 
   return (
-    <div className={classNamesList} style={resolvedStyle} {...props}>
+    <div className={classes} style={resolvedStyle} {...props}>
       {children}
     </div>
   );

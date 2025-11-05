@@ -21,6 +21,7 @@ import {
 } from "../../../shared/liveDecks.js";
 import SlideRenderer from "../components/slides/SlideRenderer.jsx";
 import LiveDashboard from "../components/teacher/LiveDashboard.jsx";
+import StatCard from "../components/ui/StatCard.jsx";
 import analyticsService from "../lib/services/AnalyticsService.js";
 import gamificationService from "../lib/services/GamificationService.js";
 import { useGamification } from "../context/GamificationContext.jsx";
@@ -88,17 +89,6 @@ function statusLabel(status) {
   }
 }
 
-function classNameFromStatus(status) {
-  switch ((status || "idle").toLowerCase()) {
-    case "live":
-      return "is-live";
-    case "paused":
-      return "is-paused";
-    default:
-      return "is-idle";
-  }
-}
-
 function useArrowNavigation(callbacks) {
   useEffect(() => {
     const handleKey = (event) => {
@@ -155,6 +145,15 @@ function SlideTimeline({ slides, pointerId, activeId, accessibleSet, onSelect, d
 function TeacherPanel({ classes, selectedClassId, onSelectClass, onStart, onAdvance, onPause, onReset, onRefresh, deckSummary, liveState, controlBusy }) {
   const classOptions = classes?.filter((clazz) => !clazz.archivedAt) ?? [];
   const pointer = liveState?.lesson;
+  const sessionStatus = statusLabel(liveState?.sessionStatus);
+  const statusTone = liveState?.sessionStatus === "live" ? "brand" : undefined;
+  const sessionMeta = [
+    liveState?.sessionCode ? `Join code ${liveState.sessionCode}` : null,
+    liveState?.updatedAt ? `Updated ${formatTimestamp(liveState.updatedAt)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" • ") || null;
+  const actionsDisabled = controlBusy || !selectedClassId;
   return (
     <section className="y7-live-panel">
       <header className="y7-live-panel__header">
@@ -177,29 +176,18 @@ function TeacherPanel({ classes, selectedClassId, onSelectClass, onStart, onAdva
           ))}
         </select>
       </label>
-      <div className={`y7-live-session-chip ${classNameFromStatus(liveState?.sessionStatus)}`}>
-        <div>
-          <span>Status</span>
-          <strong>{statusLabel(liveState?.sessionStatus)}</strong>
-        </div>
-        {liveState?.sessionCode && (
-          <div>
-            <span>Join code</span>
-            <strong>{liveState.sessionCode}</strong>
-          </div>
-        )}
-      </div>
+      <StatCard tone={statusTone} label="Session status" value={sessionStatus} meta={sessionMeta} compact />
       <div className="y7-live-actions">
-        <button type="button" className="y7-btn y7-btn--primary" disabled={controlBusy || !selectedClassId} onClick={onStart}>
+        <button type="button" className="y7-btn y7-btn--primary" disabled={actionsDisabled} onClick={onStart}>
           Start / resume
         </button>
-        <button type="button" className="y7-btn" disabled={controlBusy || !selectedClassId} onClick={onAdvance}>
+        <button type="button" className="y7-btn" disabled={actionsDisabled} onClick={onAdvance}>
           Advance
         </button>
-        <button type="button" className="y7-btn" disabled={controlBusy || !selectedClassId} onClick={onPause}>
+        <button type="button" className="y7-btn" disabled={actionsDisabled} onClick={onPause}>
           Pause
         </button>
-        <button type="button" className="y7-btn y7-btn--ghost" disabled={controlBusy || !selectedClassId} onClick={onReset}>
+        <button type="button" className="y7-btn y7-btn--ghost" disabled={actionsDisabled} onClick={onReset}>
           Reset to slide 1
         </button>
       </div>
@@ -214,7 +202,6 @@ function TeacherPanel({ classes, selectedClassId, onSelectClass, onStart, onAdva
                 </span>
               ) : null}
             </p>
-            {liveState?.updatedAt && <p className="y7-live-panel__timestamp">Updated {formatTimestamp(liveState.updatedAt)}</p>}
           </>
         ) : (
           <p>No active pointer yet. Start the session to project the first slide.</p>
@@ -226,6 +213,14 @@ function TeacherPanel({ classes, selectedClassId, onSelectClass, onStart, onAdva
 
 function StudentPanel({ deckSummary, liveState, onReturnToLive, canReturn, onJoinByCode, joinMessage, joinCodeInput, setJoinCodeInput }) {
   const pointer = liveState?.lesson;
+  const sessionStatus = statusLabel(liveState?.sessionStatus);
+  const statusTone = liveState?.sessionStatus === "live" ? "brand" : undefined;
+  const sessionMeta = [
+    liveState?.sessionCode ? `Join code ${liveState.sessionCode}` : null,
+    liveState?.updatedAt ? `Updated ${formatTimestamp(liveState.updatedAt)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" • ") || null;
   return (
     <section className="y7-live-panel">
       <header className="y7-live-panel__header">
@@ -234,18 +229,7 @@ function StudentPanel({ deckSummary, liveState, onReturnToLive, canReturn, onJoi
           <p>Stay in sync with your teacher and revisit earlier slides.</p>
         </div>
       </header>
-      <div className={`y7-live-session-chip ${classNameFromStatus(liveState?.sessionStatus)}`}>
-        <div>
-          <span>Status</span>
-          <strong>{statusLabel(liveState?.sessionStatus)}</strong>
-        </div>
-        {liveState?.sessionCode && (
-          <div>
-            <span>Join code</span>
-            <strong>{liveState.sessionCode}</strong>
-          </div>
-        )}
-      </div>
+      <StatCard tone={statusTone} label="Session status" value={sessionStatus} meta={sessionMeta} compact />
       <div className="y7-live-panel__body">
         {pointer ? (
           <p>

@@ -224,6 +224,7 @@
 .progress-indicator__fill {
   position: relative;
   height: 100%;
+  width: var(--progress-indicator, 0%);
   background: linear-gradient(90deg, var(--cs-blue), var(--cs-blue-light), var(--color-xp-gold));
   border-radius: inherit;
   transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);

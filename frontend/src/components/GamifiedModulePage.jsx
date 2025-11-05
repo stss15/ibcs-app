@@ -10,6 +10,7 @@ import PythonPlaygroundSegment from "./segments/PythonPlaygroundSegment.jsx";
 import AssessmentResultsModal from "./segments/AssessmentResultsModal.jsx";
 import ReflectionSegment from "./segments/ReflectionSegment.jsx";
 import LiveAssessmentDashboard from "./segments/LiveAssessmentDashboard.jsx";
+import StatCard from "./ui/StatCard.jsx";
 import "./GamifiedModulePage.css";
 import { useTeacherMode } from "../context/TeacherModeContext.jsx";
 import {
@@ -696,7 +697,10 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
   const level = gamificationState.level ?? 1;
   const xpToNext = level * 150;
   const currentLevelFloor = (level - 1) * 150;
-  const levelProgress = Math.min(1, (overallXp - currentLevelFloor) / Math.max(1, xpToNext - currentLevelFloor));
+  const levelProgress = Math.min(1, Math.max(0, (overallXp - currentLevelFloor) / Math.max(1, xpToNext - currentLevelFloor)));
+  const xpFormatter = useMemo(() => new Intl.NumberFormat(), []);
+  const formattedXp = useMemo(() => xpFormatter.format(Math.max(0, Math.round(overallXp))), [overallXp, xpFormatter]);
+  const formattedNextLevel = useMemo(() => xpFormatter.format(Math.max(0, Math.round(xpToNext))), [xpToNext, xpFormatter]);
 
   // Initialize previous level on mount
   useEffect(() => {
@@ -1000,32 +1004,29 @@ export default function GamifiedModulePage({ unit, classId: teacherClassId }) {
               </button>
             </div>
           ) : (
-            <div className={`gamified-xp-card ${headerCollapsed ? "is-compact" : ""}`}>
-              <button
-                type="button"
-                className="gamified-header-toggle"
-                onClick={() => setHeaderCollapsed(!headerCollapsed)}
-                aria-label={headerCollapsed ? "Expand header" : "Collapse header"}
-              >
-                {headerCollapsed ? "Show stats" : "Hide stats"}
-              </button>
-              <div className="gamified-xp-card__top">
-                <span className={`gamified-level-badge ${levelUpModal ? "level-up" : ""}`}>Lv {level}</span>
-                {!headerCollapsed && (
-                  <div className="gamified-xp-values">
-                    <strong>{overallXp} XP</strong>
-                    <span>Next level at {xpToNext} XP</span>
-                  </div>
-                )}
-              </div>
-              {!headerCollapsed && (
-                <>
-                  <div className="gamified-xp-bar">
-                    <div style={{ width: `${levelProgress * 100}%` }} />
-                  </div>
-                  <span className="gamified-progress-summary">{overallCompletion}% unit completion</span>
-                </>
-              )}
+            <div className="gamified-header__stats">
+              <StatCard
+                tone="brand"
+                compact={headerCollapsed}
+                badge={
+                  <span className={`stat-card__badge ${levelUpModal ? "is-celebrating" : ""}`}>Lv {level}</span>
+                }
+                label="Your journey"
+                value={`${formattedXp} XP`}
+                description={headerCollapsed ? null : `Next level at ${formattedNextLevel} XP`}
+                progress={headerCollapsed ? null : levelProgress}
+                progressLabel={headerCollapsed ? null : `${Math.round(overallCompletion)}% unit completion`}
+                actions={
+                  <button
+                    type="button"
+                    className="stat-card__action"
+                    onClick={() => setHeaderCollapsed(!headerCollapsed)}
+                    aria-expanded={!headerCollapsed}
+                  >
+                    {headerCollapsed ? "Show stats" : "Hide stats"}
+                  </button>
+                }
+              />
             </div>
           )}
         </div>

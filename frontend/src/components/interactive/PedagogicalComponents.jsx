@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sandpack } from "@codesandbox/sandpack-react";
 
+import "./PedagogicalComponents.css";
+
 export function BinaryLightBulbs({ levels = [], onComplete }) {
   const [levelIndex, setLevelIndex] = useState(0);
   const [states, setStates] = useState(() => new Array(5).fill(0));

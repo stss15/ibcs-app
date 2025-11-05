@@ -51,30 +51,12 @@
   width: 100%;
 }
 
-.teacher-dashboard__summary-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  display: grid;
-  gap: var(--space-2);
-  box-shadow: var(--shadow-xs);
-  backdrop-filter: blur(6px);
+.teacher-dashboard__summary-grid .stat-card {
+  height: 100%;
 }
 
-.teacher-dashboard__summary-value {
-  font-size: clamp(1.5rem, 2.6vw, 2rem);
-  font-weight: 700;
-  color: var(--color-primary-800);
-  letter-spacing: -0.02em;
-}
-
-.teacher-dashboard__summary-label {
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(12, 41, 124, 0.6);
-  font-weight: 700;
+.teacher-dashboard__summary-grid .stat-card__value {
+  font-size: clamp(1.6rem, 2.4vw, 2.1rem);
 }
 
 .teacher-dashboard__workspace {
@@ -187,66 +169,32 @@
 }
 
 .teacher-dashboard__class-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--space-3);
+  width: 100%;
 }
 
-.teacher-dashboard__class-summary div {
-  background: rgba(12, 41, 124, 0.06);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  display: grid;
-  gap: var(--space-1);
-  color: var(--color-text-muted);
-  font-weight: 600;
+.teacher-dashboard__class-summary .stat-card {
+  height: 100%;
 }
 
-.teacher-dashboard__class-summary span {
+.teacher-dashboard__class-summary .stat-card__value {
+  font-size: clamp(1.6rem, 2.4vw, 2rem);
+}
+
+.teacher-dashboard__class-summary .stat-card__progress-label {
   font-size: var(--text-xs);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.teacher-dashboard__class-summary strong {
-  font-size: var(--text-lg);
-  color: var(--color-primary-800);
-}
-
-.teacher-dashboard__pacing {
-  display: grid;
-  gap: var(--space-3);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(12, 41, 124, 0.25);
-  background: rgba(12, 41, 124, 0.08);
-  padding: var(--space-4);
-}
-
-.teacher-dashboard__pacing-summary {
-  display: grid;
-  gap: var(--space-1);
   color: var(--color-text-muted);
-}
-
-.teacher-dashboard__pacing-summary span {
-  font-size: var(--text-xs);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.teacher-dashboard__pacing-summary strong {
-  color: var(--color-primary-800);
 }
 
 .teacher-dashboard__pacing-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .teacher-dashboard__pacing-status {
   font-weight: 600;
   font-size: var(--text-sm);
+  margin-top: var(--space-3);
 }
 
 .teacher-dashboard__pacing-status--success {
