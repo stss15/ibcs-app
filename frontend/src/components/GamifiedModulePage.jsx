@@ -11,6 +11,7 @@ import AssessmentResultsModal from "./segments/AssessmentResultsModal.jsx";
 import ReflectionSegment from "./segments/ReflectionSegment.jsx";
 import LiveAssessmentDashboard from "./segments/LiveAssessmentDashboard.jsx";
 import StatCard from "./ui/StatCard.jsx";
+import Modal from "./ui/Modal.jsx";
 import "./GamifiedModulePage.css";
 import { useTeacherMode } from "../context/TeacherModeContext.jsx";
 import {
@@ -1594,21 +1595,21 @@ function LevelUpModal({ oldLevel, newLevel, xp, onClose }) {
   }));
 
   return (
-    <div className="level-up-modal-overlay" onClick={onClose}>
-      <div className="level-up-modal" onClick={(e) => e.stopPropagation()}>
+    <Modal isOpen={true} onClose={onClose} size="md" closeOnBackdropClick={true}>
+      <div className="level-up-modal">
+        <div className="level-up-modal__confetti">
+          {confettiPieces.map((piece) => (
+            <div
+              key={piece.id}
+              className="confetti-piece"
+              style={{
+                '--delay': piece.delay,
+                '--offset': piece.offset,
+              }}
+            />
+          ))}
+        </div>
         <div className="level-up-modal__content">
-          <div className="level-up-modal__confetti">
-            {confettiPieces.map((piece) => (
-              <div
-                key={piece.id}
-                className="confetti-piece"
-                style={{
-                  '--delay': piece.delay,
-                  '--offset': piece.offset,
-                }}
-              />
-            ))}
-          </div>
           <div className="level-up-modal__icon">🎉</div>
           <h2 className="level-up-modal__title">Level Up!</h2>
           <div className="level-up-modal__levels">
@@ -1626,7 +1627,7 @@ function LevelUpModal({ oldLevel, newLevel, xp, onClose }) {
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

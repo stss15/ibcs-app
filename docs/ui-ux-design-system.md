@@ -87,6 +87,71 @@ The design preserves the school's house colors while extending them with a moder
 --transition-bounce: 500ms (Playful animations)
 ```
 
+### 8. Modal Component
+
+**Features:**
+- Focus trap (keeps focus within modal)
+- Escape key handling
+- Backdrop click handling
+- Body scroll lock when open
+- ARIA attributes (role="dialog", aria-modal, aria-labelledby)
+- Token-driven styling
+- Smooth animations
+- Multiple sizes (sm, md, lg, full)
+
+**Usage:**
+```jsx
+import Modal from './components/ui/Modal';
+
+<Modal
+  isOpen={isOpen}
+  onClose={() => setIsOpen(false)}
+  title="Modal Title"
+  size="md"
+  closeOnBackdropClick={true}
+  closeOnEscape={true}
+>
+  <p>Modal content goes here</p>
+</Modal>
+```
+
+**Props:**
+- `isOpen` (boolean) - Whether modal is open
+- `onClose` (function) - Callback when modal should close
+- `title` (string, optional) - Modal title (shown in header)
+- `children` (React.ReactNode) - Modal content
+- `size` (string) - 'sm' | 'md' | 'lg' | 'full' (default: 'md')
+- `closeOnBackdropClick` (boolean) - Close on backdrop click (default: true)
+- `closeOnEscape` (boolean) - Close on Escape key (default: true)
+
+### 9. Accordion Component
+
+**Features:**
+- Single/multiple expand modes
+- Keyboard navigation (Arrow keys, Enter, Space, Home, End)
+- ARIA attributes (aria-expanded, aria-controls)
+- Smooth expand/collapse animations
+- Token-driven styling
+
+**Usage:**
+```jsx
+import Accordion from './components/ui/Accordion';
+
+<Accordion
+  items={[
+    { id: '1', title: 'Section 1', content: <p>Content 1</p> },
+    { id: '2', title: 'Section 2', content: <p>Content 2</p> },
+  ]}
+  multiple={false}
+  defaultExpanded={['1']}
+/>
+```
+
+**Props:**
+- `items` (Array) - Array of items: [{ id, title, content }]
+- `multiple` (boolean) - Allow multiple items open (default: false)
+- `defaultExpanded` (Array|string) - ID(s) of items to expand by default
+
 ## Key Components
 
 ### 1. Enhanced Tables
@@ -434,7 +499,7 @@ All text meets WCAG AA standards:
 
 ### Component Roadmap
 
-- [ ] Accordion component
+- [x] Accordion component
 - [ ] Timeline component
 - [ ] Comparison cards
 - [ ] Code diff viewer

@@ -111,7 +111,7 @@ Provide and maintain the task backlog grouped by phase. Update statuses as work 
 | P1-020 | Refresh module map + lesson roadmap | P0-003 | Completed | Curriculum map + IB roadmap styles refactored to token-driven surfaces/chips with reusable status pills (2025-11-05). |
 | P1-021 | Update assessment results + student dashboards | P1-020 | Completed | Student dashboard refactored to token-driven surfaces, status pills, and reusable progress stacks; assessment results styling aligned (2025-11-05). |
 | P1-030 | Centralise badges/pills/banners utilities | P0-003 | Completed | Added reusable `StatusPill`/`StatusBanner` primitives and migrated student dashboard, curriculum map, and IB roadmap to token-driven variants (2025-11-05). |
-| P1-031 | Standardise progressive disclosure & modals | P1-030 | Planned | Implement consistent disclosure animations & modal scaffolding referencing accessibility specs. |
+| P1-031 | Standardise progressive disclosure & modals | P1-030 | Completed | Created reusable `Modal` and `Accordion` primitives with focus trap, keyboard navigation, and ARIA attributes. Migrated LevelUpModal and TeacherDashboardPage modals to use new Modal component (2025-11-05). |
 
 ### Phase 2 — Interactive & Legacy Modules
 

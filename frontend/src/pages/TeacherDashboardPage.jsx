@@ -15,6 +15,7 @@ import ContentContainer from "../components/ui/ContentContainer.jsx";
 import ResponsiveGrid from "../components/ui/ResponsiveGrid.jsx";
 import StatCard from "../components/ui/StatCard.jsx";
 import StatusBanner from "../components/ui/StatusBanner.jsx";
+import Modal from "../components/ui/Modal.jsx";
 import "./TeacherDashboardPage.css";
 import { getYear7LessonById } from "../../../shared/liveDecks.js";
 
@@ -1341,173 +1342,166 @@ function TeacherDashboardPage() {
       </section>
 
       {classModalOpen && (
-        <div className="teacher-modal" role="dialog" aria-modal="true">
-          <div className="teacher-modal__dialog">
-            <header>
-              <h2>Create class</h2>
-              <button type="button" aria-label="Close" onClick={() => setClassModalOpen(false)}>
-                ×
+        <Modal
+          isOpen={classModalOpen}
+          onClose={() => setClassModalOpen(false)}
+          title="Create class"
+          size="md"
+        >
+          <form onSubmit={submitClass} className="teacher-modal__content">
+            <label>
+              <span>Stage</span>
+              <select
+                value={classForm.stageId}
+                onChange={(event) => handleClassStageChange("stageId", event.target.value)}
+                required
+              >
+                {STAGE_CONFIG.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Cohort (two digits)</span>
+              <input
+                value={classForm.cohort}
+                onChange={(event) => handleClassStageChange("cohort", event.target.value)}
+                placeholder="32"
+                required
+              />
+            </label>
+            <label>
+              <span>Group</span>
+              <select
+                value={classForm.group}
+                onChange={(event) => handleClassStageChange("group", event.target.value)}
+                required
+              >
+                {getStageConfig(classForm.stageId).groups.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Description (optional)</span>
+              <input
+                value={classForm.description}
+                onChange={(event) => setClassForm((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="Notes for this class"
+              />
+            </label>
+            <div className="teacher-modal__preview">
+              <span>Generated code</span>
+              <strong>{generateClassCode(classForm.stageId, classForm.cohort, classForm.group)}</strong>
+            </div>
+            <footer>
+              <button type="button" onClick={() => setClassModalOpen(false)}>
+                Cancel
               </button>
-            </header>
-            <form onSubmit={submitClass} className="teacher-modal__content">
-              <label>
-                <span>Stage</span>
-                <select
-                  value={classForm.stageId}
-                  onChange={(event) => handleClassStageChange("stageId", event.target.value)}
-                  required
-                >
-                  {STAGE_CONFIG.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Cohort (two digits)</span>
-                <input
-                  value={classForm.cohort}
-                  onChange={(event) => handleClassStageChange("cohort", event.target.value)}
-                  placeholder="32"
-                  required
-                />
-              </label>
-              <label>
-                <span>Group</span>
-                <select
-                  value={classForm.group}
-                  onChange={(event) => handleClassStageChange("group", event.target.value)}
-                  required
-                >
-                  {getStageConfig(classForm.stageId).groups.map((group) => (
-                    <option key={group} value={group}>
-                      {group}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Description (optional)</span>
-                <input
-                  value={classForm.description}
-                  onChange={(event) => setClassForm((prev) => ({ ...prev, description: event.target.value }))}
-                  placeholder="Notes for this class"
-                />
-              </label>
-              <div className="teacher-modal__preview">
-                <span>Generated code</span>
-                <strong>{generateClassCode(classForm.stageId, classForm.cohort, classForm.group)}</strong>
-              </div>
-              <footer>
-                <button type="button" onClick={() => setClassModalOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="pill pill--action">
-                  Create class
-                </button>
-              </footer>
-            </form>
-          </div>
-        </div>
+              <button type="submit" className="pill pill--action">
+                Create class
+              </button>
+            </footer>
+          </form>
+        </Modal>
       )}
 
       {studentModal && (
-        <div className="teacher-modal" role="dialog" aria-modal="true">
-          <div className="teacher-modal__dialog">
-            <header>
-              <h2>
-                {studentModal.mode === "bulk"
-                  ? `Import students · ${studentModal.classItem.className}`
-                  : `Add student · ${studentModal.classItem.className}`}
-              </h2>
-              <button type="button" aria-label="Close" onClick={() => setStudentModal(null)}>
-                ×
-              </button>
-            </header>
-
-            {studentModal.mode === "single" ? (
-              <form onSubmit={submitStudent} className="teacher-modal__content">
-                <label>
-                  <span>First name</span>
-                  <input
-                    value={studentForm.firstName}
-                    onChange={(event) => handleStudentFormChange("firstName", event.target.value)}
-                    required
-                  />
-                </label>
-                <label>
-                  <span>Surname</span>
-                  <input
-                    value={studentForm.lastName}
-                    onChange={(event) => handleStudentFormChange("lastName", event.target.value)}
-                    required
-                  />
-                </label>
-                <label>
-                  <span>Username</span>
-                  <input
-                    value={studentForm.username}
-                    onChange={(event) => handleStudentFormChange("username", event.target.value)}
-                    placeholder="Enter unique username"
-                    required
-                  />
-                </label>
-                <label>
-                  <span>Generated password</span>
-                  <input
-                    value={studentForm.password}
-                    onChange={(event) => handleStudentFormChange("password", event.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="teacher-modal__ghost"
-                    onClick={() => setStudentForm((prev) => ({ ...prev, password: generatePassword() }))}
-                  >
-                    Regenerate
-                  </button>
-                </label>
-                <footer>
-                  <button type="button" onClick={() => setStudentModal(null)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="pill pill--action">
-                    Add student
-                  </button>
-                </footer>
-              </form>
-            ) : (
-              <form onSubmit={submitBulkStudents} className="teacher-modal__content">
-                <p className="muted">
-                  Upload a CSV with the columns <code>firstName</code>, <code>lastName</code>, and optional
-                  <code>username</code>. Passwords are auto-generated for each row.
-                </p>
-                <button type="button" className="teacher-modal__ghost" onClick={downloadTemplate}>
-                  Download blank template
+        <Modal
+          isOpen={!!studentModal}
+          onClose={() => setStudentModal(null)}
+          title={
+            studentModal.mode === "bulk"
+              ? `Import students · ${studentModal.classItem.className}`
+              : `Add student · ${studentModal.classItem.className}`
+          }
+          size="md"
+        >
+          {studentModal.mode === "single" ? (
+            <form onSubmit={submitStudent} className="teacher-modal__content">
+              <label>
+                <span>First name</span>
+                <input
+                  value={studentForm.firstName}
+                  onChange={(event) => handleStudentFormChange("firstName", event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span>Surname</span>
+                <input
+                  value={studentForm.lastName}
+                  onChange={(event) => handleStudentFormChange("lastName", event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span>Username</span>
+                <input
+                  value={studentForm.username}
+                  onChange={(event) => handleStudentFormChange("username", event.target.value)}
+                  placeholder="Enter unique username"
+                  required
+                />
+              </label>
+              <label>
+                <span>Generated password</span>
+                <input
+                  value={studentForm.password}
+                  onChange={(event) => handleStudentFormChange("password", event.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="teacher-modal__ghost"
+                  onClick={() => setStudentForm((prev) => ({ ...prev, password: generatePassword() }))}
+                >
+                  Regenerate
                 </button>
-                <label>
-                  <span>CSV file</span>
-                  <input
-                    type="file"
-                    accept=".csv,text/csv"
-                    onChange={(event) => setBulkCsv(event.target.files?.[0] ?? null)}
-                    required
-                  />
-                </label>
-                {bulkStatus && <p className={`status status--${bulkStatus.tone}`}>{bulkStatus.message}</p>}
-                <footer>
-                  <button type="button" onClick={() => setStudentModal(null)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="pill pill--action">
-                    Import students
-                  </button>
-                </footer>
-              </form>
-            )}
-          </div>
-        </div>
+              </label>
+              <footer>
+                <button type="button" onClick={() => setStudentModal(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="pill pill--action">
+                  Add student
+                </button>
+              </footer>
+            </form>
+          ) : (
+            <form onSubmit={submitBulkStudents} className="teacher-modal__content">
+              <p className="muted">
+                Upload a CSV with the columns <code>firstName</code>, <code>lastName</code>, and optional
+                <code>username</code>. Passwords are auto-generated for each row.
+              </p>
+              <button type="button" className="teacher-modal__ghost" onClick={downloadTemplate}>
+                Download blank template
+              </button>
+              <label>
+                <span>CSV file</span>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(event) => setBulkCsv(event.target.files?.[0] ?? null)}
+                  required
+                />
+              </label>
+              {bulkStatus && <p className={`status status--${bulkStatus.tone}`}>{bulkStatus.message}</p>}
+              <footer>
+                <button type="button" onClick={() => setStudentModal(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="pill pill--action">
+                  Import students
+                </button>
+              </footer>
+            </form>
+          )}
+        </Modal>
       )}
     </ContentContainer>
   );

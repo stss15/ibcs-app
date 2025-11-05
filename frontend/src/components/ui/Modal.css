@@ -1,0 +1,127 @@
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 13, 49, 0.35);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  z-index: 10000;
+  animation: modalFadeIn var(--transition-base) ease-out;
+}
+
+/* Modal dialog */
+.modal-dialog {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2xl);
+  width: min(520px, 100%);
+  max-height: calc(100vh - var(--space-10));
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  animation: modalSlideIn var(--transition-base) ease-out;
+  outline: none;
+}
+
+.modal-dialog--sm {
+  width: min(400px, 100%);
+}
+
+.modal-dialog--md {
+  width: min(520px, 100%);
+}
+
+.modal-dialog--lg {
+  width: min(720px, 100%);
+}
+
+.modal-dialog--full {
+  width: min(90vw, 1200px);
+  max-height: 90vh;
+}
+
+/* Modal header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.modal-title {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-primary-800);
+  margin: 0;
+}
+
+.modal-close {
+  border: none;
+  background: transparent;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.modal-close:focus-visible {
+  outline: 2px solid var(--cs-blue-light);
+  outline-offset: 2px;
+}
+
+.modal-close:active {
+  transform: scale(0.98);
+}
+
+/* Modal content */
+.modal-content {
+  padding: var(--space-5);
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+/* Animations */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translateY(20px) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-dialog {
+    animation: none;
+  }
+}
+

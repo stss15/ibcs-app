@@ -116,6 +116,11 @@ Add all new entries under the appropriate phase heading below.
 - **Notes / Decisions**: Introduced reusable `StatusPill` and `StatusBanner` primitives backed by tokens (`color-mix`, status palette) and migrated curriculum maps, student dashboards, and teacher dashboards away from bespoke `.status-pill`/`.status-banner` classes. Removed legacy RGBA styling in favour of design-system variables; new components support tone/variant/size API for consistent usage across phases.
 - **QA**: npm run lint; npm run build (2025-11-05).
 
+### Phase 1 — 2025-11-05 — P1-031 — Standardise progressive disclosure & modals
+- **Files / Areas**: frontend/src/components/ui/Modal.jsx, frontend/src/components/ui/Modal.css, frontend/src/components/ui/Accordion.jsx, frontend/src/components/ui/Accordion.css, frontend/src/components/GamifiedModulePage.jsx, frontend/src/components/GamifiedModulePage.css, frontend/src/pages/TeacherDashboardPage.jsx, frontend/src/pages/TeacherDashboardPage.css, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md, docs/ui-ux-design-system.md
+- **Notes / Decisions**: Created reusable `Modal` and `Accordion` primitives with focus trap, keyboard navigation (Tab, Arrow keys, Enter, Space), and full ARIA attributes (role="dialog", aria-modal, aria-labelledby, aria-expanded, aria-controls). Modal component includes backdrop click handling, Escape key support, and body scroll lock. Migrated LevelUpModal in GamifiedModulePage and TeacherDashboardPage class/student modals to use new Modal primitive. Accordion supports single/multiple expand modes with smooth animations. All components use design tokens and are CSP-compliant. Removed legacy modal overlay/dialog CSS classes.
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found) (2025-11-05).
+
 ---
 
 ## Phase 2 — Interactive & Legacy Modules
