@@ -151,7 +151,10 @@ export default function DiagramLabelActivity({
                 className={`activity-diagram__target${isCorrect ? " is-correct" : ""}${
                   isIncorrect ? " is-incorrect" : ""
                 }`}
-                style={{ left: `${target.x}%`, top: `${target.y}%` }}
+                style={{
+                  '--target-x': `${target.x}%`,
+                  '--target-y': `${target.y}%`,
+                }}
                 disabled={resolved && !isTeacher}
                 onClick={() => {
                   if (!allowInteraction) return;

@@ -75,9 +75,8 @@ export default function ImageHotspotActivity({ segment, onBack, onComplete, onAt
               key={hotspot.id}
               className={className}
               style={{
-                left: `${hotspot.x}%`,
-                top: `${hotspot.y}%`,
-                transform: "translate(-50%, -50%)",
+                '--hotspot-x': `${hotspot.x}%`,
+                '--hotspot-y': `${hotspot.y}%`,
               }}
               onClick={() => toggleHotspot(hotspot.id)}
             >

@@ -347,6 +347,9 @@
 
 .activity-hotspot__point {
   position: absolute;
+  left: var(--hotspot-x, 50%);
+  top: var(--hotspot-y, 50%);
+  transform: translate(-50%, -50%);
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -645,6 +648,8 @@
 
 .activity-diagram__target {
   position: absolute;
+  left: var(--target-x, 50%);
+  top: var(--target-y, 50%);
   transform: translate(-50%, -50%);
   min-width: 120px;
   border-radius: 14px;
