@@ -120,7 +120,7 @@ Provide and maintain the task backlog grouped by phase. Update statuses as work 
 | P2-001 | Refactor diagram/image hotspot engines to tokenised positioning | P0-002 | Completed | Replaced inline coordinate styles with CSS variables (`--hotspot-x`, `--hotspot-y`, `--target-x`, `--target-y`) in ImageHotspotActivity and DiagramLabelActivity. All positioning now CSP-compliant (2025-11-05). |
 | P2-002 | Align formative activity components with design system | P2-001 | Completed | Created FeedbackPanel and ButtonGroup primitives. Migrated all formative activity components to use shared feedback and button grouping patterns (2025-11-05). |
 | P2-010 | Wrap Python/Skulpt shells in design system layout | P0-003 | Completed | Migrated PythonPlaygroundSegment to use FeedbackPanel and ButtonGroup. Tokenized all CSS styling with design tokens. CSP exception for Skulpt preserved (2025-11-05). |
-| P2-011 | Audit embedded console/editor theming | P2-010 | Planned | Map syntax highlighting to token palette; ensure CSP compliance. |
+| P2-011 | Audit embedded console/editor theming | P2-010 | Completed | Tokenized CodeCompletionActivity CSS. Audited all editor components. Sandpack uses default theme. All components CSP-compliant (2025-11-05). |
 | P2-020 | Refresh admin/account/legacy pages | P0-003 | Planned | Apply shared card/grid primitives; remove remaining bespoke CSS variables. |
 | P2-030 | Update documentation + design guide examples | P1-030 | Planned | Sync `docs/NEW-UI-UX-design-strategy.txt` snippets with new primitives and usage guidance. |
 

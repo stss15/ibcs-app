@@ -478,36 +478,37 @@
 
 .activity-code {
   display: grid;
-  gap: 1.2rem;
+  gap: var(--space-5);
 }
 
 .activity-code__prompt {
   margin: 0;
-  font-size: 0.95rem;
-  color: rgba(18, 46, 132, 0.78);
+  font-size: var(--text-sm);
+  color: var(--color-primary-800);
+  opacity: 0.78;
 }
 
 .activity-code__block {
   margin: 0;
-  padding: 1rem;
-  border-radius: 18px;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
   background: rgba(10, 16, 48, 0.92);
   color: rgba(255, 255, 255, 0.92);
   overflow-x: auto;
-  font-size: 0.95rem;
-  line-height: 1.6;
+  font-size: var(--text-sm);
+  line-height: var(--line-height-base);
 }
 
 .activity-code__block code {
-  font-family: "Fira Code", "Courier New", monospace;
+  font-family: var(--font-family-mono);
 }
 
 .activity-code__blank {
   display: inline-flex;
   align-items: center;
-  margin: 0 0.25rem;
-  padding: 0.15rem 0.35rem;
-  border-radius: 8px;
+  margin: 0 var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.18);
 }
 
@@ -517,7 +518,7 @@
   border-bottom: 2px solid rgba(255, 255, 255, 0.55);
   color: inherit;
   font: inherit;
-  padding: 0 0.25rem;
+  padding: 0 var(--space-1);
   min-width: 80px;
 }
 
@@ -531,11 +532,12 @@
 
 .activity-code__hints {
   margin: 0;
-  padding-left: 1rem;
+  padding-left: var(--space-4);
   display: grid;
-  gap: 0.3rem;
-  color: rgba(18, 46, 132, 0.78);
-  font-size: 0.9rem;
+  gap: var(--space-2);
+  color: var(--color-primary-800);
+  opacity: 0.78;
+  font-size: var(--text-sm);
 }
 
 .activity-spot {
