@@ -188,3 +188,33 @@ Add all new entries under the appropriate phase heading below.
 
 **Files:** `frontend/vite.config.js`, `frontend/dist/` (source map files generated)
 
+### Safety Guardrails Implementation (2025-11-05)
+
+**Decision:** Added comprehensive safety guardrails to ensure incremental, safe refactoring with automated verification.
+
+**Changes:**
+- Created `.ibcs-task-allowlist` file specifying allowed files per task
+- Added `scripts/verify-allowlist.js` to verify only allowed files are changed
+- Added `scripts/verify-no-raw-styles.js` to verify design token compliance (no raw hex/px/inline styles)
+- Created GitHub Actions CI workflow (`.github/workflows/ui-ux-refactor-ci.yml`) for automated checks
+- Added PR template (`.github/pull_request_template.md`) with mandatory checklist
+- Updated implementation guide with 8 safety guardrails including:
+  - File allowlist per task
+  - Diff size limits (600 LOC app code max)
+  - CSP and auth protection rules
+  - Circular dependency checks
+  - Design token lint checks
+  - Pre-commit checklist
+  - Abort and rollback procedures
+  - Agent operating contract
+
+**Impact:**
+- Prevents accidental edits to blocked files (package.json, CSP, worker code)
+- Enforces design token usage (no raw hex/px/inline styles)
+- Limits change scope to prevent large, risky PRs
+- Automated verification reduces manual review burden
+- Clear abort conditions prevent broken code from being committed
+
+**Files:** `docs/ui-ux-refactor-implementation-guide.md`, `.ibcs-task-allowlist`, `scripts/verify-allowlist.js`, `scripts/verify-no-raw-styles.js`, `.github/workflows/ui-ux-refactor-ci.yml`, `.github/pull_request_template.md`
+- **QA**: Scripts tested for syntax validity (2025-11-05).
+

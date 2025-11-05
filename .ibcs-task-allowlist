@@ -1,0 +1,58 @@
+# UI/UX Refactor Task Allowlist
+# 
+# This file specifies which files may be edited for each task.
+# Format: <task-id>: <glob-pattern>
+#
+# Example:
+# P1-031: frontend/src/components/ui/**
+# P1-031: frontend/src/pages/LoginPage.{jsx,css}
+#
+# To add a new task, add lines with the task ID and allowed file patterns.
+#
+# Blocked by default:
+# - package.json, lockfiles, .env*
+# - frontend/index.html (CSP changes need [CSP-CHANGE] tag)
+# - worker/**/* (worker code needs [AUTH] tag)
+
+# P1-031: Progressive Disclosure & Modals
+P1-031: frontend/src/components/ui/Modal.*
+P1-031: frontend/src/components/ui/Accordion.*
+P1-031: frontend/src/components/GamifiedModulePage.{jsx,css}
+P1-031: frontend/src/pages/TeacherDashboardPage.{jsx,css}
+
+# P2-001: Hotspot Engines
+P2-001: frontend/src/components/segments/activities/ImageHotspotActivity.jsx
+P2-001: frontend/src/components/segments/activities/DiagramLabelActivity.jsx
+P2-001: frontend/src/components/segments/activities/Activities.css
+
+# P2-010: Python/Skulpt Shells
+P2-010: frontend/src/components/segments/PythonPlaygroundSegment.{jsx,css}
+
+# P2-020.1: LoginPage
+P2-020.1: frontend/src/pages/LoginPage.{jsx,css}
+
+# P2-020.2: AccountPage
+P2-020.2: frontend/src/pages/AccountPage.{jsx,css}
+
+# P2-020.3: LessonPage
+P2-020.3: frontend/src/pages/LessonPage.{jsx,css}
+
+# P2-020.4: TopicPage
+P2-020.4: frontend/src/pages/TopicPage.{jsx,css}
+
+# P2-020.5: Year7MapPage
+P2-020.5: frontend/src/pages/Year7MapPage.{jsx,css}
+
+# P2-020.6: AdminDashboardPage
+P2-020.6: frontend/src/pages/AdminDashboardPage.{jsx,css}
+
+# P2-020.7: Layout Component
+P2-020.7: frontend/src/components/Layout.{jsx,css}
+
+# Always allowed (documentation)
+*: docs/ui-ux-refactor-changelog.md
+*: docs/ui-ux-refactor-plan.md
+*: docs/ui-ux-design-system.md
+*: docs/ui-ux-refactor-implementation-guide.md
+*: docs/**/*.md
+

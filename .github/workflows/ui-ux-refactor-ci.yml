@@ -1,0 +1,107 @@
+name: UI/UX Refactor CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'frontend/src/**'
+      - 'docs/ui-ux-refactor-*.md'
+      - '.ibcs-task-allowlist'
+      - 'scripts/verify-*.js'
+
+jobs:
+  ui-ux-refactor-checks:
+    if: contains(github.event.pull_request.labels.*.name, 'ui-ux-refactor')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint
+      
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+      
+      - name: Check for circular dependencies
+        working-directory: frontend
+        run: |
+          npx madge src --extensions js,jsx --circular || (echo "ERROR: Circular dependencies found" && exit 1)
+      
+      - name: Verify file allowlist
+        run: |
+          # Extract task ID from PR title or description
+          TASK_ID=$(echo "${{ github.event.pull_request.title }}" | grep -oE 'P[0-9]+-[0-9]+' | head -1 || echo "")
+          if [ -z "$TASK_ID" ]; then
+            echo "Warning: Could not extract task ID from PR title"
+            echo "PR title should include task ID like 'P1-031: ...'"
+            exit 1
+          fi
+          node scripts/verify-allowlist.js "$TASK_ID"
+      
+      - name: Verify no raw styles
+        run: node scripts/verify-no-raw-styles.js
+      
+      - name: Check diff size
+        run: |
+          DIFF_SIZE=$(git diff --numstat HEAD~1 HEAD | awk '{added+=$1; changed+=$2} END {print added+changed}')
+          APP_CODE_DIFF=$(git diff --numstat HEAD~1 HEAD -- 'frontend/src/**/*.{js,jsx,css}' | awk '{added+=$1; changed+=$2} END {print added+changed}')
+          
+          echo "Total diff size: $DIFF_SIZE lines"
+          echo "App code diff size: $APP_CODE_DIFF lines"
+          
+          if [ "$APP_CODE_DIFF" -gt 600 ]; then
+            echo "ERROR: App code diff exceeds 600 lines (found: $APP_CODE_DIFF)"
+            echo "Split the changes into smaller PRs"
+            exit 1
+          fi
+          
+          if [ "$DIFF_SIZE" -gt 1000 ]; then
+            echo "ERROR: Total diff exceeds 1000 lines (found: $DIFF_SIZE)"
+            echo "Split the changes into smaller PRs"
+            exit 1
+          fi
+      
+      - name: Check for blocked files
+        run: |
+          BLOCKED_FILES=$(git diff --name-only HEAD~1 HEAD | grep -E '^package\.json$|^package-lock\.json$|^yarn\.lock$|^pnpm-lock\.yaml$|^\.env|^worker/|^frontend/index\.html$' || true)
+          
+          if [ -n "$BLOCKED_FILES" ]; then
+            echo "ERROR: Blocked files modified:"
+            echo "$BLOCKED_FILES"
+            echo ""
+            echo "These files require explicit approval:"
+            echo "- package.json/lockfiles: Only if task allows"
+            echo "- .env*: Only if task allows"
+            echo "- worker/*: Only if task tagged [AUTH]"
+            echo "- frontend/index.html: Only if task tagged [CSP-CHANGE]"
+            exit 1
+          fi
+      
+      - name: Verify changelog updated
+        run: |
+          if ! git diff --name-only HEAD~1 HEAD | grep -q 'docs/ui-ux-refactor-changelog.md'; then
+            echo "ERROR: Changelog not updated"
+            echo "Must update docs/ui-ux-refactor-changelog.md with task entry"
+            exit 1
+          fi
+      
+      - name: All checks passed
+        run: echo "✓ All UI/UX refactor checks passed"
+
