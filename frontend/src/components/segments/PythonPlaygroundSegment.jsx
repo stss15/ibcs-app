@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Sk from "skulpt";
 import AttemptBadge from "./AttemptBadge.jsx";
 import SegmentNav from "./SegmentNav.jsx";
+import FeedbackPanel from "../ui/FeedbackPanel.jsx";
+import ButtonGroup from "../ui/ButtonGroup.jsx";
 import "./PythonPlaygroundSegment.css";
 
 function builtinRead(x) {
@@ -172,12 +174,14 @@ export default function PythonPlaygroundSegment({ segment, onBack, onComplete, o
             className="python-playground__textarea"
           />
           <div className="python-playground__actions">
-            <button type="button" className="btn btn--ghost" onClick={handleReset} disabled={running}>
-              Reset starter
-            </button>
-            <button type="button" className="btn btn--outline" onClick={handleRun} disabled={running}>
-              {running ? "Running…" : "Run code"}
-            </button>
+            <ButtonGroup align="start">
+              <button type="button" className="btn btn--ghost" onClick={handleReset} disabled={running}>
+                Reset starter
+              </button>
+              <button type="button" className="btn btn--outline" onClick={handleRun} disabled={running}>
+                {running ? "Running…" : "Run code"}
+              </button>
+            </ButtonGroup>
           </div>
           {segment.examples?.length > 0 && (
             <div className="python-playground__examples">
@@ -249,9 +253,9 @@ export default function PythonPlaygroundSegment({ segment, onBack, onComplete, o
             Check snippets
           </button>
           {fillFeedback && (
-            <p className={`gamified-feedback ${fillFeedback.tone === "error" ? "is-error" : "is-success"}`}>
+            <FeedbackPanel tone={fillFeedback.tone === "error" ? "error" : "success"}>
               {fillFeedback.message}
-            </p>
+            </FeedbackPanel>
           )}
         </div>
       )}
