@@ -155,3 +155,36 @@ Add all new entries under the appropriate phase heading below.
 
 **Files:** `frontend/index.html` (line 8)
 
+### CSP Simplification and Security Hardening (2025-11-05)
+
+**Decision:** Simplified CSP by removing redundant style directives and added explicit `script-src` along with additional security headers.
+
+**Changes:**
+- Removed `style-src-elem` and `style-src-attr` (covered by `style-src`)
+- Added explicit `script-src 'self'` to eliminate CSP warning
+- Added `object-src 'none'` and `frame-ancestors 'none'` for additional security
+- Kept `style-src 'self' 'unsafe-inline'` for Skulpt library compatibility
+
+**Impact:**
+- Eliminates "script-src was not explicitly set" CSP warning
+- Reduces CSP complexity while maintaining functionality
+- Improves security posture with object-src and frame-ancestors restrictions
+
+**Files:** `frontend/index.html` (line 8), `frontend/vite.config.js` (added source maps)
+
+### Build Configuration Improvements (2025-11-05)
+
+**Decision:** Enabled source maps in production builds and verified no circular dependencies exist.
+
+**Changes:**
+- Added `build: { sourcemap: true }` to `vite.config.js`
+- Ran circular dependency detection (no cycles found)
+- Performed clean rebuild to resolve bundling issues
+
+**Impact:**
+- Source maps enable easier debugging of production issues
+- Clean rebuild resolves potential module initialization order problems
+- Verification confirms no circular dependency issues in codebase
+
+**Files:** `frontend/vite.config.js`, `frontend/dist/` (source map files generated)
+

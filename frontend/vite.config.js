@@ -11,6 +11,9 @@ export default ({ mode }) => {
       __API_BASE__: JSON.stringify(apiBase),
       __INSTANT_APP_ID__: JSON.stringify(env.INSTANT_APP_ID || ""),
     },
+    build: {
+      sourcemap: true,
+    },
     server: {
       port: 5173,
       open: true,
