@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import ContentContainer from "../components/ui/ContentContainer.jsx";
 import "./CurriculumMapPage.css";
 
 const tracks = {
@@ -12,7 +13,7 @@ const tracks = {
 
 function CurriculumMapPage() {
   return (
-    <div className="page-shell curriculum-page">
+    <ContentContainer variant="fullWidth" className="curriculum-page">
       <section className="page-hero">
         <div className="page-hero__content">
           <span className="page-hero__eyebrow">Curriculum pathway</span>
@@ -71,7 +72,7 @@ function CurriculumMapPage() {
           </header>
           <div className="curriculum-panel__body">
             <p>
-              Topics 110 are now scaffolded into two streams so you can plan assessment pacing, live unlocks, and content authoring.
+              Topics 1 10 are now scaffolded into two streams so you can plan assessment pacing, live unlocks, and content authoring.
             </p>
             <div className="curriculum-buttons">
               {tracks.igcse.map((item) => (
@@ -112,7 +113,7 @@ function CurriculumMapPage() {
           </div>
         </article>
       </div>
-    </div>
+    </ContentContainer>
   );
 }
 

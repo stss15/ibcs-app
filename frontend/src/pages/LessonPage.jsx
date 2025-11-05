@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useSession } from "../hooks/useSession.js";
 import { useCurriculumManifest, getTrackLabel } from "../hooks/useCurriculumManifest.js";
+import ContentContainer from "../components/ui/ContentContainer.jsx";
 import "./LessonPage.css";
 
 const MODULE_LINKS = {
@@ -91,35 +92,41 @@ function LessonPage() {
 
   if (status === "loading") {
     return (
-      <section className="lesson-content">
-        <p className="muted">Loading lesson details…</p>
-      </section>
+      <ContentContainer variant="fullWidth" className="lesson-page">
+        <section className="lesson-content">
+          <p className="muted">Loading lesson details…</p>
+        </section>
+      </ContentContainer>
     );
   }
 
   if (error) {
     return (
-      <section className="lesson-content">
-        <h2>Unable to load lesson</h2>
-        <p className="muted">{error.message ?? "Please try again later."}</p>
-        <Link to="/curriculum/ib" className="pill pill--action">
-          Back to IB curriculum
-        </Link>
-      </section>
+      <ContentContainer variant="fullWidth" className="lesson-page">
+        <section className="lesson-content">
+          <h2>Unable to load lesson</h2>
+          <p className="muted">{error.message ?? "Please try again later."}</p>
+          <Link to="/curriculum/ib" className="pill pill--action">
+            Back to IB curriculum
+          </Link>
+        </section>
+      </ContentContainer>
     );
   }
 
   if (!lessonMeta) {
     return (
-      <section className="lesson-content">
-        <h2>Lesson not found</h2>
-        <p className="muted">
-          We could not locate lesson {lessonId}. Choose another chapter from the curriculum map.
-        </p>
-        <Link to="/curriculum/ib" className="pill pill--action">
-          Back to IB curriculum
-        </Link>
-      </section>
+      <ContentContainer variant="fullWidth" className="lesson-page">
+        <section className="lesson-content">
+          <h2>Lesson not found</h2>
+          <p className="muted">
+            We could not locate lesson {lessonId}. Choose another chapter from the curriculum map.
+          </p>
+          <Link to="/curriculum/ib" className="pill pill--action">
+            Back to IB curriculum
+          </Link>
+        </section>
+      </ContentContainer>
     );
   }
 
@@ -140,7 +147,7 @@ function LessonPage() {
   }
 
   return (
-    <div className="lesson-page">
+    <ContentContainer variant="fullWidth" className="lesson-page">
       <nav className="lesson-breadcrumb" aria-label="Breadcrumb">
         <Link to="/curriculum/ib">IB curriculum</Link>
         <span>/</span>
@@ -244,7 +251,7 @@ function LessonPage() {
           </div>
         </section>
       </div>
-    </div>
+    </ContentContainer>
   );
 }
 

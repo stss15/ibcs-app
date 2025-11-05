@@ -12,6 +12,7 @@ import {
   getYear7LessonById,
   getYear7LessonIndex,
 } from "../../../shared/liveDecks.js";
+import ContentContainer from "../components/ui/ContentContainer.jsx";
 
 import "./StudentDashboardPage.css";
 
@@ -243,7 +244,7 @@ function StudentDashboardLayout({
   const accuracyMessage = computedAccuracy != null ? `${attemptsLogged} attempts logged` : "Your accuracy will appear once you start practicing";
 
   return (
-    <div className="page-shell page-shell--fluid student-dashboard">
+    <ContentContainer variant="fullWidth" className="student-dashboard">
       <section className="student-dashboard__hero">
         <div className="student-dashboard__hero-left">
           <span className="student-dashboard__eyebrow">Student dashboard</span>
@@ -336,8 +337,6 @@ function StudentDashboardLayout({
           </div>
         </div>
       </section>
-
-      {status && <p className={`status-banner status-banner--${status.tone}`}>{status.message}</p>}
 
       <section className="student-dashboard__view">
         <div className="student-dashboard__unit-column">
@@ -572,7 +571,9 @@ function StudentDashboardLayout({
           )}
         </div>
       </section>
-    </div>
+
+      {status && <p className="status-banner status-banner--info">{status}</p>}
+    </ContentContainer>
   );
 }
 
@@ -603,6 +604,7 @@ function CircularProgress({ value, size = 148, strokeWidth = 12, label, caption 
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
           fill="none"
+          stroke="var(--color-primary-800)"
           strokeLinecap="round"
         />
       </svg>
@@ -705,14 +707,18 @@ function StudentDashboardPage() {
 
   if (error && !dashboardData) {
     return (
-      <div className="page-shell">
+      <ContentContainer variant="fullWidth" className="student-dashboard">
         <p className="status-banner status-banner--error">{error}</p>
-      </div>
+      </ContentContainer>
     );
   }
 
   if (!dashboardData) {
-    return <div className="page-shell">Loading...</div>;
+    return (
+      <ContentContainer variant="fullWidth" className="student-dashboard">
+        Loading...
+      </ContentContainer>
+    );
   }
 
   return <StudentDashboardRenderer data={dashboardData} localProgress={localUnitProgress} />;

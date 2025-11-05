@@ -10,6 +10,8 @@ function Layout({ children }) {
   const location = useLocation();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
 
   const role = session?.user?.role ?? null;
   const firstName = (session?.user?.firstName || "").trim();
@@ -32,14 +34,24 @@ function Layout({ children }) {
 
   const studentTrack = role === "student" ? (session?.user?.curriculumTrack || "").toLowerCase() : "";
 
-  const navigationLinks = useMemo(() => {
-    const links = [
-      {
-        to: "/curriculum",
-        label: "Curriculum overview",
-        match: (pathname) => pathname === "/curriculum",
-      },
-    ];
+  const navSections = useMemo(() => {
+    if (!role) return [];
+
+    const sections = new Map();
+    const ensureSection = (key, title) => {
+      if (!sections.has(key)) {
+        sections.set(key, { id: key, title, items: [] });
+      }
+      return sections.get(key);
+    };
+
+    const overview = ensureSection("overview", "Curriculum");
+    overview.items.push({
+      id: "curriculum-overview",
+      to: "/curriculum",
+      label: "Curriculum overview",
+      match: (pathname) => pathname === "/curriculum",
+    });
 
     const allowYear7Link =
       role === "teacher" ||
@@ -48,7 +60,8 @@ function Layout({ children }) {
       (session?.user?.yearGroup ?? "").toLowerCase().includes("year 7");
 
     if (allowYear7Link) {
-      links.push({
+      overview.items.push({
+        id: "year7-map",
         to: "/curriculum/year7",
         label: "Year 7 map",
         match: (pathname) => pathname.startsWith("/curriculum/year7"),
@@ -57,7 +70,8 @@ function Layout({ children }) {
 
     const allowIbLink = role === "teacher" || role === "admin" || studentTrack.startsWith("ib");
     if (allowIbLink) {
-      links.push({
+      overview.items.push({
+        id: "ib-map",
         to: "/curriculum/ib",
         label: "IB curriculum map",
         match: (pathname) =>
@@ -65,32 +79,43 @@ function Layout({ children }) {
       });
     }
 
-    if (role === "teacher") {
-      links.push({
+    if (role === "teacher" || role === "admin") {
+      const dashboards = ensureSection("dashboards", "Dashboards");
+      dashboards.items.push({
+        id: "teacher-dashboard",
         to: "/dashboard",
         label: "Teacher dashboard",
         match: (pathname) => pathname.startsWith("/dashboard"),
       });
-    } else if (role === "student") {
-      links.push({
+    }
+
+    if (role === "student") {
+      const studentSection = ensureSection("student", "My learning");
+      studentSection.items.push({
+        id: "student-space",
         to: "/student",
         label: "Student space",
         match: (pathname) => pathname.startsWith("/student"),
       });
-    } else if (role === "admin") {
-      links.push({
+    }
+
+    if (role === "admin") {
+      const adminSection = ensureSection("admin", "Admin");
+      adminSection.items.push({
+        id: "admin-panel",
         to: "/admin",
         label: "Admin panel",
         match: (pathname) => pathname.startsWith("/admin"),
       });
     }
 
-    return links;
+    return Array.from(sections.values()).filter((section) => section.items.length > 0);
   }, [role, studentTrack, session?.user?.yearGroup]);
 
   const handleSignOut = useCallback(() => {
     clear();
     setMenuOpen(false);
+    setSidebarMobileOpen(false);
     if (location.pathname !== "/") {
       navigate("/", { replace: true });
     }
@@ -98,6 +123,7 @@ function Layout({ children }) {
 
   useEffect(() => {
     setMenuOpen(false);
+    setSidebarMobileOpen(false);
   }, [location.pathname]);
 
   const menuItems = useMemo(() => {
@@ -120,36 +146,110 @@ function Layout({ children }) {
   const isAuthenticated = ready && Boolean(role);
 
   return (
-    <div className="layout-root">
-      <header className="layout-header">
-        <div className="layout-header__content">
-          <Link to={isAuthenticated ? "/curriculum" : "/"} className="layout-brand" aria-label="Computer Science Department home">
-            <img src={logo} alt="School crest" className="layout-brand__mark" />
-            <div className="layout-brand__text">
-              <span className="layout-brand__title">Computer Science Department</span>
-              <small className="layout-brand__subtitle">St Georges British International Schools Group Germany</small>
+    <div
+      className={`layout-root${sidebarCollapsed ? " layout-root--collapsed" : ""}${sidebarMobileOpen ? " layout-root--nav-open" : ""}`}
+    >
+      {isAuthenticated && (
+        <>
+          <aside className="layout-sidebar" aria-label="Primary navigation">
+            <div className="layout-sidebar__header">
+              <Link to="/curriculum" className="layout-brand" aria-label="Computer Science Department home">
+                <img src={logo} alt="School crest" className="layout-brand__mark" />
+                <div className="layout-brand__text">
+                  <span className="layout-brand__title">Computer Science Department</span>
+                  <small className="layout-brand__subtitle">St Georges British International Schools Group Germany</small>
+                </div>
+              </Link>
+              <button
+                type="button"
+                className="layout-sidebar__collapse"
+                onClick={() => setSidebarCollapsed((prev) => !prev)}
+                aria-pressed={sidebarCollapsed}
+                aria-label={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"}
+              >
+                <span aria-hidden="true" />
+              </button>
             </div>
-          </Link>
+            <div className="layout-sidebar__sections">
+              {navSections.map((section) => (
+                <div key={section.id} className="layout-sidebar__section">
+                  <p className="layout-sidebar__section-title">{section.title}</p>
+                  <nav>
+                    {section.items.map((item) => {
+                      const isActive = item.match ? item.match(location.pathname) : location.pathname === item.to;
+                      return (
+                        <Link
+                          key={item.id}
+                          to={item.to}
+                          className={`layout-sidebar__nav-item ${isActive ? "is-active" : ""}`}
+                          aria-current={isActive ? "page" : undefined}
+                          onClick={() => setSidebarMobileOpen(false)}
+                        >
+                          <span className="layout-sidebar__nav-bullet" aria-hidden="true">
+                            {item.label.charAt(0)}
+                          </span>
+                          <span className="layout-sidebar__nav-text">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                </div>
+              ))}
+            </div>
+            <div className="layout-sidebar__footer">
+              <div className="layout-sidebar__user">
+                <span className="layout-sidebar__avatar" aria-hidden="true">
+                  {initials}
+                </span>
+                <div className="layout-sidebar__user-meta">
+                  <strong>{displayName || "Account"}</strong>
+                  <span className="text-muted">{role ?? ""}</span>
+                </div>
+              </div>
+              <button type="button" className="layout-sidebar__signout" onClick={handleSignOut}>
+                Log out
+              </button>
+            </div>
+          </aside>
+          <button
+            type="button"
+            className="layout-sidebar__scrim"
+            aria-hidden={!sidebarMobileOpen}
+            onClick={() => setSidebarMobileOpen(false)}
+          />
+        </>
+      )}
 
-          {isAuthenticated && (
-            <nav className="layout-nav" aria-label="Primary navigation">
-              {navigationLinks.map((link) => {
-                const isActive = link.match ? link.match(location.pathname) : location.pathname === link.to;
-                return (
-                  <Link
-                    key={link.to}
-                    to={link.to}
-                    className={`layout-nav__link ${isActive ? "is-active" : ""}`}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          )}
+      <div className="layout-scaffold">
+        <header className="layout-topbar">
+          <div className="layout-topbar__left">
+            {isAuthenticated ? (
+              <>
+                <button
+                  type="button"
+                  className="layout-topbar__nav-toggle show-mobile"
+                  onClick={() => setSidebarMobileOpen((prev) => !prev)}
+                  aria-label={sidebarMobileOpen ? "Close navigation" : "Open navigation"}
+                  aria-pressed={sidebarMobileOpen}
+                >
+                  <span />
+                  <span />
+                  <span />
+                </button>
+                <span className="layout-topbar__title">Computer Science Department</span>
+              </>
+            ) : (
+              <Link to="/" className="layout-brand layout-brand--inline" aria-label="Computer Science Department home">
+                <img src={logo} alt="School crest" className="layout-brand__mark" />
+                <div className="layout-brand__text">
+                  <span className="layout-brand__title">Computer Science Department</span>
+                  <small className="layout-brand__subtitle">St Georges British International Schools Group Germany</small>
+                </div>
+              </Link>
+            )}
+          </div>
 
-          <div className="layout-actions">
+          <div className="layout-topbar__actions">
             {ready && !isAuthenticated && (
               <Link to="/" className="layout-login-link">
                 Log in
@@ -191,12 +291,14 @@ function Layout({ children }) {
               </div>
             )}
           </div>
-        </div>
-      </header>
-      <main className="layout-main">{children}</main>
-      <footer className="layout-footer">
-        <small>© {new Date().getFullYear()} Computer Science Department · All curriculum in progress.</small>
-      </footer>
+        </header>
+
+        <main className="layout-main">{children}</main>
+
+        <footer className="layout-footer">
+          <small>© {new Date().getFullYear()} Computer Science Department · All curriculum in progress.</small>
+        </footer>
+      </div>
     </div>
   );
 }

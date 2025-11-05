@@ -13,96 +13,92 @@
 }
 
 .curriculum-panel {
-  background: var(--cs-white);
-  border-radius: 18px;
-  border: 1px solid rgba(12, 41, 124, 0.06);
-  box-shadow: 0 18px 32px rgba(12, 41, 124, 0.1);
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-sm);
   padding: clamp(1.45rem, 3.2vw, 2.1rem);
   display: grid;
-  gap: 1.1rem;
+  gap: var(--space-4);
 }
 
 .curriculum-panel--highlight {
-  background: linear-gradient(130deg, rgba(12, 41, 124, 0.06) 0%, rgba(178, 133, 65, 0.08) 100%);
+  background: linear-gradient(130deg, rgba(12, 41, 124, 0.06) 0%, rgba(178, 133, 65, 0.1) 100%);
   border-color: rgba(12, 41, 124, 0.14);
-  box-shadow: 0 20px 36px rgba(12, 41, 124, 0.16);
+  box-shadow: var(--shadow-md);
 }
 
 .curriculum-panel__header {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: var(--space-2);
 }
 
 .curriculum-panel__header > div h2 {
   margin: 0;
   font-size: 1.4rem;
+  color: var(--color-primary-800);
 }
 
 .curriculum-panel__body {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-3);
 }
 
 .curriculum-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: var(--space-3);
 }
 
-.pill {
-  border-radius: 14px;
-  padding: 0.6rem 1.25rem;
-  border: 1px solid rgba(12, 41, 124, 0.12);
+.curriculum-buttons .pill {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(12, 41, 124, 0.16);
   background: rgba(12, 41, 124, 0.05);
-  color: var(--cs-blue);
+  color: var(--color-primary-800);
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.pill small {
+.curriculum-buttons .pill small {
   font-weight: 500;
-  font-size: 0.75rem;
-  color: var(--cs-muted);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
 }
 
-.pill--locked {
+.curriculum-buttons .pill--locked {
   cursor: not-allowed;
-  opacity: 0.75;
+  opacity: 0.72;
 }
 
-.pill--live {
+.curriculum-buttons .pill--live {
   background: rgba(12, 41, 124, 0.12);
-  border-color: rgba(12, 41, 124, 0.28);
-  color: var(--cs-blue);
+  border-color: rgba(12, 41, 124, 0.24);
+  color: var(--color-primary-800);
   text-decoration: none;
 }
 
-.pill--live small {
-  color: rgba(12, 41, 124, 0.72);
+.curriculum-buttons .pill--live small {
+  color: rgba(12, 41, 124, 0.7);
 }
 
-.pill--live:hover,
-.pill--live:focus-visible {
+.curriculum-buttons .pill--live:hover,
+.curriculum-buttons .pill--live:focus-visible {
   transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(12, 41, 124, 0.18);
+  box-shadow: var(--shadow-sm);
 }
 
-.pill--action {
-  background: linear-gradient(135deg, var(--cs-blue), #2647a8);
-  color: #f1f3ff;
-  text-decoration: none;
+.curriculum-buttons .pill--action {
+  background: linear-gradient(135deg, var(--color-primary-800), var(--color-primary-700));
+  color: var(--color-white);
   border: none;
-}
-
-.pill--action:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 32px rgba(12, 41, 124, 0.28);
+  text-decoration: none;
 }
 
 .curriculum-panel--highlight .pill--action {
-  box-shadow: 0 18px 36px rgba(12, 41, 124, 0.28);
+  box-shadow: var(--shadow-md);
 }

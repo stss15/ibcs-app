@@ -11,6 +11,8 @@ import {
 } from "../lib/api.js";
 import { generatePassword } from "../../../shared/passwords.js";
 import { useSession } from "../hooks/useSession.js";
+import ContentContainer from "../components/ui/ContentContainer.jsx";
+import ResponsiveGrid from "../components/ui/ResponsiveGrid.jsx";
 import "./TeacherDashboardPage.css";
 import { getYear7LessonById } from "../../../shared/liveDecks.js";
 
@@ -985,7 +987,7 @@ function TeacherDashboardPage() {
   }
 
   return (
-    <div className="page-shell page-shell--fluid teacher-dashboard">
+    <ContentContainer variant="fullWidth" className="teacher-dashboard">
       <section className="teacher-dashboard__hero">
         <div className="teacher-dashboard__hero-left">
           <span className="teacher-dashboard__eyebrow">Teacher dashboard</span>
@@ -1008,14 +1010,14 @@ function TeacherDashboardPage() {
             </button>
           </div>
         </div>
-        <div className="teacher-dashboard__summary-grid">
+        <ResponsiveGrid variant="autoFit" minColumnWidth={160} className="teacher-dashboard__summary-grid">
           {summaryCards.map((card) => (
-            <article key={card.label}>
+            <article key={card.label} className="teacher-dashboard__summary-card">
               <span className="teacher-dashboard__summary-value">{card.value}</span>
               <span className="teacher-dashboard__summary-label">{card.label}</span>
             </article>
           ))}
-        </div>
+        </ResponsiveGrid>
       </section>
 
       {status && <p className={`status-banner status-banner--${status.tone}`}>{status.message}</p>}
@@ -1455,7 +1457,7 @@ function TeacherDashboardPage() {
           </div>
         </div>
       )}
-    </div>
+    </ContentContainer>
   );
 }
 

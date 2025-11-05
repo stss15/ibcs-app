@@ -1,0 +1,32 @@
+.container {
+  width: min(var(--max-content-width), 100%);
+  margin: 0 auto;
+  padding: clamp(1.5rem, 3vw, 3rem) clamp(1rem, 4vw, 3.5rem);
+  display: grid;
+  gap: clamp(1.5rem, 3vw, 3rem);
+}
+
+.default {
+  max-width: var(--max-content-width);
+}
+
+.compact {
+  max-width: 960px;
+}
+
+.wide {
+  max-width: 1440px;
+}
+
+.fullWidth {
+  width: 100%;
+  max-width: none;
+  padding-inline: clamp(1rem, 4vw, 4rem);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: var(--space-5) var(--space-4);
+  }
+}
+
