@@ -135,6 +135,11 @@ Add all new entries under the appropriate phase heading below.
 - **Notes / Decisions**: Created reusable `FeedbackPanel` component with success/error/warning/info variants, token-driven styling, ARIA attributes (role="status", aria-live="polite"), and animation support. Created reusable `ButtonGroup` component with horizontal/vertical layouts, token-driven spacing, and responsive behavior. Migrated all formative activity components (FormativeAssessment, ImageHotspotActivity, DiagramLabelActivity, MatchingActivity, OrderingActivity, GapFillActivity, CodeCompletionActivity, ClassificationActivity, SpotTheErrorActivity, DragDropActivity, PlannerActivity) to use FeedbackPanel and ButtonGroup. Removed legacy `gamified-feedback`, `gamified-segment-actions`, and `formative__badge` CSS classes in favor of new primitives. All components now use consistent feedback display and button grouping patterns.
 - **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found) (2025-11-05).
 
+### Phase 2 — 2025-11-05 — P2-010 — Wrap Python/Skulpt shells in design system layout
+- **Files / Areas**: frontend/src/components/segments/PythonPlaygroundSegment.jsx, frontend/src/components/segments/PythonPlaygroundSegment.css, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md
+- **Notes / Decisions**: Migrated PythonPlaygroundSegment to use design system components (FeedbackPanel, ButtonGroup) and tokenized all CSS styling. Replaced hardcoded spacing, font sizes, border radius, and typography with design tokens (--space-*, --text-*, --radius-*, --font-family-mono, --line-height-base). Maintained dark theme for code editor (dark backgrounds preserved for code readability). All spacing, typography, and layout now consistent with design system. CSP exception for Skulpt runtime already documented and preserved.
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found) (2025-11-05).
+
 ---
 
 ## Phase 3 — Polish, QA, & Deployment
