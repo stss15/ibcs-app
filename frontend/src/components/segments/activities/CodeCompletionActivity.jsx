@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import AttemptBadge from "../AttemptBadge.jsx";
+import FeedbackPanel from "../../ui/FeedbackPanel.jsx";
+import ButtonGroup from "../../ui/ButtonGroup.jsx";
 import "./Activities.css";
 
 const PLACEHOLDER_REGEX = /\[\[([^[\]]+)\]\]/g;
@@ -162,14 +164,16 @@ export default function CodeCompletionActivity({
           ) : (
             <span />
           )}
-          <div className="gamified-segment-actions">
+          <ButtonGroup align="end">
             <button type="submit" className="btn btn--primary" disabled={resolved && !isTeacher}>
               Check code
             </button>
-          </div>
+          </ButtonGroup>
         </div>
         {feedback && (
-          <p className={`gamified-feedback ${feedback.tone === "error" ? "is-error" : "is-success"}`}>{feedback.message}</p>
+          <FeedbackPanel tone={feedback.tone === "error" ? "error" : "success"}>
+            {feedback.message}
+          </FeedbackPanel>
         )}
       </form>
     </article>

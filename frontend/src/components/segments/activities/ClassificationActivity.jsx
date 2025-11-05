@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AttemptBadge from "../AttemptBadge.jsx";
+import FeedbackPanel from "../../ui/FeedbackPanel.jsx";
+import ButtonGroup from "../../ui/ButtonGroup.jsx";
 import "./Activities.css";
 
 export default function ClassificationActivity({
@@ -205,14 +207,16 @@ export default function ClassificationActivity({
         ) : (
           <span />
         )}
-        <div className="gamified-segment-actions">
+        <ButtonGroup align="end">
           <button type="button" className="btn btn--primary" onClick={handleSubmit} disabled={resolved && !isTeacher}>
             Check categories
           </button>
-        </div>
+        </ButtonGroup>
       </div>
       {feedback && (
-        <p className={`gamified-feedback ${feedback.tone === "error" ? "is-error" : "is-success"}`}>{feedback.message}</p>
+        <FeedbackPanel tone={feedback.tone === "error" ? "error" : "success"}>
+          {feedback.message}
+        </FeedbackPanel>
       )}
     </article>
   );

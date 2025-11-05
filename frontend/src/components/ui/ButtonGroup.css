@@ -1,0 +1,52 @@
+.button-group {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.button-group--horizontal {
+  flex-direction: row;
+}
+
+.button-group--vertical {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.button-group--align-start {
+  justify-content: flex-start;
+}
+
+.button-group--align-center {
+  justify-content: center;
+}
+
+.button-group--align-end {
+  justify-content: flex-end;
+}
+
+.button-group--align-space-between {
+  justify-content: space-between;
+}
+
+/* Keyboard navigation support */
+.button-group:focus-within {
+  outline: none;
+}
+
+.button-group > * {
+  flex-shrink: 0;
+}
+
+/* Responsive: stack vertically on mobile */
+@media (max-width: 768px) {
+  .button-group--horizontal {
+    flex-wrap: wrap;
+  }
+
+  .button-group--align-space-between {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+

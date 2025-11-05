@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 
 import classNames from "../../utils/classNames.js";
+import FeedbackPanel from "../ui/FeedbackPanel.jsx";
+import ButtonGroup from "../ui/ButtonGroup.jsx";
 import "./FormativeAssessment.css";
 
 function SortableRow({ item }) {
@@ -91,23 +93,22 @@ function MultipleChoice({ question, onSubmit, allowRetry, disabled }) {
         ))}
       </div>
       <footer className="formative__footer">
-        {!feedback && (
-          <button type="submit" className="y7-btn y7-btn--primary" disabled={selected === null || disabled}>
-            Check answer
-          </button>
-        )}
-        {feedback && allowRetry && (
-          <button type="button" className="y7-btn" onClick={reset}>
-            Try again
-          </button>
-        )}
+        <ButtonGroup align="start">
+          {!feedback && (
+            <button type="submit" className="y7-btn y7-btn--primary" disabled={selected === null || disabled}>
+              Check answer
+            </button>
+          )}
+          {feedback && allowRetry && (
+            <button type="button" className="y7-btn" onClick={reset}>
+              Try again
+            </button>
+          )}
+        </ButtonGroup>
         {feedback && (
-          <span
-            className={classNames("formative__badge", feedback.isCorrect ? "is-correct" : "is-incorrect")}
-            role="status"
-          >
+          <FeedbackPanel tone={feedback.isCorrect ? "success" : "error"}>
             {feedback.isCorrect ? "Correct" : "Try again"}
-          </span>
+          </FeedbackPanel>
         )}
       </footer>
     </form>
@@ -184,23 +185,22 @@ function OrderingAssessment({ question, onComplete, disabled }) {
         </DragOverlay>
       </DndContext>
       <footer className="formative__footer">
-        {!feedback && (
-          <button type="button" className="y7-btn y7-btn--primary" onClick={evaluate} disabled={disabled}>
-            Check order
-          </button>
-        )}
-        {feedback && question.allowRetry !== false && (
-          <button type="button" className="y7-btn" onClick={reset}>
-            Try again
-          </button>
-        )}
+        <ButtonGroup align="start">
+          {!feedback && (
+            <button type="button" className="y7-btn y7-btn--primary" onClick={evaluate} disabled={disabled}>
+              Check order
+            </button>
+          )}
+          {feedback && question.allowRetry !== false && (
+            <button type="button" className="y7-btn" onClick={reset}>
+              Try again
+            </button>
+          )}
+        </ButtonGroup>
         {feedback && (
-          <span
-            className={classNames("formative__badge", feedback.correct ? "is-correct" : "is-incorrect")}
-            role="status"
-          >
+          <FeedbackPanel tone={feedback.correct ? "success" : "error"}>
             {feedback.correct ? "Great work" : "One more attempt"}
-          </span>
+          </FeedbackPanel>
         )}
       </footer>
     </section>
@@ -246,7 +246,6 @@ function ClassificationAssessment({ question, onComplete }) {
         {question.items.map((item) => {
           const fieldId = `${question.id}-${item.id}`;
           const entry = feedback?.summary.find((summary) => summary.id === item.id);
-          const toneClass = entry ? (entry.isCorrect ? "is-correct" : "is-incorrect") : null;
           return (
             <div key={item.id} className={classNames("formative-classification__row", { "has-feedback": Boolean(entry) })}>
               <label className="formative-classification__label" htmlFor={fieldId}>
@@ -267,28 +266,27 @@ function ClassificationAssessment({ question, onComplete }) {
               ))}
             </select>
             {feedback && (
-                <span
-                  className={classNames("formative__badge", toneClass)}
-                  role="status"
-                >
-                  {entry?.isCorrect ? "Correct" : "Incorrect"}
-              </span>
+              <FeedbackPanel tone={entry?.isCorrect ? "success" : "error"}>
+                {entry?.isCorrect ? "Correct" : "Incorrect"}
+              </FeedbackPanel>
             )}
           </div>
           );
         })}
       </div>
       <footer className="formative__footer">
-        {!feedback && (
-          <button type="submit" className="y7-btn y7-btn--primary">
-            Check answers
-          </button>
-        )}
-        {feedback && question.allowRetry !== false && (
-          <button type="button" className="y7-btn" onClick={reset}>
-            Try again
-          </button>
-        )}
+        <ButtonGroup align="start">
+          {!feedback && (
+            <button type="submit" className="y7-btn y7-btn--primary">
+              Check answers
+            </button>
+          )}
+          {feedback && question.allowRetry !== false && (
+            <button type="button" className="y7-btn" onClick={reset}>
+              Try again
+            </button>
+          )}
+        </ButtonGroup>
       </footer>
     </form>
   );

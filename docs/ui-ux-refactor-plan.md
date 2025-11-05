@@ -118,7 +118,7 @@ Provide and maintain the task backlog grouped by phase. Update statuses as work 
 | ID | Task | Dependencies | Status | Notes |
 | --- | --- | --- | --- | --- |
 | P2-001 | Refactor diagram/image hotspot engines to tokenised positioning | P0-002 | Completed | Replaced inline coordinate styles with CSS variables (`--hotspot-x`, `--hotspot-y`, `--target-x`, `--target-y`) in ImageHotspotActivity and DiagramLabelActivity. All positioning now CSP-compliant (2025-11-05). |
-| P2-002 | Align formative activity components with design system | P2-001 | Planned | Introduce shared feedback panels and button groups; ensure keyboard navigation. |
+| P2-002 | Align formative activity components with design system | P2-001 | Completed | Created FeedbackPanel and ButtonGroup primitives. Migrated all formative activity components to use shared feedback and button grouping patterns (2025-11-05). |
 | P2-010 | Wrap Python/Skulpt shells in design system layout | P0-003 | Planned | Apply `ContentContainer` wrappers; document unavoidable inline styles required by Skulpt runtime. |
 | P2-011 | Audit embedded console/editor theming | P2-010 | Planned | Map syntax highlighting to token palette; ensure CSP compliance. |
 | P2-020 | Refresh admin/account/legacy pages | P0-003 | Planned | Apply shared card/grid primitives; remove remaining bespoke CSS variables. |

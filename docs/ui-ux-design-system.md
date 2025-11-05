@@ -152,6 +152,79 @@ import Accordion from './components/ui/Accordion';
 - `multiple` (boolean) - Allow multiple items open (default: false)
 - `defaultExpanded` (Array|string) - ID(s) of items to expand by default
 
+### 10. FeedbackPanel Component
+
+**Features:**
+- Success/error/warning/info variants
+- Token-driven styling with status colors
+- ARIA attributes (role="status", aria-live="polite")
+- Smooth slide-in animation on mount
+- Icon indicators (✓ for success, ✗ for error, ⚠ for warning)
+- Accessible status announcements
+
+**Usage:**
+```jsx
+import FeedbackPanel from './components/ui/FeedbackPanel';
+
+<FeedbackPanel tone="success">
+  Great work!
+</FeedbackPanel>
+
+<FeedbackPanel tone="error">
+  Please try again
+</FeedbackPanel>
+
+<FeedbackPanel tone="warning">
+  Check your answers
+</FeedbackPanel>
+
+<FeedbackPanel tone="info">
+  Useful information
+</FeedbackPanel>
+```
+
+**Props:**
+- `tone` (string) - 'success' | 'error' | 'warning' | 'info' (default: 'info')
+- `children` (React.ReactNode) - Feedback message content
+- `animated` (boolean) - Enable animation on mount (default: true)
+- `className` (string) - Additional CSS classes
+
+### 11. ButtonGroup Component
+
+**Features:**
+- Horizontal/vertical layouts
+- Token-driven spacing
+- Flexible alignment options
+- Responsive behavior (wraps on mobile)
+- Accessible role="group" attribute
+- Keyboard navigation support
+
+**Usage:**
+```jsx
+import ButtonGroup from './components/ui/ButtonGroup';
+
+<ButtonGroup align="start">
+  <button>Cancel</button>
+  <button>Submit</button>
+</ButtonGroup>
+
+<ButtonGroup align="end" layout="vertical">
+  <button>Option 1</button>
+  <button>Option 2</button>
+</ButtonGroup>
+
+<ButtonGroup align="space-between">
+  <button>Back</button>
+  <button>Next</button>
+</ButtonGroup>
+```
+
+**Props:**
+- `children` (React.ReactNode) - Button elements
+- `layout` (string) - 'horizontal' | 'vertical' (default: 'horizontal')
+- `align` (string) - 'start' | 'center' | 'end' | 'space-between' (default: 'start')
+- `className` (string) - Additional CSS classes
+
 ## Key Components
 
 ### 1. Enhanced Tables
@@ -500,6 +573,8 @@ All text meets WCAG AA standards:
 ### Component Roadmap
 
 - [x] Accordion component
+- [x] FeedbackPanel component
+- [x] ButtonGroup component
 - [ ] Timeline component
 - [ ] Comparison cards
 - [ ] Code diff viewer

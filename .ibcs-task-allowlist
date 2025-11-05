@@ -25,6 +25,12 @@ P2-001: frontend/src/components/segments/activities/ImageHotspotActivity.jsx
 P2-001: frontend/src/components/segments/activities/DiagramLabelActivity.jsx
 P2-001: frontend/src/components/segments/activities/Activities.css
 
+# P2-002: Formative Activity Components
+P2-002: frontend/src/components/ui/FeedbackPanel.*
+P2-002: frontend/src/components/ui/ButtonGroup.*
+P2-002: frontend/src/components/assessments/FormativeAssessment.{jsx,css}
+P2-002: frontend/src/components/segments/activities/*.jsx
+
 # P2-010: Python/Skulpt Shells
 P2-010: frontend/src/components/segments/PythonPlaygroundSegment.{jsx,css}
 

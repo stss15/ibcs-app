@@ -1,5 +1,7 @@
 import { useState } from "react";
 import AttemptBadge from "../AttemptBadge.jsx";
+import FeedbackPanel from "../../ui/FeedbackPanel.jsx";
+import ButtonGroup from "../../ui/ButtonGroup.jsx";
 import "./Activities.css";
 
 export default function PlannerActivity({
@@ -83,21 +85,23 @@ export default function PlannerActivity({
           ) : (
             <span />
           )}
-          <div className="gamified-segment-actions">
+          <ButtonGroup align="end">
             {isTeacher && (
               <button type="button" className="btn btn--outline" onClick={handleTeacherComplete}>
                 Mark complete
               </button>
             )}
-            <button type="submit" className="btn btn--primary" disabled={locked && !isTeacher}>
-              Lock planner
-            </button>
-          </div>
+            {!locked && (
+              <button type="submit" className="btn btn--primary" disabled={locked && !isTeacher}>
+                Lock planner
+              </button>
+            )}
+          </ButtonGroup>
         </div>
         {feedback && (
-          <p className={`gamified-feedback ${feedback.tone === "error" ? "is-error" : "is-success"}`}>
+          <FeedbackPanel tone={feedback.tone === "error" ? "error" : "success"}>
             {feedback.message}
-          </p>
+          </FeedbackPanel>
         )}
       </form>
     </article>
