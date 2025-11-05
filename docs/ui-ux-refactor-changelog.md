@@ -138,5 +138,20 @@ Add all new entries under the appropriate phase heading below.
 
 ## Open Decisions
 
-- *(Track outstanding questions or trade-offs here — e.g., inline styles required by third-party libraries, pending component redesigns, etc.)*
+### CSP Exception for Skulpt Library (2025-11-05)
+
+**Decision:** Added `'unsafe-inline'` to `style-src-elem` directive in `frontend/index.html` to allow Skulpt's dynamically injected `<style>` elements.
+
+**Rationale:**
+- Skulpt (Python runtime library) dynamically injects `<style>` tags for syntax highlighting in Python playground segments
+- This is a third-party library requirement that cannot be modified (see P2-010 in refactor plan)
+- The exception only affects `<style>` elements, not inline style attributes (`style="..."`), which remain controlled by `style-src-attr`
+- Our refactored code uses CSS variables and classes, not `<style>` tags, so this exception only applies to Skulpt
+
+**Impact:**
+- Low security risk: Only code from `'self'` origin can inject styles, and Skulpt is already bundled in the app
+- No impact on refactored components: All Phase 1 UI components remain CSP-compliant
+- Required for functionality: Python playground segments cannot function without this exception
+
+**Files:** `frontend/index.html` (line 8)
 
