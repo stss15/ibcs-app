@@ -130,6 +130,11 @@ Add all new entries under the appropriate phase heading below.
 - **Notes / Decisions**: Replaced inline coordinate styles (`left`, `top`) with CSS variables (`--hotspot-x`, `--hotspot-y`, `--target-x`, `--target-y`) in ImageHotspotActivity and DiagramLabelActivity components. Coordinates are static (from segment data as percentages), making CSS variable refactoring straightforward. CSS updated to use CSS variables with fallback values. All positioning now CSP-compliant while maintaining exact same functionality. Transform (`translate(-50%, -50%)`) remains in CSS (not inline). No coordinate calculations affected.
 - **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found); verified no inline coordinate styles remain (2025-11-05).
 
+### Phase 2 — 2025-11-05 — P2-002 — Align formative activity components with design system
+- **Files / Areas**: frontend/src/components/ui/FeedbackPanel.jsx, frontend/src/components/ui/FeedbackPanel.css, frontend/src/components/ui/ButtonGroup.jsx, frontend/src/components/ui/ButtonGroup.css, frontend/src/components/assessments/FormativeAssessment.jsx, frontend/src/components/assessments/FormativeAssessment.css, frontend/src/components/segments/activities/*.jsx, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md, docs/ui-ux-design-system.md
+- **Notes / Decisions**: Created reusable `FeedbackPanel` component with success/error/warning/info variants, token-driven styling, ARIA attributes (role="status", aria-live="polite"), and animation support. Created reusable `ButtonGroup` component with horizontal/vertical layouts, token-driven spacing, and responsive behavior. Migrated all formative activity components (FormativeAssessment, ImageHotspotActivity, DiagramLabelActivity, MatchingActivity, OrderingActivity, GapFillActivity, CodeCompletionActivity, ClassificationActivity, SpotTheErrorActivity, DragDropActivity, PlannerActivity) to use FeedbackPanel and ButtonGroup. Removed legacy `gamified-feedback`, `gamified-segment-actions`, and `formative__badge` CSS classes in favor of new primitives. All components now use consistent feedback display and button grouping patterns.
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found) (2025-11-05).
+
 ---
 
 ## Phase 3 — Polish, QA, & Deployment
