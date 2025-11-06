@@ -404,6 +404,11 @@ function TeacherDashboardPage() {
   const selectedClassMeta = useMemo(() => (selectedClass ? parseClassMeta(selectedClass) : null), [selectedClass]);
   const selectedPacing = selectedClass ? classPacingMap.get(selectedClass.id) ?? null : null;
   const selectedPacingLesson = selectedPacing ? getYear7LessonById(selectedPacing.lessonId) : null;
+  const overallStudentCount = dashboard?.students?.length ?? 0;
+  const lockedLessons = dashboard?.lessonSummary?.locked ?? 0;
+  const availableLessons = dashboard?.lessonSummary?.available ?? 0;
+  const formativeComplete = dashboard?.lessonSummary?.["formative-complete"] ?? 0;
+  const summativeComplete = dashboard?.lessonSummary?.["summative-complete"] ?? 0;
   const numberFormatter = useMemo(() => new Intl.NumberFormat(), []);
   const classSummaryCards = useMemo(() => {
     if (!selectedClass) return [];
@@ -605,12 +610,7 @@ function TeacherDashboardPage() {
   const teacherName =
     dashboard?.teacher?.displayName ?? session?.user?.displayName ?? session?.user?.username ?? "Teacher";
 
-  const overallStudentCount = dashboard?.students?.length ?? 0;
-  const lockedLessons = dashboard?.lessonSummary?.locked ?? 0;
-  const availableLessons = dashboard?.lessonSummary?.available ?? 0;
-  const formativeComplete = dashboard?.lessonSummary?.["formative-complete"] ?? 0;
-  const summativeComplete = dashboard?.lessonSummary?.["summative-complete"] ?? 0;
-const summaryCards = useMemo(
+  const summaryCards = useMemo(
     () => [
       { label: "Active classes", value: numberFormatter.format(classes.length) },
       { label: "Active students", value: numberFormatter.format(overallStudentCount) },
