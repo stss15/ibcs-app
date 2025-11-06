@@ -13,6 +13,18 @@ export default ({ mode }) => {
     },
     build: {
       sourcemap: true,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: ["react", "react-dom"],
+            router: ["react-router-dom"],
+            dndkit: ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
+            sandpack: ["@codesandbox/sandpack-react"],
+            skulpt: ["skulpt"],
+            motion: ["framer-motion"],
+          },
+        },
+      },
     },
     server: {
       port: 5173,

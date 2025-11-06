@@ -2,17 +2,33 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 13, 49, 0.35);
-  backdrop-filter: blur(8px);
   display: grid;
   place-items: center;
   padding: var(--space-5);
   z-index: 10000;
   animation: modalFadeIn var(--transition-base) ease-out;
+  overflow: auto;
+}
+
+.modal-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 13, 49, 0.35);
+  backdrop-filter: blur(8px);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.modal-overlay__backdrop:focus-visible {
+  outline: 2px solid var(--cs-blue-light);
+  outline-offset: 2px;
 }
 
 /* Modal dialog */
 .modal-dialog {
+  position: relative;
+  z-index: 1;
   background: var(--color-white);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-2xl);
@@ -124,4 +140,3 @@
     animation: none;
   }
 }
-

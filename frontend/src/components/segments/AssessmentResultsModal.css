@@ -11,6 +11,9 @@
   inset: 0;
   background: rgba(13, 18, 40, 0.55);
   backdrop-filter: blur(6px);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
 }
 
 .results-modal__card {

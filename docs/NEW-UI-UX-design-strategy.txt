@@ -17,6 +17,7 @@ When educational platforms try to display too much information, they often creat
     margin: 0;
     border: 1px solid #ccc;
   }
+
 }
 
 // ✅ GOOD: Hierarchical spacing
@@ -2006,6 +2007,366 @@ const FormField = ({ label, error, helper, required, children }) => {
 };
 ```
 
+## 9. Design System Primitives (Implemented Components)
+
+The following components have been implemented as part of the UI/UX refactor and are available in `frontend/src/components/ui/`. These components use design tokens from `global.css` and are CSP-compliant.
+
+### 9.1 FeedbackPanel
+
+**Location**: `frontend/src/components/ui/FeedbackPanel.jsx`
+
+**Purpose**: Display status messages with consistent styling and accessibility support.
+
+**Usage**:
+```jsx
+import FeedbackPanel from "../components/ui/FeedbackPanel.jsx";
+
+// Success message
+<FeedbackPanel tone="success">
+  Teacher account created successfully.
+</FeedbackPanel>
+
+// Error message
+<FeedbackPanel tone="error">
+  Failed to load dashboard data.
+</FeedbackPanel>
+
+// Warning message
+<FeedbackPanel tone="warning">
+  Your session will expire soon.
+</FeedbackPanel>
+
+// Info message (default)
+<FeedbackPanel tone="info">
+  Loading data…
+</FeedbackPanel>
+```
+
+**Props**:
+- `tone` (string): 'success' | 'error' | 'warning' | 'info' (default: 'info')
+- `children` (ReactNode): Feedback message content
+- `animated` (boolean): Whether to animate on mount (default: true)
+- `className` (string): Additional CSS classes
+
+**Features**:
+- ARIA attributes (role="status", aria-live="polite")
+- Smooth entrance animation
+- Design token-based styling
+- CSP-compliant (no inline styles)
+
+### 9.2 ButtonGroup
+
+**Location**: `frontend/src/components/ui/ButtonGroup.jsx`
+
+**Purpose**: Group related action buttons with consistent spacing and alignment.
+
+**Usage**:
+```jsx
+import ButtonGroup from "../components/ui/ButtonGroup.jsx";
+
+// Horizontal layout (default)
+<ButtonGroup>
+  <button>Save</button>
+  <button>Cancel</button>
+</ButtonGroup>
+
+// Vertical layout
+<ButtonGroup layout="vertical">
+  <button>Option 1</button>
+  <button>Option 2</button>
+</ButtonGroup>
+
+// Space-between alignment
+<ButtonGroup align="space-between">
+  <button>Previous</button>
+  <button>Next</button>
+</ButtonGroup>
+```
+
+**Props**:
+- `layout` (string): 'horizontal' | 'vertical' (default: 'horizontal')
+- `align` (string): 'start' | 'center' | 'end' | 'space-between' (default: 'start')
+- `children` (ReactNode): Button elements
+- `className` (string): Additional CSS classes
+
+**Features**:
+- Flexible layout options
+- Consistent spacing using design tokens
+- ARIA role="group" for accessibility
+
+### 9.3 Modal
+
+**Location**: `frontend/src/components/ui/Modal.jsx`
+
+**Purpose**: Accessible modal dialog with focus trap and keyboard handling.
+
+**Usage**:
+```jsx
+import Modal from "../components/ui/Modal.jsx";
+
+function MyComponent() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <button onClick={() => setIsOpen(true)}>Open Modal</button>
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Modal Title"
+        size="md"
+      >
+        <p>Modal content goes here.</p>
+        <ButtonGroup>
+          <button onClick={() => setIsOpen(false)}>Close</button>
+        </ButtonGroup>
+      </Modal>
+    </>
+  );
+}
+```
+
+**Props**:
+- `isOpen` (boolean): Whether the modal is open
+- `onClose` (function): Callback when modal should close
+- `title` (string): Modal title (used for aria-labelledby)
+- `children` (ReactNode): Modal content
+- `size` (string): 'sm' | 'md' | 'lg' | 'full' (default: 'md')
+- `closeOnBackdropClick` (boolean): Whether to close on backdrop click (default: true)
+- `closeOnEscape` (boolean): Whether to close on Escape key (default: true)
+
+**Features**:
+- Focus trap (keeps focus within modal)
+- Keyboard navigation (Tab, Escape)
+- ARIA attributes (role="dialog", aria-modal, aria-labelledby)
+- Accessible focus management
+- Design token-based styling
+
+### 9.4 Accordion
+
+**Location**: `frontend/src/components/ui/Accordion.jsx`
+
+**Purpose**: Progressive disclosure component for collapsible content sections.
+
+**Usage**:
+```jsx
+import Accordion from "../components/ui/Accordion.jsx";
+
+const items = [
+  {
+    id: "item-1",
+    title: "Section 1",
+    content: "Content for section 1"
+  },
+  {
+    id: "item-2",
+    title: "Section 2",
+    content: "Content for section 2"
+  }
+];
+
+<Accordion items={items} multiple={false} />
+```
+
+**Props**:
+- `items` (array): Array of accordion items with `id`, `title`, and `content`
+- `multiple` (boolean): Allow multiple items open at once (default: false)
+- `defaultExpanded` (array): Array of item IDs to expand by default
+
+**Features**:
+- Keyboard navigation (Arrow keys, Enter, Space)
+- ARIA attributes (aria-expanded, aria-controls)
+- Smooth expand/collapse animations
+- Design token-based styling
+
+### 9.5 ProgressBar
+
+**Location**: `frontend/src/components/ui/ProgressBar.jsx`
+
+**Purpose**: Token-driven progress indicator without inline width styling (CSP-compliant).
+
+**Usage**:
+```jsx
+import ProgressBar from "../components/ui/ProgressBar.jsx";
+
+// Basic progress bar
+<ProgressBar value={75} max={100} />
+
+// With label and value
+<ProgressBar 
+  value={45} 
+  max={100} 
+  label="Module Progress"
+  showValue
+/>
+
+// Different tones
+<ProgressBar value={60} tone="success" />
+<ProgressBar value={30} tone="warning" />
+<ProgressBar value={80} tone="brand" />
+```
+
+**Props**:
+- `value` (number): Current progress value (default: 0)
+- `max` (number): Maximum value (default: 100)
+- `tone` (string): 'brand' | 'success' | 'warning' | 'error' (default: 'brand')
+- `size` (string): 'sm' | 'md' | 'lg' (default: 'md')
+- `showValue` (boolean): Show percentage value (default: false)
+- `label` (string): Label text displayed below progress bar
+- `ariaLabel` (string): ARIA label for accessibility
+
+**Features**:
+- CSP-compliant (uses CSS custom property `--progress-percent`)
+- ARIA attributes for accessibility
+- Multiple size and tone variants
+- Design token-based styling
+
+### 9.6 StatCard
+
+**Location**: `frontend/src/components/ui/StatCard.jsx`
+
+**Purpose**: Standardized dashboard summary cards with icon, value, and optional progress.
+
+**Usage**:
+```jsx
+import StatCard from "../components/ui/StatCard.jsx";
+
+// Basic stat card
+<StatCard
+  label="Total Students"
+  value="1,234"
+  description="Active this term"
+/>
+
+// With icon and badge
+<StatCard
+  label="XP Earned"
+  value="5,280"
+  icon="⭐"
+  badge="+12%"
+  meta="vs last week"
+/>
+
+// With progress indicator
+<StatCard
+  label="Module Completion"
+  value="68%"
+  progress={0.68}
+  progressLabel="12 of 18 lessons"
+/>
+```
+
+**Props**:
+- `label` (string): Card label/title
+- `value` (string|ReactNode): Primary value to display
+- `description` (string|ReactNode): Secondary description text
+- `badge` (string|ReactNode): Badge element (e.g., "+12%")
+- `icon` (ReactNode): Icon element
+- `meta` (string|ReactNode): Meta text (e.g., "vs last week")
+- `actions` (ReactNode): Action buttons/elements
+- `progress` (number): Progress value (0-1) for progress bar
+- `progressLabel` (string): Label for progress bar
+- `tone` (string): Card tone variant (default: 'default')
+- `compact` (boolean): Compact variant (default: false)
+
+**Features**:
+- Flexible content slots
+- Optional progress indicator
+- Design token-based styling
+- Responsive layout
+
+### 9.7 StatusPill
+
+**Location**: `frontend/src/components/ui/StatusPill.jsx`
+
+**Purpose**: Unified status badge/pill component with consistent styling.
+
+**Usage**:
+```jsx
+import StatusPill from "../components/ui/StatusPill.jsx";
+
+// Soft variant (default)
+<StatusPill tone="success">Active</StatusPill>
+<StatusPill tone="warning">Pending</StatusPill>
+<StatusPill tone="danger">Error</StatusPill>
+<StatusPill tone="info">Info</StatusPill>
+
+// Solid variant
+<StatusPill tone="success" variant="solid">Complete</StatusPill>
+
+// Outline variant
+<StatusPill tone="warning" variant="outline">In Progress</StatusPill>
+
+// With icon
+<StatusPill tone="success" icon="✓">Verified</StatusPill>
+
+// Different sizes
+<StatusPill size="sm">Small</StatusPill>
+<StatusPill size="md">Medium</StatusPill>
+<StatusPill size="lg">Large</StatusPill>
+```
+
+**Props**:
+- `tone` (string): 'info' | 'success' | 'warning' | 'danger' | 'neutral' | 'muted' (default: 'info')
+- `variant` (string): 'soft' | 'solid' | 'outline' (default: 'soft')
+- `size` (string): 'sm' | 'md' | 'lg' (default: 'sm')
+- `icon` (ReactNode): Icon element
+- `children` (ReactNode): Label text
+- `as` (string|Component): Element type (default: 'span')
+- `className` (string): Additional CSS classes
+
+**Features**:
+- Multiple tone variants
+- Soft, solid, and outline styles
+- Icon support
+- Size variants
+- Design token-based styling
+
+### 9.8 ContentContainer
+
+**Location**: `frontend/src/components/ui/ContentContainer.jsx`
+
+**Purpose**: Standardized content wrapper with consistent padding and max-width.
+
+**Usage**:
+```jsx
+import ContentContainer from "../components/ui/ContentContainer.jsx";
+
+<ContentContainer>
+  <h1>Page Title</h1>
+  <p>Page content...</p>
+</ContentContainer>
+```
+
+**Features**:
+- Consistent edge spacing
+- Responsive max-width
+- Design token-based padding
+
+### 9.9 ResponsiveGrid
+
+**Location**: `frontend/src/components/ui/ResponsiveGrid.jsx`
+
+**Purpose**: Flexible grid layout with responsive breakpoints.
+
+**Usage**:
+```jsx
+import ResponsiveGrid from "../components/ui/ResponsiveGrid.jsx";
+
+<ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }}>
+  <div>Item 1</div>
+  <div>Item 2</div>
+  <div>Item 3</div>
+</ResponsiveGrid>
+```
+
+**Features**:
+- Responsive column configuration
+- Design token-based gaps
+- Flexible layout options
+
+---
+
 This comprehensive guide provides you with:
 
 1. **Spatial Design Solutions** - Fixes cramped layouts with proper spacing systems
@@ -2016,6 +2377,7 @@ This comprehensive guide provides you with:
 6. **Data Visualization** - Clean, scannable data presentation
 7. **Color Psychology** - Age-appropriate color choices
 8. **Implementation Patterns** - Ready-to-use code for common scenarios
+9. **Design System Primitives** - Reusable components with design tokens
 
 Each section addresses your specific pain points:
 - **Breathing room** through systematic spacing

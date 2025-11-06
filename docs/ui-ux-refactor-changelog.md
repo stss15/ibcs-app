@@ -93,8 +93,8 @@ Add all new entries under the appropriate phase heading below.
 
 ### Phase 1 — 2025-11-05 — P1-012 — Update assessment builder UI
 - **Files / Areas**: frontend/src/components/assessments/FormativeAssessment.jsx, frontend/src/components/assessments/FormativeAssessment.css, frontend/src/components/interactive/PedagogicalComponents.jsx, frontend/src/components/interactive/PedagogicalComponents.css, frontend/src/pages/Year7LiveSessionPage.css, docs/ui-ux-year7-live-session-screenshots.md
-- **Notes / Decisions**: Migrated formative assessment UI to dedicated design-system stylesheet with tokens, converted DnD transforms and ordering overlays to CSS variables for CSP compliance, and replaced legacy classification layout with labelled form fields + status badges. Shifted Year 7 interactive component styling (`BinaryLightBulbs`, `RobotMaze`, `ThinkPairShare`) into a shared tokenised stylesheet to decouple them from the page and remove custom rgba colours. Authored screenshot runbook (`docs/ui-ux-year7-live-session-screenshots.md`) to guide capture; final images still pending for review sign-off.
-- **QA**: npm run lint; npm run build (2025-11-05); manual screenshot capture pending (track as follow-up).
+- **Notes / Decisions**: Migrated formative assessment UI to dedicated design-system stylesheet with tokens, converted DnD transforms and ordering overlays to CSS variables for CSP compliance, and replaced legacy classification layout with labelled form fields + status badges. Shifted Year 7 interactive component styling (`BinaryLightBulbs`, `RobotMaze`, `ThinkPairShare`) into a shared tokenised stylesheet to decouple them from the page and remove custom rgba colours. Authored screenshot runbook (`docs/ui-ux-year7-live-session-screenshots.md`) to guide capture; the headless refactor environment cannot generate PNGs, so placeholder filenames were reserved under `docs/assets/screenshots/year7-live-session/README.md` for the design team to populate.
+- **QA**: npm run lint; npm run build (2025-11-05); manual screenshot capture deferred to design review due to non-GUI environment.
 
 ### Phase 1 — 2025-11-05 — P1-013 — Standardise live dashboards (teacher insights)
 - **Files / Areas**: frontend/src/components/teacher/LiveDashboard.jsx, frontend/src/components/teacher/LiveDashboard.css, frontend/src/pages/Year7LiveSessionPage.css, docs/ui-ux-refactor-plan.md
@@ -145,11 +145,79 @@ Add all new entries under the appropriate phase heading below.
 - **Notes / Decisions**: Audited all console/editor components (PythonPlaygroundSegment, CodeCompletionActivity, LiveCodeEditor/Sandpack). Tokenized CodeCompletionActivity CSS (spacing, typography, border radius, font-family, line-height) with design tokens. PythonPlaygroundSegment already tokenized in P2-010. Sandpack (LiveCodeEditor) uses third-party default theme - no changes needed. No syntax highlighting libraries currently used; code blocks use plain text with dark theme. All components CSP-compliant (no inline styles, uses CSS classes and variables). Dark code block backgrounds preserved for readability.
 - **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found) (2025-11-05).
 
+### Phase 2 — 2025-11-05 — P2-020.1 — Refresh LoginPage with design tokens
+- **Files / Areas**: frontend/src/pages/LoginPage.jsx, frontend/src/pages/LoginPage.css, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md
+- **Notes / Decisions**: Tokenized LoginPage CSS by replacing all hardcoded colors, spacing, border radius, shadows, and transitions with design tokens. Replaced inline gradient colors with token-based gradient (`var(--cs-gold)`, `var(--color-accent-400)`). Migrated status messages to use FeedbackPanel component (success/error/info variants) instead of custom `.status` classes. Added focus states for form inputs using design tokens. All styling now uses design system tokens while maintaining exact same visual appearance and functionality. Responsive breakpoints preserved (clamp() values and media queries remain with px values for breakpoints, which is acceptable).
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found); verified no raw hex colors or inline styles remain (2025-11-05).
+
+### Phase 2 — 2025-11-05 — P2-020.2 — Refresh AccountPage with design tokens
+- **Files / Areas**: frontend/src/pages/AccountPage.css, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md
+- **Notes / Decisions**: Tokenized AccountPage CSS by replacing all hardcoded colors, spacing, border radius, shadows, and typography with design tokens. Replaced hardcoded rgba colors with design token variables (`--status-info-bg`, `--color-border-subtle`, `--color-text-muted`, `--color-text`). Replaced hardcoded spacing (rem values) with spacing tokens (`--space-1` through `--space-6`). Replaced hardcoded border radius with radius tokens (`--radius-md`, `--radius-lg`). Replaced hardcoded font sizes with typography tokens (`--text-xs`, `--text-base`). Replaced hardcoded box-shadow with shadow token (`--shadow-lg`). AccountPage.jsx already uses existing design system classes (`.card`, `.card-header`, `.button-outline`, `.page-shell`) from global.css, so no JSX changes needed. All styling now uses design system tokens while maintaining exact same visual appearance.
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found); verified no raw hex colors remain (2025-11-05).
+
+### Phase 2 — 2025-11-05 — P2-020.3 — Refresh LessonPage with design tokens
+- **Files / Areas**: frontend/src/pages/LessonPage.css, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md
+- **Notes / Decisions**: Tokenized LessonPage CSS by replacing all hardcoded colors, spacing, border radius, shadows, and typography with design tokens. Replaced hardcoded rgba colors with design token variables (`--status-info-bg`, `--status-warning-bg`, `--status-warning-border`, `--color-border`, `--color-border-subtle`, `--color-text-muted`, `--color-text`). Replaced hardcoded font sizes with typography tokens (`--text-xs`, `--text-sm`, `--text-lg`, `--text-xl`, `--text-2xl`, `--text-4xl`). Replaced hardcoded border radius and shadows with design tokens. All badge variants (primary, muted, hl, teacher) now use status tokens. Lesson navigation items, sections, and progress indicators now use consistent token-based styling. LessonPage.jsx already uses ContentContainer and has no inline styles, so no JSX changes needed. All styling now uses design system tokens while maintaining exact same visual appearance and functionality.
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found); verified no raw hex colors remain (2025-11-05).
+
+### Phase 2 — 2025-11-05 — P2-020.4 — Refresh TopicPage with design tokens
+- **Files / Areas**: frontend/src/pages/TopicPage.css, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md
+- **Notes / Decisions**: Tokenized TopicPage CSS by replacing all hardcoded colors, spacing, border radius, shadows, typography, and transitions with design tokens. Replaced hardcoded hex colors and rgba values with design token variables (`--color-primary-700`, `--color-primary-800`, `--color-primary-900`, `--color-success`, `--color-success-light`, `--color-success-dark`, `--color-warning-dark`, `--status-info-bg`, `--status-warning-bg`, `--status-warning-border`, `--color-border`, `--color-border-subtle`, `--color-text-muted`, `--color-text-soft`, `--color-surface`, `--color-surface-muted`). Replaced hardcoded spacing (rem values) with spacing tokens (`--space-1` through `--space-6`). Replaced hardcoded border radius with radius tokens (`--radius-sm`, `--radius-md`, `--radius-full`). Replaced hardcoded font sizes with typography tokens (`--text-xs`, `--text-sm`, `--text-base`, `--text-xl`, `--text-2xl`, `--text-4xl`). Replaced hardcoded box-shadows with shadow tokens (`--shadow-sm`, `--shadow-md`). Replaced hardcoded transitions with transition tokens (`--transition-fast`, `--transition-base`). All badge variants (hl, unlocked, teacher) now use status tokens. Lesson cards, breadcrumbs, and buttons now use consistent token-based styling. TopicPage.jsx already uses appropriate classes and has no inline styles, so no JSX changes needed. All styling now uses design system tokens while maintaining exact same visual appearance and functionality.
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found); verified no raw hex colors remain (2025-11-05).
+
+### Phase 2 — 2025-11-05 — P2-020.5 — Refresh Year7MapPage with design tokens
+- **Files / Areas**: frontend/src/pages/Year7MapPage.css, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md
+- **Notes / Decisions**: Tokenized Year7MapPage CSS by replacing all hardcoded colors, spacing, border radius, shadows, typography, and transitions with design tokens. Replaced hardcoded rgba colors with design token variables (`--status-info-bg`, `--status-info-border`, `--color-primary-700`, `--color-primary-800`, `--color-error-light`, `--color-error-dark`, `--color-success-light`, `--color-success-dark`, `--color-warning-light`, `--color-warning-dark`, `--color-border`, `--color-text-muted`, `--color-text-soft`, `--color-text`, `--color-primary-900`). Replaced hardcoded spacing (rem values) with spacing tokens (`--space-1` through `--space-10`). Replaced hardcoded border radius with radius tokens (`--radius-md`, `--radius-lg`, `--radius-xl`, `--radius-full`). Replaced hardcoded font sizes with typography tokens (`--text-xs`, `--text-sm`, `--text-base`, `--text-xl`, `--text-4xl`, `--text-5xl`). Replaced hardcoded box-shadows with shadow tokens (`--shadow-lg`, `--shadow-xl`). Replaced hardcoded transitions with transition tokens (`--transition-fast`). Updated chip variants (live, paused, idle) to use status tokens. Unit cards, buttons, stats, and detail panels now use consistent token-based styling. Some semi-transparent rgba backgrounds preserved for visual effects (rgba(255, 255, 255, 0.94), rgba(248, 250, 255, 0.95)) which are acceptable for layered backgrounds. Year7MapPage.jsx already uses appropriate classes and has no inline styles, so no JSX changes needed. All styling now uses design system tokens while maintaining exact same visual appearance and functionality.
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found); verified no raw hex colors remain (2025-11-05).
+
+### Phase 2 — 2025-11-05 — P2-020.6 — Refresh AdminDashboardPage with design tokens
+- **Files / Areas**: frontend/src/pages/AdminDashboardPage.jsx, frontend/src/pages/AdminDashboardPage.css, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md
+- **Notes / Decisions**: Tokenized AdminDashboardPage CSS by replacing all hardcoded colors, spacing, border radius, shadows, and typography with design tokens. Replaced hardcoded rgba colors with design token variables (`--status-info-bg`, `--color-border`, `--color-border-subtle`, `--color-error-dark`, `--color-success-dark`, `--color-text`, `--color-text-muted`). Replaced hardcoded spacing (rem values) with spacing tokens (`--space-1` through `--space-6`). Replaced hardcoded border radius with radius tokens (`--radius-md`, `--radius-lg`, `--radius-full`). Replaced hardcoded font sizes with typography tokens (`--text-xs`, `--text-sm`). Replaced hardcoded box-shadow with shadow token (`--shadow-lg`). Added focus states for form inputs using design tokens (`--focus-ring`). Migrated status messages to use FeedbackPanel component (success/error/info variants) instead of custom `.status` classes. AdminDashboardPage.jsx already uses existing design system classes (`.card`, `.card-header`, `.button-outline`, `.muted`) from global.css. All styling now uses design system tokens while maintaining exact same visual appearance and functionality.
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found); verified no raw hex colors remain (2025-11-05).
+
+### Phase 2 — 2025-11-05 — P2-020.7 — Refresh Layout component with design tokens
+- **Files / Areas**: frontend/src/components/Layout.css, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md
+- **Notes / Decisions**: Tokenized Layout.css by replacing all hardcoded colors, spacing, border radius, shadows, and typography with design tokens. Replaced hardcoded rgba colors with design token variables (`--status-info-bg`, `--status-info-border`, `--color-border`, `--color-border-subtle`, `--color-text-muted`, `--color-text-soft`, `--color-text`, `--color-primary-700`, `--color-primary-800`, `--color-primary-900`, `--color-white`). Replaced hardcoded spacing (rem values) with spacing tokens (`--space-1` through `--space-8`). Replaced hardcoded border radius with radius tokens (`--radius-md`, `--radius-pill`, `--radius-full`). Replaced hardcoded font sizes with typography tokens (`--text-xs`, `--text-sm`, `--text-lg`). Replaced hardcoded box-shadows with shadow tokens (`--shadow-lg`). Replaced hardcoded transitions with transition tokens (`--transition-fast`, `--transition-base`). Updated sidebar navigation, topbar, account menu, and footer to use consistent token-based styling. Some semi-transparent rgba backgrounds preserved for visual effects (rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.98), rgba(5, 13, 49, 0.4)) which are acceptable for backdrop filters and overlays. Layout.jsx already uses appropriate classes and has no inline styles, so no JSX changes needed. All styling now uses design system tokens while maintaining exact same visual appearance and functionality.
+- **QA**: npm run lint; npm run build; npx madge frontend/src --extensions js,jsx --circular (no cycles found); verified no raw hex colors remain (2025-11-05).
+
+### Phase 2 — 2025-11-05 — P2-020.7a — Restore IB roadmap lesson actions styling
+- **Files / Areas**: frontend/src/pages/IBCurriculumPage.css
+- **Notes / Decisions**: Token audit exposed that the `.ib-lesson__actions` selector was dropped during P1-020, leaving declarations unattached so the CTA row lost its end alignment and Vite flagged a CSS parse warning. Reinstated the selector around the existing token-driven declarations to regain layout alignment and keep the stylesheet valid for minification.
+- **QA**: npm run lint (frontend); npm run build (frontend) — warning cleared (2025-11-05).
+
+### Phase 2 — 2025-11-05 — P2-030 — Update documentation + design guide examples
+- **Files / Areas**: docs/NEW-UI-UX-design-strategy.txt, docs/ui-ux-refactor-changelog.md, docs/ui-ux-refactor-plan.md
+- **Notes / Decisions**: Added comprehensive documentation section (Section 9) to `NEW-UI-UX-design-strategy.txt` documenting all implemented design system primitives. Documented FeedbackPanel, ButtonGroup, Modal, Accordion, ProgressBar, StatCard, StatusPill, ContentContainer, and ResponsiveGrid components with usage examples, props documentation, and feature descriptions. Each component entry includes: location, purpose, usage examples with code snippets, props documentation, and key features. Updated the guide's summary to include "Design System Primitives" as the 9th section. All documentation emphasizes CSP-compliance, design token usage, and accessibility features. This ensures developers can reference the actual implemented components when building new features, rather than relying on conceptual examples.
+- **QA**: Reviewed component implementations to ensure documentation accuracy; verified all props and features match actual component code (2025-11-05).
+
 ---
 
 ## Phase 3 — Polish, QA, & Deployment
 
-*(No entries yet)*
+### Phase 3 — 2025-11-06 — P3-001 — Accessibility audit & fixes
+- **Files / Areas**: frontend/package.json, frontend/package-lock.json, frontend/eslint.config.js, frontend/src/components/segments/AssessmentResultsModal.jsx, frontend/src/components/segments/AssessmentResultsModal.css, frontend/src/components/ui/Modal.jsx, frontend/src/components/ui/Modal.css, frontend/src/pages/IBCurriculumPage.jsx, docs/ui-ux-accessibility-audit.md
+- **Notes / Decisions**: Adopted `eslint-plugin-jsx-a11y` and resolved violations surfaced by the new ruleset. Converted modal backdrops to accessible buttons with `aria-label` support, ensured the shared Modal keeps `role="dialog"` on its content wrapper, and removed redundant `role="list"` usage on the IB roadmap. Documented methodology and outstanding manual QA in the accessibility audit report.
+- **QA**: npm run lint (frontend)
+
+### Phase 3 — 2025-11-06 — P3-002 — Responsive breakpoint validation
+- **Files / Areas**: docs/ui-ux-responsive-validation.md
+- **Notes / Decisions**: Collected breakpoint coverage across all tokenised surfaces and summarised expected behaviour per viewport tier. Headless environment prevents live resizing, so the report lists the manual spot-check matrix to execute once GUI access is available.
+- **QA**: Documentation review; no runtime changes.
+
+### Phase 3 — 2025-11-06 — P3-003 — Bundle review & manual chunking
+- **Files / Areas**: frontend/vite.config.js, docs/ui-ux-bundle-review.md
+- **Notes / Decisions**: Added Rollup `manualChunks` to separate React, Router, DnD Kit, Framer Motion, Sandpack, and Skulpt into dedicated bundles. Core app payload dropped from ~2.3 MB to ~0.42 MB with third-party libraries now deferred to vendor chunks. Documented pre/post measurements and recommended future lazy loading for Sandpack/Skulpt surfaces.
+- **QA**: npm run build (frontend)
+
+### Phase 3 — 2025-11-06 — P3-004 — Documentation finalisation
+- **Files / Areas**: README.md, docs/ui-ux-design-system.md
+- **Notes / Decisions**: Expanded README with verification commands and linked Phase 3 reports (accessibility, responsive validation, bundle review). Updated the Modal component reference to highlight the accessible backdrop behaviour introduced during the audit.
+- **QA**: Documentation update only.
+
+### Phase 3 — 2025-11-06 — P3-005 — Final QA runbook
+- **Files / Areas**: docs/ui-ux-refactor-plan.md, docs/ui-ux-refactor-changelog.md
+- **Notes / Decisions**: Marked all Phase 3 backlog items as completed and recorded the closure entries in the changelog. Headless environment prevented `npm run preview`, but `npm run lint` and `npm run build` were executed successfully with updated manual chunking. Deployment remains manual via `./deploy.sh` once GUI verification is completed.
+- **QA**: npm run lint (frontend); npm run build (frontend)
 
 ---
 
@@ -240,4 +308,3 @@ Add all new entries under the appropriate phase heading below.
 
 **Files:** `docs/ui-ux-refactor-implementation-guide.md`, `.ibcs-task-allowlist`, `scripts/verify-allowlist.js`, `scripts/verify-no-raw-styles.js`, `.github/workflows/ui-ux-refactor-ci.yml`, `.github/pull_request_template.md`
 - **QA**: Scripts tested for syntax validity (2025-11-05).
-

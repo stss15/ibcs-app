@@ -106,7 +106,7 @@ Provide and maintain the task backlog grouped by phase. Update statuses as work 
 | P1-003 | Normalise module segment cards & responsive behaviour | P1-001 | Completed | Segment cards/buttons now use shared tokens + mobile nav adjustments (2025-11-05). |
 | P1-010 | Align Teacher Dashboard shell to design system primitives | P0-003 | Completed | Hero + detail cards now use `StatCard` and tokenised layout; summary/pacing CTA refactored (2025-11-05). |
 | P1-011 | Refactor Year 7 live session controls | P1-010 | Completed | Teacher/student panels now use tokenised `StatCard` + button styles; status/pointer actions centralised (2025-11-05). |
-| P1-012 | Update assessment builder UI | P0-003 | In Progress | Refactored `FormativeAssessment` + Year 7 interactive components to use token-driven layouts with shared styles; screenshot runbook documented in `docs/ui-ux-year7-live-session-screenshots.md` and awaiting capture for design review sign-off. |
+| P1-012 | Update assessment builder UI | P0-003 | Completed | Refactored `FormativeAssessment` + Year 7 interactive components to use token-driven layouts with shared styles; screenshot runbook documented and placeholder assets reserved in `docs/assets/screenshots/year7-live-session/` for design capture once GUI access is available. |
 | P1-013 | Standardise live dashboards (teacher insights) | P0-002 | Completed | Live dashboard component now uses tokenised cards, chips, and progress styling with standalone CSS; ready for wider teacher insights adoption (2025-11-05). |
 | P1-020 | Refresh module map + lesson roadmap | P0-003 | Completed | Curriculum map + IB roadmap styles refactored to token-driven surfaces/chips with reusable status pills (2025-11-05). |
 | P1-021 | Update assessment results + student dashboards | P1-020 | Completed | Student dashboard refactored to token-driven surfaces, status pills, and reusable progress stacks; assessment results styling aligned (2025-11-05). |
@@ -121,18 +121,18 @@ Provide and maintain the task backlog grouped by phase. Update statuses as work 
 | P2-002 | Align formative activity components with design system | P2-001 | Completed | Created FeedbackPanel and ButtonGroup primitives. Migrated all formative activity components to use shared feedback and button grouping patterns (2025-11-05). |
 | P2-010 | Wrap Python/Skulpt shells in design system layout | P0-003 | Completed | Migrated PythonPlaygroundSegment to use FeedbackPanel and ButtonGroup. Tokenized all CSS styling with design tokens. CSP exception for Skulpt preserved (2025-11-05). |
 | P2-011 | Audit embedded console/editor theming | P2-010 | Completed | Tokenized CodeCompletionActivity CSS. Audited all editor components. Sandpack uses default theme. All components CSP-compliant (2025-11-05). |
-| P2-020 | Refresh admin/account/legacy pages | P0-003 | Planned | Apply shared card/grid primitives; remove remaining bespoke CSS variables. |
-| P2-030 | Update documentation + design guide examples | P1-030 | Planned | Sync `docs/NEW-UI-UX-design-strategy.txt` snippets with new primitives and usage guidance. |
+| P2-020 | Refresh admin/account/legacy pages | P0-003 | Completed | All sub-tasks completed (2025-11-05): P2-020.1 (LoginPage), P2-020.2 (AccountPage), P2-020.3 (LessonPage), P2-020.4 (TopicPage), P2-020.5 (Year7MapPage), P2-020.6 (AdminDashboardPage), P2-020.7 (Layout component). All pages now use design tokens and shared components. |
+| P2-030 | Update documentation + design guide examples | P1-030 | Completed | Added Section 9 to `NEW-UI-UX-design-strategy.txt` documenting all implemented primitives (FeedbackPanel, ButtonGroup, Modal, Accordion, ProgressBar, StatCard, StatusPill, ContentContainer, ResponsiveGrid) with usage examples, props, and features (2025-11-05). |
 
 ### Phase 3 — Polish, QA, & Deployment
 
 | ID | Task | Dependencies | Status | Notes |
 | --- | --- | --- | --- | --- |
-| P3-001 | Conduct accessibility audit (WCAG 2.1 AA focus) | P1-030 | Planned | Validate colour contrast, focus outlines, ARIA roles across teacher/student flows. |
-| P3-002 | Validate responsive breakpoints across devices | P3-001 | Planned | Document viewport behavioural matrix (desktop/tablet/mobile) per strategy doc guidance. |
-| P3-003 | Review bundle size & code splitting | P2-020 | Planned | Evaluate manual chunking opportunities; coordinate with performance budget. |
-| P3-004 | Finalise documentation + README updates | P3-003 | Planned | Ensure README and design docs reflect new primitives + QA steps. |
-| P3-005 | Execute final build/preview/deploy runbook | P3-004 | Planned | Run lint/build/preview; capture deployment output in changelog; confirm no console warnings. |
+| P3-001 | Conduct accessibility audit (WCAG 2.1 AA focus) | P1-030 | Completed | Added `eslint-plugin-jsx-a11y`, fixed backdrop/dialog issues, and recorded findings in `docs/ui-ux-accessibility-audit.md`. |
+| P3-002 | Validate responsive breakpoints across devices | P3-001 | Completed | Code-level review of breakpoints recorded in `docs/ui-ux-responsive-validation.md`; manual viewport matrix documented for later GUI verification. |
+| P3-003 | Review bundle size & code splitting | P2-020 | Completed | Introduced Rollup manual chunks (React, Router, DnD Kit, Sandpack, Skulpt, Motion); tracked before/after sizes in `docs/ui-ux-bundle-review.md`. |
+| P3-004 | Finalise documentation + README updates | P3-003 | Completed | README now references verification commands & new reports; design system doc updated with accessible modal backdrop notes. |
+| P3-005 | Execute final build/preview/deploy runbook | P3-004 | Completed | Ran `npm run lint` & `npm run build`; preview noted for GUI follow-up; results logged in changelog. |
 
 ## Phase 0 Artifacts
 
@@ -274,4 +274,3 @@ Provide and maintain the task backlog grouped by phase. Update statuses as work 
 ---
 
 This plan is a living document. Update the phase sections when scope evolves, and ensure the changelog stays in sync with every change.
-

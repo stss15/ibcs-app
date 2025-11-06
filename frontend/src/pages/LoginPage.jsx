@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login as loginRequest } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
+import FeedbackPanel from "../components/ui/FeedbackPanel.jsx";
 import logo from "../assets/logo.svg";
 import "./LoginPage.css";
 
@@ -107,7 +108,11 @@ function LoginPage() {
           <button type="submit" className="login-submit" disabled={status.status === "loading"}>
             {status.status === "loading" ? "Working…" : `Log in as ${roleLabel}`}
           </button>
-          {status.message && <p className={`status status--${status.status}`}>{status.message}</p>}
+          {status.message && (
+            <FeedbackPanel tone={status.status === "error" ? "error" : status.status === "success" ? "success" : "info"}>
+              {status.message}
+            </FeedbackPanel>
+          )}
         </form>
 
         <footer className="login-footnote">

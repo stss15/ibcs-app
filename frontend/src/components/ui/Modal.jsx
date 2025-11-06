@@ -94,26 +94,30 @@ export default function Modal({
 
   if (!isOpen) return null;
 
-  const handleBackdropClick = (e) => {
-    if (closeOnBackdropClick && e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   const titleId = title ? `modal-title-${Math.random().toString(36).substr(2, 9)}` : undefined;
 
   return (
-    <div
-      className="modal-overlay"
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-    >
+    <div className="modal-overlay" role="presentation">
+      <button
+        type="button"
+        className="modal-overlay__backdrop"
+        aria-label="Close modal"
+        tabIndex={-1}
+        onClick={
+          closeOnBackdropClick
+            ? () => {
+                onClose?.();
+              }
+            : undefined
+        }
+        aria-hidden={closeOnBackdropClick ? undefined : "true"}
+      />
       <div
         ref={modalRef}
         className={`modal-dialog modal-dialog--${size}`}
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
       >
         {title && (
           <header className="modal-header">
@@ -135,4 +139,3 @@ export default function Modal({
     </div>
   );
 }
-

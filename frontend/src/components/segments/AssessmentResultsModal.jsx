@@ -28,7 +28,13 @@ export default function AssessmentResultsModal({ success, correctCount, totalCou
 
   return (
     <div className={`results-modal ${success ? "is-success" : "is-error"}`}>
-      <div className="results-modal__backdrop" onClick={onClose} />
+      <button
+        type="button"
+        className="results-modal__backdrop"
+        onClick={onClose}
+        aria-label="Close results modal"
+        tabIndex={-1}
+      />
       <div className="results-modal__card">
         <header>
           <h3>{success ? "Checkpoint cleared!" : "Keep going!"}</h3>
@@ -58,4 +64,3 @@ export default function AssessmentResultsModal({ success, correctCount, totalCou
     </div>
   );
 }
-

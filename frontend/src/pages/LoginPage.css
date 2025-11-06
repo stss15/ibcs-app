@@ -3,28 +3,28 @@
   justify-content: center;
   align-items: center;
   min-height: clamp(360px, 68vh, 640px);
-  padding: clamp(1.8rem, 5vw, 3rem) 1.25rem;
+  padding: clamp(var(--space-5), 5vw, var(--space-8)) var(--space-5);
 }
 
 .login-card {
   width: min(640px, 100%);
   background: var(--cs-white);
-  border-radius: 18px;
-  box-shadow: 0 18px 36px rgba(12, 41, 124, 0.12);
-  padding: clamp(1.45rem, 3vw, 2.3rem);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: clamp(var(--space-4), 3vw, var(--space-6));
   display: grid;
-  gap: 1.4rem;
-  border: 1px solid rgba(12, 41, 124, 0.06);
+  gap: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .login-card__header {
   display: flex;
-  gap: 1.35rem;
+  gap: var(--space-4);
   align-items: center;
-  background: rgba(12, 41, 124, 0.05);
-  border-radius: 14px;
-  padding: 1.1rem 1.3rem;
-  border: 1px solid rgba(12, 41, 124, 0.1);
+  background: var(--status-info-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--status-info-border);
 }
 
 .login-card__logo {
@@ -34,71 +34,79 @@
 
 .login-card__header h1 {
   margin: 0;
-  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  font-size: clamp(var(--text-2xl), 3.2vw, var(--text-4xl));
   color: var(--cs-blue);
 }
 
 .login-role {
   display: grid;
-  gap: 0.6rem;
+  gap: var(--space-2);
 }
 
 .login-role__toggle {
   display: inline-flex;
-  padding: 0.25rem;
-  gap: 0.25rem;
-  border-radius: 999px;
-  background: rgba(12, 41, 124, 0.06);
-  border: 1px solid rgba(12, 41, 124, 0.12);
+  padding: var(--space-1);
+  gap: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--status-info-bg);
+  border: 1px solid var(--status-info-border);
 }
 
 .login-role__toggle button {
   border: none;
   background: transparent;
-  padding: 0.5rem 1.2rem;
+  padding: var(--space-2) var(--space-3);
   font-weight: 600;
-  color: rgba(12, 41, 124, 0.7);
-  border-radius: 999px;
-  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
 }
 
 .login-role__toggle button.active {
   background: var(--cs-blue);
   color: var(--cs-white);
-  box-shadow: 0 12px 22px rgba(12, 41, 124, 0.22);
+  box-shadow: var(--shadow-md);
 }
 
 .login-form {
   display: grid;
-  gap: 1.1rem;
+  gap: var(--space-3);
 }
 
 .login-form label {
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-1);
 }
 
 .login-form input {
-  border: 1px solid rgba(12, 41, 124, 0.16);
-  border-radius: 0.75rem;
-  padding: 0.7rem 0.85rem;
-  font-size: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
   background: var(--cs-white);
+  color: var(--color-text);
+  transition: border-color var(--transition-fast);
+}
+
+.login-form input:focus {
+  outline: none;
+  border-color: var(--cs-blue);
+  box-shadow: var(--focus-ring);
 }
 
 .login-submit {
   border: none;
-  border-radius: 999px;
-  padding: 0.75rem 1.7rem;
+  border-radius: var(--radius-full);
+  padding: var(--space-3) var(--space-5);
   font-weight: 600;
-  background: linear-gradient(135deg, var(--cs-gold), #d2a35a);
+  background: linear-gradient(135deg, var(--cs-gold), var(--color-accent-400));
   color: var(--cs-black);
-  transition: transform 0.17s ease, box-shadow 0.17s ease;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.login-submit:hover {
+.login-submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(178, 133, 65, 0.25);
+  box-shadow: var(--shadow-lg);
 }
 
 .login-submit:disabled {
@@ -106,26 +114,9 @@
   cursor: progress;
 }
 
-.status {
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-.status--error {
-  color: #c0392b;
-}
-
-.status--success {
-  color: #0f7a39;
-}
-
-.status--loading {
-  color: var(--cs-blue);
-}
-
 .login-footnote {
-  border-top: 1px solid rgba(12, 41, 124, 0.12);
-  padding-top: 1rem;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-4);
 }
 
 @media (max-width: 640px) {

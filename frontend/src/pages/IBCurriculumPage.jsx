@@ -309,7 +309,7 @@ function IBCurriculumPage() {
                       </div>
                     </header>
 
-                    <ul className="ib-lessons" role="list">
+                    <ul className="ib-lessons">
                       {subtopic.lessons?.map((lesson, index) => {
                         const status = computeLessonStatus({
                           lesson,

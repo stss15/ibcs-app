@@ -1,22 +1,22 @@
 .admin-grid {
   display: grid;
-  gap: 2rem;
+  gap: var(--space-6);
 }
 
 .card {
   background: var(--cs-white);
-  border-radius: 18px;
-  padding: clamp(1.6rem, 3.5vw, 2.4rem);
-  box-shadow: 0 22px 48px rgba(12, 41, 124, 0.14);
-  border: 1px solid rgba(12, 41, 124, 0.12);
+  border-radius: var(--radius-lg);
+  padding: clamp(var(--space-4), 3.5vw, var(--space-6));
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border-subtle);
   display: grid;
-  gap: 1.4rem;
+  gap: var(--space-4);
 }
 
 .card-header {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .status {
@@ -24,11 +24,11 @@
 }
 
 .status--error {
-  color: #c0392b;
+  color: var(--color-error-dark);
 }
 
 .status--success {
-  color: #0f7a39;
+  color: var(--color-success-dark);
 }
 
 .status--info {
@@ -42,69 +42,77 @@
 .admin-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .admin-summary div {
-  border-radius: 1rem;
-  border: 1px solid rgba(12, 41, 124, 0.12);
-  background: rgba(12, 41, 124, 0.04);
-  padding: 1rem 1.1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--status-info-bg);
+  padding: var(--space-4) var(--space-3);
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-1);
 }
 
 .admin-form {
   display: grid;
-  gap: 0.9rem;
+  gap: var(--space-3);
 }
 
 .admin-form label {
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-1);
 }
 
 .admin-form input {
-  border: 1px solid rgba(12, 41, 124, 0.18);
-  border-radius: 0.75rem;
-  padding: 0.65rem 0.85rem;
-  background: rgba(12, 41, 124, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  background: var(--status-info-bg);
+  color: var(--color-text);
+  transition: border-color var(--transition-fast);
+}
+
+.admin-form input:focus {
+  outline: none;
+  border-color: var(--cs-blue);
+  box-shadow: var(--focus-ring);
 }
 
 .teacher-table {
   display: grid;
-  gap: 0.85rem;
+  gap: var(--space-3);
 }
 
 .teacher-table__head,
 .teacher-row {
   display: grid;
   grid-template-columns: 1.5fr 1fr 0.8fr 0.8fr 1fr auto;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: center;
 }
 
 .teacher-table__head {
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--cs-muted);
 }
 
 .teacher-row {
-  border: 1px solid rgba(12, 41, 124, 0.12);
-  border-radius: 1rem;
-  padding: 0.85rem 1rem;
-  background: rgba(12, 41, 124, 0.05);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  background: var(--status-info-bg);
 }
 
 .badge {
   display: inline-block;
-  border-radius: 999px;
-  padding: 0.25rem 0.7rem;
-  background: rgba(12, 41, 124, 0.12);
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-2);
+  background: var(--status-info-bg);
   color: var(--cs-blue);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   text-align: center;
 }
@@ -116,7 +124,7 @@
 
   .teacher-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem;
+    gap: var(--space-2);
   }
 
   .teacher-row span:last-child {

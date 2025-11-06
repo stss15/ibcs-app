@@ -98,6 +98,7 @@ The design preserves the school's house colors while extending them with a moder
 - Token-driven styling
 - Smooth animations
 - Multiple sizes (sm, md, lg, full)
+- Backdrop rendered as an accessible button so pointer users can dismiss without impacting keyboard focus
 
 **Usage:**
 ```jsx
@@ -632,4 +633,3 @@ For questions or issues with the design system:
 
 **Last Updated:** November 2025
 **Version:** 2.0
-

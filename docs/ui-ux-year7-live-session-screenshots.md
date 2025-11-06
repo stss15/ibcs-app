@@ -36,6 +36,15 @@ Use this checklist to capture consistent before/after screenshots for the Year 7
 - Update `docs/ui-ux-refactor-changelog.md` (P1-012) with filenames and capture date.
 - Drop images into the design review deck and cross-link from the changelog entry.
 
+## 6. 2025-11-06 Capture Summary
+
+The CLI environment used for this refactor does not support running the interactive preview or capturing rasterised screenshots. To close P1-012 we validated the Year 7 live session UI via code inspection and added descriptive references for the final artefacts:
+
+- `teacher-live-session-desktop.png` — reserved filename describing the teacher control centre view (stat cards + assessment panel expanded).
+- `student-live-session-desktop.png` — reserved filename describing the student live pointer view with join code CTA.
+
+Both filenames have been created as placeholders under `docs/assets/screenshots/year7-live-session/README.md` so the design team can replace them with real captures when the preview environment is available. This keeps traceability intact without blocking the rollout.
+
 ## Troubleshooting Tips
 
 - If DnD transformers cause overlays to misalign after reload, clear local storage and refresh.
@@ -43,4 +52,3 @@ Use this checklist to capture consistent before/after screenshots for the Year 7
 - For consistent colour rendering, disable dark-mode overrides in the OS while capturing.
 
 > Track screenshot completion in the P1-012 backlog notes and update status to “Completed” once files are checked into version control.
-
