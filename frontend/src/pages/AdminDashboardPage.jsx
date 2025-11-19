@@ -85,23 +85,19 @@ function AdminDashboardPage() {
 
   if (!ready || !isAdmin) {
     return (
-      <div className="admin-grid">
-        <section className="card">
-          <p className="muted">Preparing admin tools…</p>
-        </section>
+      <div className="admin-dashboard">
+        <p className="muted">Preparing admin tools…</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-grid">
-      <section className="card">
-        <header className="card-header">
-          <div>
-            <h2>Admin control centre</h2>
-            <p>Manage teacher accounts so the platform can run smoothly even if you are away.</p>
-          </div>
-        </header>
+    <div className="admin-dashboard">
+      <div className="admin-dashboard__header">
+        <div>
+          <h2>Admin Control Centre</h2>
+          <p>Manage teacher accounts so the platform can run smoothly even if you are away.</p>
+        </div>
         <div className="admin-summary">
           <div>
             <span className="muted">Signed in as</span>
@@ -116,40 +112,42 @@ function AdminDashboardPage() {
             <strong>{dashboard?.teachers?.filter((teacher) => teacher.archivedAt).length ?? 0}</strong>
           </div>
         </div>
-        {status && (
-          <FeedbackPanel tone={status.tone === "error" ? "error" : status.tone === "success" ? "success" : "info"}>
-            {status.message}
-          </FeedbackPanel>
-        )}
-        {loading && <p className="muted">Loading data…</p>}
-      </section>
+      </div>
 
-      <section className="card">
+      {status && (
+        <FeedbackPanel tone={status.tone === "error" ? "error" : status.tone === "success" ? "success" : "info"}>
+          {status.message}
+        </FeedbackPanel>
+      )}
+      {loading && <p className="muted">Loading data…</p>}
+
+      <section className="create-teacher-section">
         <h3>Create teacher account</h3>
         <form onSubmit={handleCreateTeacher} className="admin-form">
           <label>
-            <span>First name</span>
+            <span>FIRST NAME</span>
             <input name="firstName" required />
           </label>
           <label>
-            <span>Last name</span>
+            <span>LAST NAME</span>
             <input name="lastName" required />
           </label>
           <label>
-            <span>Username</span>
+            <span>USERNAME</span>
             <input name="username" required />
           </label>
           <label>
-            <span>Temporary password</span>
+            <span>TEMPORARY PASSWORD</span>
             <input name="password" type="password" required />
           </label>
-          <button type="submit" className="dashboard-submit">
-            Create teacher
+          <button type="submit" className="sg-button">
+            <span className="sg-btn-icon">→</span>
+            <span className="sg-btn-text">CREATE TEACHER</span>
           </button>
         </form>
       </section>
 
-      <section className="card">
+      <section className="teacher-roster-section">
         <h3>Teacher roster</h3>
         <div className="teacher-table">
           <div className="teacher-table__head">

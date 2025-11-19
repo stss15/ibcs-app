@@ -58,7 +58,7 @@ function LoginPage() {
         </header>
 
         <div className="login-role">
-          <span>Sign in as</span>
+          <span className="login-role__label">Sign in as</span>
           <div className="login-role__toggle" role="group" aria-label="Choose account type">
             {ROLES.map((option) => (
               <button
@@ -78,15 +78,18 @@ function LoginPage() {
 
         <form onSubmit={handleSubmit} className="login-form">
           <label>
-            <span>Username</span>
+            <span>USERNAME</span>
             <input name="username" required autoComplete="username" />
           </label>
           <label>
-            <span>Password</span>
+            <span>PASSWORD</span>
             <input name="password" type="password" required autoComplete="current-password" />
           </label>
-          <button type="submit" className="login-submit" disabled={status.status === 'loading'}>
-            {status.status === 'loading' ? 'Working…' : `Log in as ${roleLabel}`}
+          <button type="submit" className="sg-button login-submit" disabled={status.status === 'loading'}>
+            <span className="sg-btn-icon">→</span>
+            <span className="sg-btn-text">
+              {status.status === 'loading' ? 'WORKING…' : `LOG IN AS ${roleLabel.toUpperCase()}`}
+            </span>
           </button>
           {status.message && (
             <FeedbackPanel tone={status.status === 'error' ? 'error' : status.status === 'success' ? 'success' : 'info'}>

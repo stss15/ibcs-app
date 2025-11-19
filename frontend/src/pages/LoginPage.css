@@ -2,133 +2,136 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: clamp(360px, 68vh, 640px);
-  padding: clamp(1.8rem, 5vw, 3rem) 1.25rem;
+  min-height: calc(100vh - 200px);
+  padding: var(--space-6) var(--space-4);
 }
 
 .login-card {
   width: min(640px, 100%);
-  background: var(--cs-white);
-  border-radius: 18px;
-  box-shadow: 0 18px 36px rgba(12, 41, 124, 0.12);
-  padding: clamp(1.45rem, 3vw, 2.3rem);
+  background: var(--sg-white);
+  border-radius: var(--radius-none);
+  padding: var(--space-8) var(--space-6);
   display: grid;
-  gap: 1.4rem;
-  border: 1px solid rgba(12, 41, 124, 0.06);
+  gap: var(--space-6);
+  border: 1px solid var(--sg-grey-soft);
 }
 
 .login-card__header {
   display: flex;
-  gap: 1.35rem;
+  gap: var(--space-4);
   align-items: center;
-  background: rgba(12, 41, 124, 0.05);
-  border-radius: 14px;
-  padding: 1.1rem 1.3rem;
-  border: 1px solid rgba(12, 41, 124, 0.1);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--sg-grey-soft);
 }
 
 .login-card__logo {
-  width: clamp(72px, 9vw, 92px);
+  width: 72px;
   flex-shrink: 0;
 }
 
 .login-card__header h1 {
+  margin: 0 0 var(--space-2) 0;
+}
+
+.login-card__header p {
   margin: 0;
-  font-size: clamp(1.5rem, 3.2vw, 2rem);
-  color: var(--cs-blue);
 }
 
 .login-role {
   display: grid;
-  gap: 0.6rem;
+  gap: var(--space-3);
+}
+
+.login-role__label {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  color: var(--sg-navy);
 }
 
 .login-role__toggle {
   display: inline-flex;
-  padding: 0.25rem;
-  gap: 0.25rem;
-  border-radius: 999px;
-  background: rgba(12, 41, 124, 0.06);
-  border: 1px solid rgba(12, 41, 124, 0.12);
+  padding: var(--space-1);
+  gap: var(--space-1);
+  border: 1px solid var(--sg-grey-soft);
+  background: var(--sg-grey-bg);
 }
 
 .login-role__toggle button {
   border: none;
   background: transparent;
-  padding: 0.5rem 1.2rem;
+  padding: var(--space-3) var(--space-5);
+  font-family: var(--font-ui);
   font-weight: 600;
-  color: rgba(12, 41, 124, 0.7);
-  border-radius: 999px;
-  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  color: var(--sg-text-dark);
+  transition: background 0.2s ease, color 0.2s ease;
+  border-radius: var(--radius-none);
+}
+
+.login-role__toggle button:hover {
+  background: rgba(14, 28, 60, 0.1);
 }
 
 .login-role__toggle button.active {
-  background: var(--cs-blue);
-  color: var(--cs-white);
-  box-shadow: 0 12px 22px rgba(12, 41, 124, 0.22);
+  background: var(--sg-navy);
+  color: var(--sg-white);
 }
 
 .login-form {
   display: grid;
-  gap: 1.1rem;
+  gap: var(--space-5);
 }
 
 .login-form label {
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-2);
 }
 
 .login-form input {
-  border: 1px solid rgba(12, 41, 124, 0.16);
-  border-radius: 0.75rem;
-  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--sg-grey-soft);
+  border-radius: var(--radius-none);
+  padding: var(--space-3) var(--space-4);
   font-size: 1rem;
-  background: var(--cs-white);
+  background: var(--sg-white);
+  font-family: var(--font-body);
+}
+
+.login-form input:focus {
+  outline: 2px solid var(--sg-navy);
+  outline-offset: 2px;
 }
 
 .login-submit {
-  border: none;
-  border-radius: 999px;
-  padding: 0.75rem 1.7rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, var(--cs-gold), #d2a35a);
-  color: var(--cs-black);
-  transition: transform 0.17s ease, box-shadow 0.17s ease;
-}
-
-.login-submit:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(178, 133, 65, 0.25);
+  margin-top: var(--space-2);
 }
 
 .login-submit:disabled {
   opacity: 0.6;
-  cursor: progress;
+  cursor: not-allowed;
 }
 
-.status {
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-.status--error {
-  color: #c0392b;
-}
-
-.status--success {
-  color: #0f7a39;
-}
-
-.status--loading {
-  color: var(--cs-blue);
+.login-submit:disabled:hover {
+  transform: none;
 }
 
 .login-footnote {
-  border-top: 1px solid rgba(12, 41, 124, 0.12);
-  padding-top: 1rem;
+  border-top: 1px solid var(--sg-grey-soft);
+  padding-top: var(--space-5);
+}
+
+.login-footnote p {
+  margin: 0;
+  font-size: 0.875rem;
 }
 
 @media (max-width: 640px) {
+  .login-card {
+    padding: var(--space-6) var(--space-4);
+  }
+
   .login-card__header {
     flex-direction: column;
     text-align: center;

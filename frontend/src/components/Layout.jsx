@@ -27,38 +27,42 @@ function Layout({ children }) {
   return (
     <div className="layout-root">
       <header className="layout-topbar">
-        <Link to={dashboardLink} className="layout-brand" aria-label="IBCS home">
-          <img src={logo} alt="School crest" className="layout-brand__mark" />
-          <div className="layout-brand__text">
-            <strong className="layout-brand__title">Computer Science Department</strong>
-            <span className="layout-brand__subtitle">Secure admin console</span>
-          </div>
-        </Link>
-        <div className="layout-topbar__actions">
-          {ready && !role && (
-            <Link to="/" className="layout-login-link">
-              Log in
-            </Link>
-          )}
-          {ready && role && (
-            <div className="layout-account">
-              <span className="layout-account__avatar" aria-hidden="true">
-                {initials}
-              </span>
-              <div className="layout-account__details">
-                <span>{displayName || 'Signed in'}</span>
-                <small>{role === 'admin' ? 'Admin' : 'Teacher'}</small>
-              </div>
-              <button type="button" className="layout-account__logout" onClick={handleSignOut}>
-                Log out
-              </button>
+        <div className="layout-topbar__container">
+          <Link to={dashboardLink} className="layout-brand" aria-label="IBCS home">
+            <img src={logo} alt="School crest" className="layout-brand__mark" />
+            <div className="layout-brand__text">
+              <strong className="layout-brand__title">Computer Science Department</strong>
+              <span className="layout-brand__subtitle">St. George&apos;s British International School</span>
             </div>
-          )}
+          </Link>
+          <div className="layout-topbar__actions">
+            {ready && !role && (
+              <Link to="/" className="layout-login-link">
+                LOG IN
+              </Link>
+            )}
+            {ready && role && (
+              <div className="layout-account">
+                <span className="layout-account__avatar" aria-hidden="true">
+                  {initials}
+                </span>
+                <div className="layout-account__details">
+                  <span>{displayName || 'Signed in'}</span>
+                  <small>{role === 'admin' ? 'Admin' : 'Teacher'}</small>
+                </div>
+                <button type="button" className="layout-account__logout" onClick={handleSignOut}>
+                  LOG OUT
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
       <main className="layout-main">{children}</main>
       <footer className="layout-footer">
-        <small>© {new Date().getFullYear()} Computer Science Department</small>
+        <div className="layout-footer__container">
+        <small>© {new Date().getFullYear()} St. George&apos;s British International School - Computer Science Department</small>
+        </div>
       </footer>
     </div>
   );

@@ -125,37 +125,56 @@ function TeacherDashboardPage() {
   if (!ready || !isTeacher) {
     return (
       <div className="teacher-dashboard">
-        <section className="card">
-          <p className="muted">Preparing your dashboard…</p>
-        </section>
+        <p className="muted">Preparing your dashboard…</p>
       </div>
     );
   }
 
   return (
     <div className="teacher-dashboard">
-      <section className="card create-class">
-        <header>
-          <h2>Create a class</h2>
-          <p>Define the year group, class number, and how many students to generate.</p>
-        </header>
+      <div className="teacher-dashboard__header">
+        <div>
+          <h2>Teacher Dashboard</h2>
+          <p>Manage your classes and student credentials.</p>
+        </div>
+        <dl className="dashboard-stats">
+          <div>
+            <dt>Classes</dt>
+            <dd>{dashboard?.classes?.length ?? 0}</dd>
+          </div>
+          <div>
+            <dt>Students</dt>
+            <dd>{totalStudents}</dd>
+          </div>
+        </dl>
+      </div>
+
+      {status && (
+        <FeedbackPanel tone={status.tone === 'error' ? 'error' : status.tone === 'success' ? 'success' : 'info'}>
+          {status.message}
+        </FeedbackPanel>
+      )}
+
+      <section className="create-class-section">
+        <h3>Create a class</h3>
+        <p className="muted">Define the year group, class number, and how many students to generate.</p>
         <form className="class-form" onSubmit={handleCreateClass}>
           <label>
-            <span>Year level</span>
+            <span>YEAR LEVEL</span>
             <input
               value={classForm.yearLevel}
               onChange={(event) => setClassForm((prev) => ({ ...prev, yearLevel: event.target.value }))}
             />
           </label>
           <label>
-            <span>Class number</span>
+            <span>CLASS NUMBER</span>
             <input
               value={classForm.classNumber}
               onChange={(event) => setClassForm((prev) => ({ ...prev, classNumber: event.target.value }))}
             />
           </label>
           <label>
-            <span>Students to generate</span>
+            <span>STUDENTS TO GENERATE</span>
             <input
               type="number"
               min="0"
@@ -166,48 +185,34 @@ function TeacherDashboardPage() {
               }
             />
           </label>
-          <button type="submit" className="dashboard-submit" disabled={loading}>
-            Create class
+          <button type="submit" className="sg-button" disabled={loading}>
+            <span className="sg-btn-icon">→</span>
+            <span className="sg-btn-text">CREATE CLASS</span>
           </button>
         </form>
-        <dl className="class-stats">
-          <div>
-            <dt>Classes</dt>
-            <dd>{dashboard?.classes?.length ?? 0}</dd>
-          </div>
-          <div>
-            <dt>Students</dt>
-            <dd>{totalStudents}</dd>
-          </div>
-        </dl>
-        {status && (
-          <FeedbackPanel tone={status.tone === 'error' ? 'error' : status.tone === 'success' ? 'success' : 'info'}>
-            {status.message}
-          </FeedbackPanel>
-        )}
       </section>
 
       {(dashboard?.classes ?? []).length === 0 && (
-        <section className="card empty-state">
-          <h3>You don’t have any classes yet.</h3>
+        <section className="empty-state">
+          <h3>You don&apos;t have any classes yet.</h3>
           <p>Create a class above to generate student credentials.</p>
         </section>
       )}
 
       {dashboard?.classes?.map((classItem) => (
-        <section key={classItem.id} className="card class-card">
-          <header className="class-card__header">
+        <section key={classItem.id} className="class-section">
+          <header className="class-section__header">
             <div>
               <h3>{classItem.label}</h3>
               <p className="muted">{classItem.code}</p>
             </div>
-            <div className="class-card__stats">
+            <div className="class-section__stats">
               <span>{classItem.students?.length ?? 0} active students</span>
             </div>
           </header>
           <form className="class-actions" onSubmit={(event) => handleAddStudents(event, classItem.id)}>
             <label>
-              <span>Add students</span>
+              <span>ADD STUDENTS</span>
               <input
                 type="number"
                 min="1"
@@ -218,7 +223,10 @@ function TeacherDashboardPage() {
                 }
               />
             </label>
-            <button type="submit" className="dashboard-submit">Generate credentials</button>
+            <button type="submit" className="sg-button">
+              <span className="sg-btn-icon">→</span>
+              <span className="sg-btn-text">GENERATE CREDENTIALS</span>
+            </button>
           </form>
           <div className="class-roster">
             <div className="class-roster__head">
