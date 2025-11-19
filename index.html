@@ -3,18 +3,717 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; connect-src 'self' https://api.instantdb.com https://ibcs-auth.stevengstewart25.workers.dev; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'"
-    />
+    <meta name="description" content="St. George's Computer Science Hub curriculum overview" />
+    <title>St. George's Computer Science Hub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400&display=swap" rel="stylesheet" />
-    <title>IBCS App</title>
-    <script type="module" crossorigin src="/ibcs-app/assets/index-BImEQGHL.js"></script>
-    <link rel="stylesheet" crossorigin href="/ibcs-app/assets/index-BdXgZhQD.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-dlN6JtkjAY7dcknUFd9ztqkJofyegLKorG2TDhvukSxRWtYx2LWN9N53VD3UqMDdZwLx4T9e3zqkHjQk65fFgQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* -----------------------------------------------------------------
+         ST. GEORGE'S VLE DESIGN SYSTEM
+         ----------------------------------------------------------------- */
+      :root {
+        --sg-navy: #0E1C3C;
+        --sg-gold: #C1A06E;
+        --sg-white: #FFFFFF;
+        --sg-grey-bg: #F2F2F2;
+        --sg-text-dark: #333333;
+        --sg-border: #DDDDDD;
+        --sg-card-bg: #FFFFFF;
+        --font-primary: 'Open Sans', sans-serif;
+        --font-ui: 'Montserrat', sans-serif;
+        --radius-soft: 8px;
+        --shadow-vle: 0 4px 12px rgba(0,0,0,0.08);
+        --ai-user-message-bg: #E3E6EE;
+        --ai-agent-message-bg: #FFFFFF;
+      }
+
+      body {
+        font-family: var(--font-primary);
+        color: var(--sg-text-dark);
+        background-color: var(--sg-grey-bg);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1, h2, h3, h4, h5 {
+        font-family: var(--font-primary);
+        color: var(--sg-navy);
+        font-weight: 700;
+      }
+
+      .ui-label {
+        font-family: var(--font-ui);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .sg-button-vle {
+        background-color: var(--sg-navy);
+        color: var(--sg-white);
+        font-family: var(--font-ui);
+        font-weight: 600;
+        text-transform: uppercase;
+        padding: 12px 24px;
+        border-radius: var(--radius-soft);
+        letter-spacing: 0.5px;
+        transition: background-color 0.2s, box-shadow 0.2s;
+      }
+
+      .sg-button-vle:hover {
+        background-color: #081430;
+        box-shadow: 0 4px 10px rgba(14, 28, 60, 0.4);
+      }
+
+      .sg-card {
+        background: var(--sg-card-bg);
+        border-radius: var(--radius-soft);
+        box-shadow: var(--shadow-vle);
+        transition: transform 0.2s ease, box-shadow 0.2s;
+        border: 1px solid transparent;
+      }
+
+      .sg-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--sg-gold);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+      }
+
+      .heritage-underline {
+        position: relative;
+        margin-bottom: 20px;
+        padding-bottom: 8px;
+      }
+
+      .heritage-underline::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 40px;
+        height: 3px;
+        background-color: var(--sg-gold);
+        border-radius: 2px;
+      }
+
+      #sidebar {
+        transition: width 0.3s ease-in-out, opacity 0.2s ease-in-out;
+        width: 18rem;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+
+      #sidebar.collapsed {
+        width: 0;
+        border-right: none;
+      }
+
+      .sidebar-link {
+        font-family: var(--font-ui);
+        font-weight: 600;
+        color: #A0AEC0;
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
+        white-space: nowrap;
+        overflow: hidden;
+        cursor: pointer;
+      }
+
+      .sidebar-link:hover,
+      .sidebar-link.active {
+        color: var(--sg-white);
+        background: rgba(255,255,255,0.05);
+        border-left-color: var(--sg-gold);
+      }
+
+      .submenu {
+        background-color: #0a152e;
+        overflow: hidden;
+        max-height: 0;
+        transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .submenu.open {
+        max-height: 500px;
+      }
+
+      .submenu-link {
+        padding-left: 3.5rem;
+        font-size: 0.8rem;
+        color: #8899A6;
+        display: block;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-left: 3px solid transparent;
+      }
+
+      .submenu-link:hover {
+        color: var(--sg-white);
+        background: rgba(255,255,255,0.02);
+      }
+
+      .custom-scroll::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .custom-scroll::-webkit-scrollbar-track {
+        background: var(--sg-navy);
+      }
+
+      .custom-scroll::-webkit-scrollbar-thumb {
+        background: #2A3B61;
+      }
+
+      #sidebar-expander {
+        position: fixed;
+        top: 1.5rem;
+        left: 1.5rem;
+        z-index: 1000;
+        width: 3.5rem;
+        height: 3.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--sg-navy);
+        color: var(--sg-gold);
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 4px 15px rgba(14, 28, 60, 0.3);
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.3s ease;
+        transform: scale(0.9);
+      }
+
+      #sidebar.collapsed + main #sidebar-expander {
+        opacity: 1;
+        pointer-events: auto;
+        transform: scale(1);
+      }
+
+      #sidebar-expander:hover {
+        transform: scale(1.05);
+        background-color: #152345;
+      }
+
+      #scroll-mask {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6rem;
+        background: linear-gradient(to bottom, var(--sg-grey-bg) 40%, rgba(242,242,242,0));
+        z-index: 900;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      #sidebar.collapsed + main #scroll-mask {
+        opacity: 1;
+      }
+
+      #main-scroll.padded-top {
+        padding-top: 5rem !important;
+      }
+
+      .ai-chat-container {
+        background-color: var(--sg-card-bg);
+        border-radius: var(--radius-soft);
+        box-shadow: var(--shadow-vle);
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .ai-message-list {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding-right: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .ai-message {
+        padding: 0.75rem 1rem;
+        border-radius: 18px;
+        margin-bottom: 1rem;
+        max-width: 85%;
+        line-height: 1.5;
+        font-size: 0.95rem;
+      }
+
+      .ai-message-user {
+        background-color: var(--ai-user-message-bg);
+        margin-left: auto;
+        color: var(--sg-text-dark);
+      }
+
+      .ai-message-agent {
+        background-color: var(--ai-agent-message-bg);
+        border: 1px solid var(--sg-border);
+        margin-right: auto;
+        color: var(--sg-navy);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      }
+
+      .ai-input-bar {
+        display: flex;
+        border-top: 1px solid var(--sg-border);
+        padding-top: 1rem;
+      }
+
+      .ai-input-bar input {
+        flex-grow: 1;
+        padding: 10px 15px;
+        border: 1px solid var(--sg-border);
+        border-radius: var(--radius-soft);
+        font-family: var(--font-primary);
+        margin-right: 0.75rem;
+        transition: border-color 0.2s;
+      }
+
+      .ai-input-bar input:focus {
+        outline: none;
+        border-color: var(--sg-gold);
+        box-shadow: 0 0 0 1px var(--sg-gold);
+      }
+
+      .ai-send-button {
+        background-color: var(--sg-gold);
+        color: var(--sg-navy);
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+      }
+
+      .ai-send-button:hover {
+        background-color: #DDAA55;
+      }
+
+      .auth-overlay {
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(145deg, rgba(14,28,60,0.95), rgba(12,36,74,0.9));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        padding: 2rem;
+      }
+
+      .auth-card {
+        background: var(--sg-white);
+        border-radius: 18px;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+        padding: 2.5rem;
+        max-width: 420px;
+        width: 100%;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.2);
+      }
+
+      .auth-logo {
+        width: 100px;
+        height: auto;
+        margin: 0 auto 1.5rem;
+      }
+
+      .auth-title {
+        font-family: var(--font-ui);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        font-size: 0.85rem;
+        color: #6B7280;
+        margin-bottom: 1.25rem;
+      }
+
+      .auth-form input {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        border-radius: var(--radius-soft);
+        border: 1px solid var(--sg-border);
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        transition: border 0.2s, box-shadow 0.2s;
+      }
+
+      .auth-form input:focus {
+        outline: none;
+        border-color: var(--sg-gold);
+        box-shadow: 0 0 0 1px var(--sg-gold);
+      }
+
+      .auth-button {
+        width: 100%;
+        border: none;
+        background: var(--sg-navy);
+        color: var(--sg-white);
+        padding: 0.9rem;
+        border-radius: var(--radius-soft);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.2s;
+      }
+
+      .auth-button:hover {
+        background: #081430;
+        transform: translateY(-1px);
+      }
+
+      .auth-error {
+        color: #B91C1C;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="h-screen flex overflow-hidden">
+    <div id="auth-overlay" class="auth-overlay">
+      <div class="auth-card">
+        <img src="assets/logo-U6WRSyen.svg" alt="St. George's School logo" class="auth-logo" />
+        <p class="auth-title">St. George's CS Hub Access</p>
+        <h1 class="text-2xl font-bold text-[var(--sg-navy)] mb-3">Protected Curriculum</h1>
+        <p class="text-sm text-gray-500 mb-6">Enter the shared passphrase to view the Computer Science curriculum overview.</p>
+        <form id="auth-form" class="auth-form" autocomplete="off">
+          <label for="access-password" class="sr-only">Access password</label>
+          <input type="password" id="access-password" name="access-password" placeholder="Access Password" required />
+          <button type="submit" class="auth-button">Enter Hub</button>
+        </form>
+        <p id="auth-error" class="auth-error hidden">Incorrect password. Try again.</p>
+      </div>
+    </div>
+
+    <div id="app-content" class="flex flex-1 overflow-hidden hidden">
+      <!-- LEFT SIDEBAR -->
+      <aside id="sidebar" class="flex-shrink-0 bg-[var(--sg-navy)] flex flex-col h-full text-white z-20 border-r border-[#1e2d4d]">
+        <div class="h-20 flex items-center justify-between px-6 bg-[#0a152e] overflow-hidden whitespace-nowrap flex-shrink-0">
+          <img src="assets/logo-U6WRSyen.svg" alt="St. George's School logo" class="h-12 w-auto" />
+          <button onclick="toggleSidebar()" class="text-white hover:text-[var(--sg-gold)] focus:outline-none p-1 transition-colors" aria-label="Toggle sidebar">
+            <i class="fa-solid fa-bars text-lg"></i>
+          </button>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto custom-scroll py-4">
+          <div class="px-6 mb-2 text-[10px] font-[var(--font-ui)] uppercase tracking-wider text-gray-500 ui-label">Overview</div>
+          <a href="#" onclick="showDashboard()" id="nav-map" class="sidebar-link active flex items-center px-6 py-3 text-sm">
+            <i class="fa-solid fa-map w-5 text-center mr-3 min-w-[1.25rem]"></i>
+            <span class="nav-text">Curriculum Overview</span>
+          </a>
+
+          <div class="mt-4 px-6 mb-2 text-[10px] font-[var(--font-ui)] uppercase tracking-wider text-gray-500 ui-label">Teaching Units</div>
+
+          <div class="accordion-item">
+            <div onclick="toggleSubmenu('submenu-y7')" class="sidebar-link flex items-center justify-between px-6 py-3 text-sm group">
+              <div class="flex items-center">
+                <i class="fa-solid fa-7 w-5 text-center mr-3 min-w-[1.25rem] group-hover:text-[var(--sg-gold)] transition-colors"></i>
+                <span class="nav-text">Year 7</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 text-gray-500" id="arrow-y7"></i>
+            </div>
+            <div id="submenu-y7" class="submenu">
+              <a href="#" class="submenu-link">Unit 1: Impact of Tech</a>
+              <a href="#" class="submenu-link">Unit 2: Block Coding</a>
+              <a href="#" class="submenu-link">Unit 3: Hardware</a>
+              <a href="#" class="submenu-link">Unit 4: Data Rep</a>
+              <a href="#" class="submenu-link">Unit 5: Networks</a>
+              <a href="#" class="submenu-link">Unit 6: Final Project</a>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div onclick="toggleSubmenu('submenu-y8')" class="sidebar-link flex items-center justify-between px-6 py-3 text-sm group">
+              <div class="flex items-center">
+                <i class="fa-solid fa-8 w-5 text-center mr-3 min-w-[1.25rem] group-hover:text-[var(--sg-gold)] transition-colors"></i>
+                <span class="nav-text">Year 8</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 text-gray-500" id="arrow-y8"></i>
+            </div>
+            <div id="submenu-y8" class="submenu">
+              <a href="#" class="submenu-link">Unit 1: Python Intro</a>
+              <a href="#" class="submenu-link">Unit 2: Web Dev</a>
+              <a href="#" class="submenu-link">Unit 3: Systems</a>
+              <a href="#" class="submenu-link">Unit 4: Binary Logic</a>
+              <a href="#" class="submenu-link">Unit 5: AI Basics</a>
+              <a href="#" class="submenu-link">Unit 6: App Design</a>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div onclick="toggleSubmenu('submenu-y9')" class="sidebar-link flex items-center justify-between px-6 py-3 text-sm group">
+              <div class="flex items-center">
+                <i class="fa-solid fa-9 w-5 text-center mr-3 min-w-[1.25rem] group-hover:text-[var(--sg-gold)] transition-colors"></i>
+                <span class="nav-text">Year 9</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 text-gray-500" id="arrow-y9"></i>
+            </div>
+            <div id="submenu-y9" class="submenu">
+              <a href="#" class="submenu-link">Unit 1: Adv Python</a>
+              <a href="#" class="submenu-link">Unit 2: Cybersecurity</a>
+              <a href="#" class="submenu-link">Unit 3: Data Science</a>
+              <a href="#" class="submenu-link">Unit 4: Ethics</a>
+              <a href="#" class="submenu-link">Unit 5: Game Dev</a>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div onclick="toggleSubmenu('submenu-igcse')" class="sidebar-link flex items-center justify-between px-6 py-3 text-sm group">
+              <div class="flex items-center">
+                <i class="fa-solid fa-microchip w-5 text-center mr-3 min-w-[1.25rem] group-hover:text-[var(--sg-gold)] transition-colors"></i>
+                <span class="nav-text">IGCSE</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 text-gray-500" id="arrow-igcse"></i>
+            </div>
+            <div id="submenu-igcse" class="submenu">
+              <a href="#" class="submenu-link">Unit 1: Data Rep</a>
+              <a href="#" class="submenu-link">Unit 2: Communication</a>
+              <a href="#" class="submenu-link">Unit 3: Hardware</a>
+              <a href="#" class="submenu-link">Unit 4: Software</a>
+              <a href="#" class="submenu-link">Unit 5: The Internet</a>
+              <a href="#" class="submenu-link">Unit 6: Security</a>
+              <a href="#" class="submenu-link">Unit 7: Algorithms</a>
+              <a href="#" class="submenu-link">Unit 8: Programming</a>
+              <a href="#" class="submenu-link">Unit 9: Databases</a>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div onclick="toggleSubmenu('submenu-ib')" class="sidebar-link flex items-center justify-between px-6 py-3 text-sm group">
+              <div class="flex items-center">
+                <i class="fa-solid fa-graduation-cap w-5 text-center mr-3 min-w-[1.25rem] group-hover:text-[var(--sg-gold)] transition-colors"></i>
+                <span class="nav-text">IB Diploma</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 text-gray-500" id="arrow-ib"></i>
+            </div>
+            <div id="submenu-ib" class="submenu">
+              <a href="#" onclick="showLesson()" class="submenu-link text-[var(--sg-gold)] font-semibold">Theme A: Fundamentals</a>
+              <a href="#" class="submenu-link">Theme B: Comp Thinking</a>
+              <a href="#" class="submenu-link">Theme C: Networks</a>
+              <a href="#" class="submenu-link">Theme D: OOP</a>
+              <a href="#" class="submenu-link">Option D: Databases</a>
+              <a href="#" class="submenu-link">Internal Assessment</a>
+              <a href="#" class="submenu-link">Case Study</a>
+            </div>
+          </div>
+        </nav>
+      </aside>
+
+      <!-- MAIN CONTENT AREA -->
+      <main class="flex-1 flex flex-col h-full relative overflow-hidden transition-all">
+        <div id="scroll-mask"></div>
+        <button onclick="toggleSidebar()" id="sidebar-expander" aria-label="Expand sidebar">
+          <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+
+        <div class="flex-1 overflow-y-auto bg-[var(--sg-grey-bg)] p-8 md:p-10" id="main-scroll">
+          <div id="view-dashboard" class="max-w-6xl mx-auto h-full flex flex-col pb-20">
+            <div class="mb-6 flex-shrink-0">
+              <h1 class="text-3xl md:text-4xl font-bold mb-1 text-[var(--sg-navy)]">Curriculum Overview</h1>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+              <div class="col-span-1 lg:col-span-2 sg-card p-8 md:p-10">
+                <div class="flex items-start justify-between mb-4">
+                  <div class="flex flex-col">
+                    <h2 class="text-2xl font-bold text-[var(--sg-navy)] flex items-center">
+                      <i class="fa-solid fa-gamepad text-[var(--sg-gold)] text-2xl mr-3"></i>
+                      Key Stage 3 Computing
+                    </h2>
+                    <div class="heritage-underline w-16 mb-0"></div>
+                  </div>
+                </div>
+
+                <p class="text-sm text-gray-600 mb-8 max-w-4xl leading-relaxed">
+                  Building digital literacy, computational thinking, and programming skills. Years 7-9 rotate through dedicated units on Python, Hardware, and Digital Creativity.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button class="sg-button-vle shadow-lg w-full">
+                    <i class="fa-solid fa-7 mr-2"></i> YEAR 7
+                  </button>
+                  <button class="sg-button-vle shadow-lg w-full">
+                    <i class="fa-solid fa-8 mr-2"></i> YEAR 8
+                  </button>
+                  <button class="sg-button-vle shadow-lg w-full">
+                    <i class="fa-solid fa-9 mr-2"></i> YEAR 9
+                  </button>
+                </div>
+              </div>
+
+              <div class="sg-card p-8 flex flex-col shadow-lg border-t-4 border-t-[var(--sg-gold)]">
+                <div class="flex items-center mb-4">
+                  <i class="fa-solid fa-microchip text-[var(--sg-gold)] text-2xl mr-3"></i>
+                  <div>
+                    <h2 class="text-xl font-bold text-[var(--sg-navy)]">IGCSE</h2>
+                    <div class="heritage-underline w-16 mb-0"></div>
+                  </div>
+                </div>
+                <p class="text-sm text-gray-600 mb-8 flex-1">
+                  Cambridge IGCSE (0478). Years 10-11 covers foundational Theory of Computer Science and Practical Programming skills.
+                </p>
+                <button class="sg-button-vle mt-auto">STUDENT PATHWAY</button>
+              </div>
+
+              <div class="sg-card p-8 flex flex-col shadow-lg border-t-4 border-t-[var(--sg-navy)]">
+                <div class="flex items-center mb-4">
+                  <i class="fa-solid fa-graduation-cap text-[var(--sg-gold)] text-2xl mr-3"></i>
+                  <div>
+                    <h2 class="text-xl font-bold text-[var(--sg-navy)]">IB Diploma</h2>
+                    <div class="heritage-underline w-16 mb-0"></div>
+                  </div>
+                </div>
+                <p class="text-sm text-gray-600 mb-8 flex-1">
+                  Years 12-13 HL/SL. System Fundamentals, OOP, Networks, and the Internal Assessment Project (IA).
+                </p>
+                <button onclick="showLesson()" class="sg-button-vle mt-auto">STUDENT PATHWAY</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="view-lesson" class="hidden max-w-5xl mx-auto flex">
+            <div class="w-64 flex-shrink-0 hidden lg:block pr-8 sticky top-10 self-start">
+              <div class="bg-white p-6 shadow-md border border-gray-100 rounded-lg">
+                <h4 class="text-[var(--sg-navy)] font-bold text-xs uppercase mb-4 ui-label">Page Contents</h4>
+                <ul class="space-y-2 text-sm font-[var(--font-primary)] text-gray-600">
+                  <li><a href="#" class="text-[var(--sg-navy)] font-semibold border-l-2 border-[var(--sg-gold)] pl-2 block transition-colors">Introduction</a></li>
+                  <li><a href="#" class="hover:text-[var(--sg-navy)] pl-2 block transition-colors">1.1 Systems in Organizations</a></li>
+                  <li><a href="#" class="hover:text-[var(--sg-navy)] pl-2 block">Theme A: Networking</a></li>
+                  <li><a href="#" class="hover:text-[var(--sg-navy)] pl-2 block">Internal Assessment</a></li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="flex-1">
+              <div class="sg-card p-8 md:p-12 relative shadow-xl">
+                <span class="absolute top-8 right-12 text-[var(--sg-gold)] font-[var(--font-ui)] text-xs font-bold tracking-widest uppercase ui-label">IB Computer Science</span>
+                <h1 class="text-3xl md:text-4xl mb-4 font-bold text-[var(--sg-navy)] leading-tight">Theme A: Concepts of Computer Science</h1>
+                <div class="heritage-underline w-full mb-10"></div>
+
+                <div class="lesson-content font-[var(--font-primary)] space-y-6 text-base leading-relaxed">
+                  <p class="text-lg font-light text-gray-800">
+                    Welcome. This unit explores the fundamental concepts underpinning modern computing systems. We'll start with the smallest parts—the logic gates—and build up to large, complex networks.
+                  </p>
+
+                  <h3 class="text-2xl pt-4 border-t border-gray-100">1.1 System Fundamentals</h3>
+                  <p>
+                    A <strong>computer system</strong> is defined as a combination of hardware and software that processes data. Understanding the components and their interactions is key to advanced problem-solving. This includes the CPU, primary memory, secondary storage, and I/O devices.
+                  </p>
+
+                  <h3 class="text-2xl pt-4 border-t border-gray-100">1.2 Binary Representation</h3>
+                  <p>
+                    All data in a computer is stored and processed using the binary system (base 2), which uses only two digits: 0 and 1. This is because the fundamental hardware components, transistors, can only exist in one of two states (on or off).
+                  </p>
+
+                  <div class="bg-gray-100 p-4 border-l-4 border-[var(--sg-gold)] rounded-lg">
+                    <h4 class="text-[var(--sg-navy)] font-semibold ui-label text-xs mb-2">Key Definition</h4>
+                    <p class="text-sm"><strong>Bit:</strong> The smallest unit of digital information, representing either a 0 or a 1. Eight bits make up one byte.</p>
+                  </div>
+                </div>
+
+                <div class="mt-12 pt-8 border-t border-gray-200 flex justify-between items-center">
+                  <button onclick="showDashboard()" class="text-gray-500 hover:text-[var(--sg-navy)] font-semibold text-sm uppercase ui-label transition-colors">
+                    <i class="fa-solid fa-arrow-left mr-2"></i> Back to Overview
+                  </button>
+                  <button class="sg-button-vle text-sm">
+                    Next Lesson <i class="fa-solid fa-arrow-right ml-2"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const sidebar = document.getElementById('sidebar');
+      const mainScroll = document.getElementById('main-scroll');
+      const accessPassword = 'admin123!';
+      const authOverlay = document.getElementById('auth-overlay');
+      const appContent = document.getElementById('app-content');
+      const authForm = document.getElementById('auth-form');
+      const passwordInput = document.getElementById('access-password');
+      const authError = document.getElementById('auth-error');
+
+      function updateMainPadding() {
+        if (!sidebar) return;
+        if (sidebar.classList.contains('collapsed')) {
+          mainScroll.classList.add('padded-top');
+        } else {
+          mainScroll.classList.remove('padded-top');
+        }
+      }
+
+      function toggleSidebar() {
+        sidebar.classList.toggle('collapsed');
+        updateMainPadding();
+      }
+
+      function toggleSubmenu(id) {
+        const submenu = document.getElementById(id);
+        const arrow = document.getElementById(id.replace('submenu', 'arrow'));
+        const isOpen = submenu.classList.contains('open');
+        const allSubmenus = document.querySelectorAll('.submenu');
+        const allArrows = document.querySelectorAll('.fa-chevron-down');
+        allSubmenus.forEach(el => el.classList.remove('open'));
+        allArrows.forEach(el => el.style.transform = 'rotate(0deg)');
+        if (!isOpen) {
+          submenu.classList.add('open');
+          arrow.style.transform = 'rotate(180deg)';
+        }
+      }
+
+      function showDashboard() {
+        document.getElementById('view-dashboard').classList.remove('hidden');
+        document.getElementById('view-lesson').classList.add('hidden');
+        document.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+        document.getElementById('nav-map').classList.add('active');
+      }
+
+      function showLesson() {
+        document.getElementById('view-dashboard').classList.add('hidden');
+        document.getElementById('view-lesson').classList.remove('hidden');
+        document.getElementById('main-scroll').scrollTop = 0;
+      }
+
+      function unlockSite() {
+        authOverlay.classList.add('hidden');
+        appContent.classList.remove('hidden');
+        updateMainPadding();
+      }
+
+      authForm.addEventListener('submit', event => {
+        event.preventDefault();
+        const provided = passwordInput.value.trim();
+        if (provided === accessPassword) {
+          authError.classList.add('hidden');
+          unlockSite();
+        } else {
+          authError.classList.remove('hidden');
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        updateMainPadding();
+        passwordInput.focus();
+      });
+    </script>
   </body>
 </html>
