@@ -21,6 +21,8 @@ chmod +x deploy.sh   # first time only
 - Password: `SGSD2024!`
 - Role: Teacher
 
+> The worker also seeds a default `admin` account with the same password after deployment, so you don't need to edit InstantDB manually. Set `SEED_ADMIN_USERNAME`, `SEED_ADMIN_PASSWORD`, `SEED_TEACHER_USERNAME`, or `SEED_TEACHER_PASSWORD` (via Wrangler secrets or the worker environment) if you want to change those credentials, or run `npm run set-credentials` inside `worker/`.
+
 ## Structure
 
 ```

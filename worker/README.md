@@ -9,6 +9,11 @@ This worker now only handles login, token verification, and the admin/teacher en
 
 Set each secret with `npx wrangler secret put SECRET_NAME`.
 
+## Seeded credentials
+- The worker automatically seeds an `admin` account plus the `MrStewart` teacher with the default password `SGSD2024!` (bcrypt-hashed) the first time it handles a request.
+- Override the defaults by providing `SEED_ADMIN_USERNAME`, `SEED_ADMIN_PASSWORD`, `SEED_TEACHER_USERNAME`, and/or `SEED_TEACHER_PASSWORD` via Wrangler secrets or the environment; legacy names like `ADMIN_USERNAME`/`TEACHER_PASSWORD` are still supported.
+- Use `npm run set-credentials` whenever you need to rotate credentials manually—the script uses the same `SEED_*` variables so you can keep everything in sync.
+
 ## Commands
 ```
 npx wrangler dev    # run locally

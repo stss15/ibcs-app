@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { getDb, tx } from './src/instant.js';
+import { getDb, id, tx } from './src/instant.js';
 import {
   findAdminByUsername,
   findTeacherByUsername,
@@ -10,6 +10,7 @@ import {
   appendStudentsToClass,
   getTeacherDashboardData,
   archiveStudent,
+  nextTeacherSequence,
 } from './src/repositories.js';
 import { json, readJson, withCors } from './src/http.js';
 import { createToken, verifyToken } from './src/jwt.js';
@@ -29,6 +30,134 @@ const AUTH_PREFIX = 'Bearer ';
 const VALID_ROLES = new Set(['admin', 'teacher']);
 const BCRYPT_ROUNDS = 8;
 
+const DEFAULT_SEED_PASSWORD = 'SGSD2024!';
+const DEFAULT_ADMIN_USERNAME = 'admin';
+const DEFAULT_TEACHER_USERNAME = 'MrStewart';
+let seedInitializationPromise = null;
+
+async function ensureSeedAccounts(env) {
+  if (!seedInitializationPromise) {
+    seedInitializationPromise = seedDefaultAccounts(env);
+  }
+  try {
+    return await seedInitializationPromise;
+  } catch (error) {
+    seedInitializationPromise = null;
+    throw error;
+  }
+}
+
+async function seedDefaultAccounts(env) {
+  const db = getDb(env);
+  const adminConfig = getSeedConfig(env, 'admin');
+  const teacherConfig = getSeedConfig(env, 'teacher');
+  await Promise.all([
+    seedAdminAccount(db, adminConfig),
+    seedTeacherAccount(db, teacherConfig),
+  ]);
+}
+
+function getSeedConfig(env, role) {
+  const uppercaseRole = role.toUpperCase();
+  const fallbackUsername = role === 'admin' ? DEFAULT_ADMIN_USERNAME : DEFAULT_TEACHER_USERNAME;
+  const username =
+    env[`SEED_${uppercaseRole}_USERNAME`] ??
+    env[`${uppercaseRole}_USERNAME`] ??
+    fallbackUsername;
+  const password =
+    env[`SEED_${uppercaseRole}_PASSWORD`] ??
+    env[`${uppercaseRole}_PASSWORD`] ??
+    env.SEED_PASSWORD ??
+    DEFAULT_SEED_PASSWORD;
+  return { username, password };
+}
+
+function prepareSeedUsername(value) {
+  if (!value && value !== 0) return null;
+  const trimmed = String(value).trim();
+  return trimmed || null;
+}
+
+function prepareSeedPassword(value) {
+  if (value === undefined || value === null) {
+    return DEFAULT_SEED_PASSWORD;
+  }
+  return String(value);
+}
+
+function hasPositiveSequenceNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0;
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+async function seedAdminAccount(db, config) {
+  const username = prepareSeedUsername(config.username);
+  if (!username) return;
+  const normalized = username.toLowerCase();
+  const admin = await findAdminByUsername(db, username);
+  const password = prepareSeedPassword(config.password);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  if (!admin) {
+    const adminId = id();
+    await db.transact([
+      tx.admins[adminId].update({
+        username,
+        usernameLower: normalized,
+        passwordHash,
+        createdAt: nowIso(),
+      }),
+    ]);
+    return;
+  }
+  const updates = {};
+  if (!admin.passwordHash) updates.passwordHash = passwordHash;
+  if (admin.username !== username) updates.username = username;
+  if (admin.usernameLower !== normalized) updates.usernameLower = normalized;
+  if (Object.keys(updates).length > 0) {
+    await db.transact([tx.admins[admin.id].update(updates)]);
+  }
+}
+
+async function seedTeacherAccount(db, config) {
+  const username = prepareSeedUsername(config.username);
+  if (!username) return;
+  const normalized = username.toLowerCase();
+  const teacher = await findTeacherByUsername(db, username);
+  const password = prepareSeedPassword(config.password);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  if (!teacher) {
+    const teacherId = id();
+    const sequenceNumber = await nextTeacherSequence(db);
+    await db.transact([
+      tx.teachers[teacherId].update({
+        username,
+        usernameLower: normalized,
+        sequenceNumber,
+        passwordHash,
+        passwordPlain: password,
+        createdAt: nowIso(),
+        archivedAt: null,
+      }),
+    ]);
+    return;
+  }
+  const updates = {};
+  if (!teacher.passwordHash) updates.passwordHash = passwordHash;
+  if (!teacher.passwordPlain) updates.passwordPlain = password;
+  if (!hasPositiveSequenceNumber(teacher.sequenceNumber)) {
+    updates.sequenceNumber = await nextTeacherSequence(db);
+  }
+  if (teacher.username !== username) updates.username = username;
+  if (teacher.usernameLower !== normalized) updates.usernameLower = normalized;
+  if (Object.keys(updates).length > 0) {
+    await db.transact([tx.teachers[teacher.id].update(updates)]);
+  }
+}
+
 export default {
   async fetch(request, env) {
     const ctx = createRequestContext({ request });
@@ -40,6 +169,7 @@ export default {
     }
 
     try {
+      await ensureSeedAccounts(env);
       const url = new URL(request.url);
       const { pathname } = url;
 

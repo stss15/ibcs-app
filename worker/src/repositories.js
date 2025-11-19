@@ -166,7 +166,7 @@ function findTeacherByDoc(doc) {
   };
 }
 
-async function nextTeacherSequence(db) {
+export async function nextTeacherSequence(db) {
   const result = await db.query({ teachers: { $: { where: {} } } });
   const numbers = (result?.teachers ?? []).map(
     (doc) => doc.sequenceNumber ?? (Number(doc.username?.replace(/\D/g, '')) || 0),
