@@ -109,7 +109,7 @@ export async function findTeacherByUsername(db, username) {
     id: extractId(doc),
     username: doc.username,
     usernameLower: doc.usernameLower ?? normalized,
-    sequenceNumber: doc.sequenceNumber ?? Number(doc.username?.replace(/\D/g, '')) || null,
+    sequenceNumber: doc.sequenceNumber ?? (Number(doc.username?.replace(/\D/g, '')) || null),
     passwordHash: doc.passwordHash,
     passwordPlain: doc.passwordPlain ?? null,
     createdAt: doc.createdAt ?? null,
@@ -168,7 +168,9 @@ function findTeacherByDoc(doc) {
 
 async function nextTeacherSequence(db) {
   const result = await db.query({ teachers: { $: { where: {} } } });
-  const numbers = (result?.teachers ?? []).map((doc) => doc.sequenceNumber ?? Number(doc.username?.replace(/\D/g, '')) || 0);
+  const numbers = (result?.teachers ?? []).map(
+    (doc) => doc.sequenceNumber ?? (Number(doc.username?.replace(/\D/g, '')) || 0),
+  );
   const max = numbers.length > 0 ? Math.max(...numbers) : 0;
   return max + 1;
 }
