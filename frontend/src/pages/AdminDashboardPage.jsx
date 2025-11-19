@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createTeacher as createTeacherRequest, deleteTeacher, getAdminDashboard } from "../lib/api.js";
 import { useSession } from "../hooks/useSession.js";
+import FeedbackPanel from "../components/ui/FeedbackPanel.jsx";
 import "./AdminDashboardPage.css";
 
 function AdminDashboardPage() {
@@ -115,7 +116,11 @@ function AdminDashboardPage() {
             <strong>{dashboard?.teachers?.filter((teacher) => teacher.archivedAt).length ?? 0}</strong>
           </div>
         </div>
-        {status && <p className={`status status--${status.tone}`}>{status.message}</p>}
+        {status && (
+          <FeedbackPanel tone={status.tone === "error" ? "error" : status.tone === "success" ? "success" : "info"}>
+            {status.message}
+          </FeedbackPanel>
+        )}
         {loading && <p className="muted">Loading data…</p>}
       </section>
 

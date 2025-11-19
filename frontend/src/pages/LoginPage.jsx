@@ -1,20 +1,24 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { login as loginRequest } from "../lib/api.js";
-import { useSession } from "../hooks/useSession.js";
-import logo from "../assets/logo.svg";
-import "./LoginPage.css";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { login as loginRequest } from '../lib/api.js';
+import { useSession } from '../hooks/useSession.js';
+import FeedbackPanel from '../components/ui/FeedbackPanel.jsx';
+import logo from '../assets/logo.svg';
+import './LoginPage.css';
 
-const initialState = { status: "idle", message: "" };
+const initialState = { status: 'idle', message: '' };
+const ROLES = [
+  { id: 'teacher', label: 'Teacher' },
+  { id: 'admin', label: 'Admin' },
+];
 
 function LoginPage() {
-  const [role, setRole] = useState("teacher");
+  const [role, setRole] = useState('teacher');
   const [status, setStatus] = useState(initialState);
   const { setSession } = useSession();
   const navigate = useNavigate();
 
-  const roleLabel =
-    role === "teacher" ? "Teacher" : role === "student" ? "Student" : "Admin";
+  const roleLabel = ROLES.find((option) => option.id === role)?.label ?? 'Teacher';
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -23,28 +27,22 @@ function LoginPage() {
     const password = form.password.value;
 
     if (!username || !password) {
-      setStatus({ status: "error", message: "Enter username and password." });
+      setStatus({ status: 'error', message: 'Enter username and password.' });
       return;
     }
 
-    setStatus({ status: "loading", message: `Signing in as ${roleLabel}…` });
+    setStatus({ status: 'loading', message: `Signing in as ${roleLabel}…` });
 
     try {
       const response = await loginRequest({ role, username, password });
       if (!response?.token || !response?.user) {
-        throw new Error("Unexpected login response");
+        throw new Error('Unexpected login response');
       }
       setSession({ token: response.token, user: response.user });
-      setStatus({ status: "success", message: "Signed in." });
-      if (response.user.role === "admin") {
-        navigate("/admin", { replace: true });
-      } else if (response.user.role === "teacher") {
-        navigate("/dashboard", { replace: true });
-      } else {
-        navigate("/student", { replace: true });
-      }
+      setStatus({ status: 'success', message: 'Signed in.' });
+      navigate(role === 'admin' ? '/admin' : '/dashboard', { replace: true });
     } catch (error) {
-      setStatus({ status: "error", message: error.message || "Login failed" });
+      setStatus({ status: 'error', message: error.message || 'Login failed' });
     }
   };
 
@@ -55,43 +53,26 @@ function LoginPage() {
           <img src={logo} alt="School crest" className="login-card__logo" />
           <div>
             <h1>Computer Science Department</h1>
-            <p className="muted">Sign in to access the teaching dashboards and curriculum map.</p>
+            <p className="muted">Admin console for teachers and site staff.</p>
           </div>
         </header>
 
         <div className="login-role">
           <span>Sign in as</span>
-          <div className="login-role__toggle" role="group" aria-label="Choose account role">
-            <button
-              type="button"
-              className={role === "teacher" ? "active" : ""}
-              onClick={() => {
-                setRole("teacher");
-                setStatus(initialState);
-              }}
-            >
-              Teacher
-            </button>
-            <button
-              type="button"
-              className={role === "student" ? "active" : ""}
-              onClick={() => {
-                setRole("student");
-                setStatus(initialState);
-              }}
-            >
-              Student
-            </button>
-            <button
-              type="button"
-              className={role === "admin" ? "active" : ""}
-              onClick={() => {
-                setRole("admin");
-                setStatus(initialState);
-              }}
-            >
-              Admin
-            </button>
+          <div className="login-role__toggle" role="group" aria-label="Choose account type">
+            {ROLES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={role === option.id ? 'active' : ''}
+                onClick={() => {
+                  setRole(option.id);
+                  setStatus(initialState);
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -104,16 +85,19 @@ function LoginPage() {
             <span>Password</span>
             <input name="password" type="password" required autoComplete="current-password" />
           </label>
-          <button type="submit" className="login-submit" disabled={status.status === "loading"}>
-            {status.status === "loading" ? "Working…" : `Log in as ${roleLabel}`}
+          <button type="submit" className="login-submit" disabled={status.status === 'loading'}>
+            {status.status === 'loading' ? 'Working…' : `Log in as ${roleLabel}`}
           </button>
-          {status.message && <p className={`status status--${status.status}`}>{status.message}</p>}
+          {status.message && (
+            <FeedbackPanel tone={status.status === 'error' ? 'error' : status.status === 'success' ? 'success' : 'info'}>
+              {status.message}
+            </FeedbackPanel>
+          )}
         </form>
 
         <footer className="login-footnote">
           <p className="muted">
-            Admins manage teacher accounts. Teachers manage classes and unlock curriculum. Students track their own
-            journey. Choose the right role above so we can route you to the correct dashboard.
+            Admins manage teachers. Teachers create classes, add students, and unlock content when ready.
           </p>
         </footer>
       </section>
