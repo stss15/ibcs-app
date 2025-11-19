@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { getDb } from './src/instant.js';
+import { getDb, tx } from './src/instant.js';
 import {
   findAdminByUsername,
   findTeacherByUsername,
@@ -27,6 +27,7 @@ import {
 const TOKEN_TTL_HOURS = 12;
 const AUTH_PREFIX = 'Bearer ';
 const VALID_ROLES = new Set(['admin', 'teacher']);
+const BCRYPT_ROUNDS = 8;
 
 export default {
   async fetch(request, env) {
@@ -182,7 +183,7 @@ async function handleLogin(request, env, ctx) {
     return json({ error: 'Invalid credentials' }, 401);
   }
 
-  const matches = await bcrypt.compare(normalizedPassword, account.passwordHash || '');
+  const matches = await verifyOrRehashPassword(db, normalizedRole, account, normalizedPassword);
   if (!matches) {
     logAuthResult(ctx, { status: 'failure', reason: 'password_mismatch', role: normalizedRole, username: normalizedUsername });
     return json({ error: 'Invalid credentials' }, 401);
@@ -195,6 +196,24 @@ async function handleLogin(request, env, ctx) {
   );
   logAuthResult(ctx, { status: 'success', role: normalizedRole, username: account.username });
   return json({ token, user: formatSessionUser(normalizedRole, account) });
+}
+
+async function verifyOrRehashPassword(db, role, account, password) {
+  const passwordHash = account.passwordHash || null;
+  if (passwordHash) {
+    return bcrypt.compare(password, passwordHash);
+  }
+  if (!account.passwordPlain) {
+    return false;
+  }
+  if (account.passwordPlain !== password) {
+    return false;
+  }
+  const newHash = await bcrypt.hash(account.passwordPlain, BCRYPT_ROUNDS);
+  const collection = role === 'admin' ? tx.admins : tx.teachers;
+  await db.transact([collection[account.id].update({ passwordHash: newHash })]);
+  account.passwordHash = newHash;
+  return true;
 }
 
 async function handleVerify(request, env, ctx) {

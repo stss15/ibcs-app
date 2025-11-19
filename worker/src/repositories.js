@@ -94,7 +94,7 @@ export async function findAdminByUsername(db, username) {
   });
   const doc = result?.admins?.[0];
   if (!doc) return null;
-  return { ...doc, passwordHash: doc.passwordHash, username: doc.username };
+  return { ...doc, id: extractId(doc), passwordHash: doc.passwordHash, username: doc.username };
 }
 
 export async function findTeacherByUsername(db, username) {
